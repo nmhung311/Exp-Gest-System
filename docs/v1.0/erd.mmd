@@ -1,0 +1,20 @@
+erDiagram
+    EVENT ||--o{ GUEST : has
+    EVENT {
+        int id PK
+        string name
+        datetime start_datetime
+        string location
+        string agenda
+    }
+    GUEST {
+        int id PK
+        string full_name
+        string title
+        string organization
+        string phone
+        string qr_code UK
+        string rsvp_status
+        datetime checkin_at
+        int event_id FK
+    }

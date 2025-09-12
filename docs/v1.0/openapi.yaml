@@ -1,0 +1,597 @@
+openapi: 3.0.3
+info:
+  title: Guest Management API - 15th Anniversary
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+paths:
+  /guests/import:
+    post:
+      summary: Import guests from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                event_id:
+                  type: integer
+              required: [file, event_id]
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: integer
+                  updated:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+  /guests:
+    get:
+      summary: List guests
+      parameters:
+        - name: event_id
+          in: query
+          schema:
+            type: integer
+        - name: rsvp_status
+          in: query
+          schema:
+            type: string
+            enum: [pending, accepted, declined]
+      responses:
+        '200':
+          description: Guests list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guest'
+  /guests/{id}/rsvp:
+    post:
+      summary: Update RSVP status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [accepted, declined]
+              required: [status]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guest'
+        '404':
+          description: Guest not found
+  /guests/{id}/checkin:
+    post:
+      summary: Check-in guest by QR token or id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Check-in success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guest'
+        '409':
+          description: Already checked-in
+        '404':
+          description: Guest not found or invalid token
+  /events:
+    get:
+      summary: Get events
+      responses:
+        '200':
+          description: Events list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+
+  /invites/preview:
+    post:
+      summary: Generate invitation preview HTML and test ICS link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationPayload'
+            examples:
+              sample:
+                value:
+                  guest:
+                    title: Mr.
+                    name: Nguyen Van A
+                    role: Director
+                    organization: ABC Corp
+                    tag: Partner
+                  event:
+                    title: 15th Anniversary
+                    subtitle: Celebrating our journey
+                    datetime:
+                      start_at: '2025-11-20T18:00:00+07:00'
+                      end_at: '2025-11-20T21:00:00+07:00'
+                    timezone: Asia/Ho_Chi_Minh
+                    venue:
+                      name: Grand Hall
+                      address: 123 Le Loi, Ho Chi Minh City
+                  rsvp:
+                    accept_url: https://example.com/rsvp/accept/abc
+                    decline_url: https://example.com/rsvp/decline/abc
+                    deadline: '2025-11-10T23:59:59+07:00'
+                  qr:
+                    value: INV-ABC-123
+                    qr_url: https://cdn.example.com/qrs/INV-ABC-123.png
+                  delivery:
+                    email_to: guest@example.com
+                    email_subject: Invitation to 15th Anniversary
+                    file_name: invite-abc.pdf
+                  branding:
+                    logo_url: https://cdn.example.com/logo.png
+                    primary_color: '#004aad'
+                    accent_color: '#f5a623'
+              sample:
+                value:
+                  guest:
+                    title: "Mr"
+                    name: "Tên khách"
+                    role: "CEO"
+                    organization: "Công ty ABC"
+                    tag: "VIP"
+                  event:
+                    title: "Sự kiện"
+                    subtitle: "Mô tả sự kiện"
+                    host_org: "Tổ chức chủ trì"
+                    datetime: "2025-01-01T18:00:00"
+                    timezone: "Asia/Ho_Chi_Minh"
+                    venue:
+                      name: "Địa điểm sự kiện"
+                      address: "Địa chỉ chi tiết"
+                      map_url: "https://maps.example.com/venue"
+                    program_outline:
+                      - time: "18:00"
+                        item: "Chương trình 1"
+                      - time: "18:30"
+                        item: "Chương trình 2"
+                      - time: "19:00"
+                        item: "Chương trình 3"
+                      - time: "20:00"
+                        item: "Chương trình 4"
+                  rsvp:
+                    accept_url: "https://example.com/rsvp/accept?id=INV123"
+                    decline_url: "https://example.com/rsvp/decline?id=INV123"
+                    deadline: "2025-01-01"
+                  qr:
+                    qr_url: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=INV123"
+                    value: "INV123"
+                  delivery:
+                    mode: "email"
+                    email_subject: "Thiệp mời sự kiện"
+                    email_to: "guest@example.com"
+                    file_name: "invite_INV123.html"
+                  branding:
+                    logo_url: "logo.jpeg"
+                    primary_color: "#0B2A4A"
+                    accent_color: "#1E88E5"
+                  meta:
+                    invitation_id: "INV123"
+                    created_at: "2025-09-10T18:00:00"
+                    notes: "Mẫu thử nghiệm"
+      responses:
+        '200':
+          description: Preview generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  html:
+                    type: string
+                    description: Rendered HTML of invitation
+                  ics_url:
+                    type: string
+                    description: Temporary ICS link for preview
+              examples:
+                simple_invitation_letter:
+                  value:
+                    html: "<html><body><h1>Thiệp mời</h1><p>Kính gửi Mr Nguyễn Cường,</p><p>Trân trọng kính mời Quý khách tham dự sự kiện EXP Technology – 15 Years of Excellence, lúc 18:00 ngày 10/10/2025 tại Trung tâm Hội nghị tỉnh Thái Nguyên.</p><p>Vui lòng phản hồi RSVP trước 30/09/2025.</p></body></html>"
+                    ics_url: "https://api.example.com/preview/ics/tmp/INV123.ics"
+        '401':
+          description: Bad signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badSignature:
+                  value:
+                    code: 401_BAD_SIGNATURE
+                    message: Signature is invalid
+
+  /invites/{invitation_id}:
+    get:
+      summary: Get invitation metadata without extra PII
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationMetadata'
+              examples:
+                inv123:
+                  value:
+                    invitation_id: "INV123"
+                    event:
+                      title: "EXP Technology – 15 Years of Excellence"
+                      datetime:
+                        start_at: "2025-10-10T18:00:00+07:00"
+                      venue:
+                        name: "Trung tâm Hội nghị tỉnh Thái Nguyên"
+                        address: "Số 1 Đường XYZ, TP. Thái Nguyên"
+                    guest:
+                      title: "Mr"
+                      display_name: "Nguyễn Cường"
+                    links:
+                      rsvp_accept: "https://exp.example.com/rsvp/accept?id=INV123"
+                      rsvp_decline: "https://exp.example.com/rsvp/decline?id=INV123"
+                    branding:
+                      logo_url: "logo.jpeg"
+                      primary_color: "#0B2A4A"
+                      accent_color: "#1E88E5"
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    code: 404_INVITE_NOT_FOUND
+                    message: Invitation not found
+
+  /rsvp/{invitation_id}:
+    post:
+      summary: Submit RSVP (idempotent)
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [accept, decline, tentative]
+              required: [action]
+            examples:
+              acceptExample:
+                value: { action: accept }
+      responses:
+        '200':
+          description: RSVP recorded (idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitation_id:
+                    type: string
+                  rsvp_status:
+                    type: string
+                    enum: [accepted, declined, tentative]
+                  rsvp_at:
+                    type: string
+                    format: date-time
+              examples:
+                inv123_accept:
+                  value:
+                    invitation_id: "INV123"
+                    rsvp_status: "accepted"
+                    rsvp_at: "2025-09-12T09:00:00+07:00"
+        '410':
+          description: RSVP deadline passed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                deadline:
+                  value:
+                    code: 410_RSVP_DEADLINE_PASSED
+                    message: RSVP deadline has passed
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    code: 404_INVITE_NOT_FOUND
+                    message: Invitation not found
+
+  /tickets/{invitation_id}/qr:
+    get:
+      summary: Render QR PNG from signed token
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Bad signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badSignature:
+                  value:
+                    code: 401_BAD_SIGNATURE
+                    message: Signature is invalid
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/ics:
+    get:
+      summary: Download ICS file with Asia/Ho_Chi_Minh timezone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ICS calendar file
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename=event-{id}.ics
+          content:
+            text/calendar:
+              schema:
+                type: string
+              examples:
+                ics:
+                  value: |
+                    BEGIN:VCALENDAR
+                    VERSION:2.0
+                    PRODID:-//Example Inc//Event ICS//EN
+                    BEGIN:VEVENT
+                    UID:example-uid
+                    DTSTAMP:20251120T110000Z
+                    DTSTART;TZID=Asia/Ho_Chi_Minh:20251120T180000
+                    DTEND;TZID=Asia/Ho_Chi_Minh:20251120T210000
+                    SUMMARY:15th Anniversary
+                    LOCATION:Grand Hall, 123 Le Loi, Ho Chi Minh City
+                    END:VEVENT
+                    END:VCALENDAR
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Guest:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        title:
+          type: string
+        organization:
+          type: string
+        phone:
+          type: string
+        qr_code:
+          type: string
+        rsvp_status:
+          type: string
+          enum: [pending, accepted, declined]
+        checkin_at:
+          type: string
+          format: date-time
+        event_id:
+          type: integer
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        start_datetime:
+          type: string
+          format: date-time
+        location:
+          type: string
+        agenda:
+          type: string
+    InvitationPayload:
+      type: object
+      properties:
+        guest:
+          type: object
+          properties:
+            title: { type: string }
+            name: { type: string }
+            role: { type: string }
+            organization: { type: string }
+            tag: { type: string, nullable: true }
+            vip: { type: boolean, nullable: true }
+        event:
+          type: object
+          properties:
+            title: { type: string }
+            subtitle: { type: string, nullable: true }
+            host_org: { type: string, nullable: true }
+            datetime:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: object
+                  properties:
+                    start_at: { type: string, format: date-time }
+                    end_at: { type: string, format: date-time, nullable: true }
+            timezone: { type: string }
+            venue:
+              type: object
+              properties:
+                name: { type: string }
+                address: { type: string }
+                map_url: { type: string, nullable: true }
+            program_outline:
+              type: array
+              items:
+                type: object
+                properties:
+                  time: { type: string }
+                  item: { type: string }
+        rsvp:
+          type: object
+          properties:
+            accept_url: { type: string }
+            decline_url: { type: string }
+            deadline: { type: string, format: date, nullable: true }
+        qr:
+          type: object
+          properties:
+            value: { type: string }
+            qr_url: { type: string }
+        delivery:
+          type: object
+          properties:
+            mode: { type: string }
+            email_to: { type: string }
+            email_subject: { type: string }
+            file_name: { type: string, nullable: true }
+        branding:
+          type: object
+          properties:
+            logo_url: { type: string, nullable: true }
+            primary_color: { type: string, nullable: true }
+            accent_color: { type: string, nullable: true }
+        meta:
+          type: object
+          properties:
+            invitation_id: { type: string }
+            created_at: { type: string, format: date-time }
+            notes: { type: string, nullable: true }
+    InvitationMetadata:
+      type: object
+      properties:
+        invitation_id: { type: string }
+        event:
+          type: object
+          properties:
+            title: { type: string }
+            datetime:
+              type: object
+              properties:
+                start_at: { type: string, format: date-time }
+                end_at: { type: string, format: date-time, nullable: true }
+            venue:
+              type: object
+              properties:
+                name: { type: string }
+                address: { type: string }
+        guest:
+          type: object
+          properties:
+            title: { type: string }
+            first_name: { type: string, nullable: true }
+            last_name: { type: string, nullable: true }
+            display_name: { type: string }
+        links:
+          type: object
+          properties:
+            rsvp_accept: { type: string }
+            rsvp_decline: { type: string }
+        branding:
+          $ref: '#/components/schemas/InvitationPayload/properties/branding'
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [404_INVITE_NOT_FOUND, 410_RSVP_DEADLINE_PASSED, 401_BAD_SIGNATURE]
+        message:
+          type: string

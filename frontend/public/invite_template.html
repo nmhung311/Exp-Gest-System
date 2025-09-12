@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{event.title}} - Thiệp mời</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: var(--primary-color, #0B2A4A);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        
+        .event-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .event-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px 20px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .event-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .detail-icon {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        .detail-text {
+            flex: 1;
+        }
+        
+        .program-outline {
+            margin: 20px 0;
+        }
+        
+        .program-item {
+            display: flex;
+            margin-bottom: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .program-time {
+            font-weight: bold;
+            width: 60px;
+            color: var(--accent-color, #1E88E5);
+        }
+        
+        .program-description {
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 0 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .cta-accept {
+            background: var(--accent-color, #1E88E5);
+            color: white;
+        }
+        
+        .cta-accept:hover {
+            background: #1976d2;
+        }
+        
+        .cta-decline {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .cta-decline:hover {
+            background: #5a6268;
+        }
+        
+        .qr-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .qr-code {
+            max-width: 150px;
+            height: auto;
+            margin: 15px 0;
+        }
+        
+        .qr-warning {
+            color: #dc3545;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .footer-logo {
+            max-width: 80px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        
+        .footer-text {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .ics-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: var(--primary-color, #0B2A4A);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .ics-link:hover {
+            background: #0a1f3a;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .cta-button {
+                display: block;
+                margin: 10px 0;
+            }
+            
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .detail-icon {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body style="--primary-color: {{branding.primary_color}}; --accent-color: {{branding.accent_color}};">
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            {% if branding.logo_url %}
+            <img src="{{branding.logo_url}}" alt="Logo" class="logo">
+            {% endif %}
+            <h1 class="event-title">{{event.title}}</h1>
+            {% if event.subtitle %}
+            <p class="event-subtitle">{{event.subtitle}}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Kính gửi {{guest.title}} {{guest.name}},
+            </div>
+            
+            <p>Trân trọng kính mời Quý khách tham dự sự kiện đặc biệt:</p>
+            
+            <!-- Event Details -->
+            <div class="event-details">
+                <div class="detail-row">
+                    <span class="detail-icon">📅</span>
+                    <div class="detail-text">
+                        <strong>Thời gian:</strong> {{event.datetime}} ({{event.timezone}})
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-icon">📍</span>
+                    <div class="detail-text">
+                        <strong>Địa điểm:</strong> {{event.venue.name}}
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-icon">🏢</span>
+                    <div class="detail-text">
+                        <strong>Địa chỉ:</strong> {{event.venue.address}}
+                        {% if event.venue.map_url %}
+                        <br><a href="{{event.venue.map_url}}" target="_blank">Xem bản đồ</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Program Outline -->
+            {% if event.program_outline %}
+            <div class="program-outline">
+                <h3>Chương trình:</h3>
+                {% for item in event.program_outline %}
+                <div class="program-item">
+                    <div class="program-time">{{item.time}}</div>
+                    <div class="program-description">{{item.item}}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- CTA Section -->
+            <div class="cta-section">
+                <p><strong>Vui lòng phản hồi trước {{rsvp.deadline}} để chúng tôi chuẩn bị tốt nhất.</strong></p>
+                <a href="{{rsvp.accept_url}}" class="cta-button cta-accept">Tham dự</a>
+                <a href="{{rsvp.decline_url}}" class="cta-button cta-decline">Từ chối</a>
+            </div>
+            
+            <!-- QR Ticket Section -->
+            <div class="qr-section">
+                <h3>🎫 VÉ THAM DỰ CỦA BẠN</h3>
+                <img src="{{qr.qr_url}}" alt="QR Code" class="qr-code">
+                <div class="qr-warning">
+                    ⚠️ QUAN TRỌNG: Mỗi QR code chỉ sử dụng được 1 lần. Không chia sẻ QR code này với người khác.
+                </div>
+            </div>
+            
+            <!-- ICS Download -->
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="/events/{{event.id}}/ics" class="ics-link">📅 Tải lịch (.ics)</a>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            {% if branding.logo_url %}
+            <img src="{{branding.logo_url}}" alt="Logo" class="footer-logo">
+            {% endif %}
+            <div class="footer-text">
+                <strong>{{event.host_org}}</strong><br>
+                📧 Liên hệ: info@exp.com | 🌐 Website: www.exp.com<br>
+                <small>Nếu bạn không thể tham dự, vui lòng từ chối để chúng tôi có thể mời khách khác.</small>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
