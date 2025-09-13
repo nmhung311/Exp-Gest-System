@@ -5,13 +5,15 @@ import json
 from queue import Queue, Empty
 import pytz
 from .db import db
-from .models import Guest, Token, Checkin, Event
+from .models import Guest, Token, Checkin, Event, User
 import secrets
 import csv
 import io
 import qrcode
 from io import BytesIO
 from datetime import datetime
+import os
+import hashlib
 
 
 def create_app() -> Flask:
@@ -20,6 +22,41 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     CORS(app)
     db.init_app(app)
+
+    # Ensure tables and columns exist even when running via `python -m backend.app`
+    with app.app_context():
+        try:
+            db.create_all()
+            # --- lightweight migration for new Event fields on SQLite ---
+            try:
+                existing_cols = set()
+                result = db.session.execute(db.text("PRAGMA table_info(events)"))
+                for row in result:
+                    # row columns: cid, name, type, notnull, dflt_value, pk
+                    existing_cols.add(str(row[1]))
+
+                alter_statements: list[str] = []
+                if "venue_address" not in existing_cols:
+                    alter_statements.append("ALTER TABLE events ADD COLUMN venue_address TEXT")
+                if "venue_map_url" not in existing_cols:
+                    alter_statements.append("ALTER TABLE events ADD COLUMN venue_map_url TEXT")
+                if "program_outline" not in existing_cols:
+                    alter_statements.append("ALTER TABLE events ADD COLUMN program_outline TEXT")
+                if "dress_code" not in existing_cols:
+                    alter_statements.append("ALTER TABLE events ADD COLUMN dress_code TEXT")
+
+                for stmt in alter_statements:
+                    try:
+                        db.session.execute(db.text(stmt))
+                    except Exception as _:
+                        pass
+                if alter_statements:
+                    db.session.commit()
+            except Exception as _:
+                # Do not block app start if pragma/alter fails
+                db.session.rollback()
+        except Exception as e:
+            print(f"DB init error: {e}")
 
     @app.after_request
     def add_cors_headers(response):
@@ -35,6 +72,58 @@ def create_app() -> Flask:
     @app.get("/")
     def root() -> tuple[dict, int]:
         return {"service": "EXP Guest Backend", "version": "0.1.0"}, 200
+
+    # --- Auth: register/login (simple) ---
+    @app.post("/api/auth/register")
+    def auth_register():
+        try:
+            data = request.get_json(silent=True)
+            if not data:
+                # fallback to form data
+                data = request.form.to_dict() if request.form else {}
+            username = (data.get("username") or data.get("user") or data.get("email") or "").strip()
+            email = (data.get("email") or "").strip() or None
+            password = (data.get("password") or data.get("pass") or data.get("pwd") or "").strip()
+            if not username or not password:
+                return {"message": "username and password are required"}, 400
+            if User.query.filter_by(username=username).first():
+                return {"message": "username already exists"}, 409
+            if email and User.query.filter_by(email=email).first():
+                return {"message": "email already exists"}, 409
+            user = User.create_user(username=username, password=password, email=email)
+            return {"user": user.to_public_dict()}, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"message": f"register error: {str(e)}"}, 500
+
+    @app.post("/api/auth/login")
+    def auth_login():
+        try:
+            body = request.get_json(silent=True)
+            if not body:
+                body = request.form.to_dict() if request.form else {}
+            username = (body.get("username") or body.get("user") or body.get("email") or "").strip()
+            password = (body.get("password") or body.get("pass") or body.get("pwd") or "").strip()
+
+            user = User.query.filter(
+                (User.username == username) | (User.email == username)
+            ).first()
+            if not user or not user.verify_password(password):
+                return {"message": "invalid credentials"}, 401
+
+            token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
+            token = hashlib.sha256(token_raw.encode()).hexdigest()
+            return {"token": token, "user": user.to_public_dict()}, 200
+        except Exception as e:
+            return {"message": f"login error: {str(e)}"}, 500
+
+    @app.get("/api/auth/users")
+    def auth_list_users():
+        try:
+            users = User.query.order_by(User.id.desc()).all()
+            return {"users": [u.to_public_dict() for u in users]}, 200
+        except Exception as e:
+            return {"message": f"list users error: {str(e)}", "users": []}, 500
 
     @app.post("/api/guests/import")
     def import_guests():
@@ -216,6 +305,11 @@ def create_app() -> Flask:
             email = data.get("email", "").strip()
             if email and Guest.query.filter_by(email=email).first():
                 return {"message": "Email already exists"}, 409
+            
+            # Check if phone already exists
+            phone = data.get("phone", "").strip()
+            if phone and Guest.query.filter_by(phone=phone).first():
+                return {"message": "Phone number already exists"}, 409
             
             guest = Guest(
                 name=name,
@@ -412,7 +506,19 @@ def create_app() -> Flask:
         guest = Guest.query.get(tok.guest_id)
         if not guest:
             return {"valid": False, "reason": "guest not found"}, 404
-        return {"valid": True, "guest": guest.to_dict()}, 200
+        
+        # Include event data for invite template
+        event_data = None
+        if guest.event_id:
+            event = Event.query.get(guest.event_id)
+            if event:
+                event_data = event.to_dict()
+        
+        guest_dict = guest.to_dict()
+        if event_data:
+            guest_dict["event"] = event_data
+            
+        return {"valid": True, "guest": guest_dict}, 200
 
     @app.post("/api/qr/refresh")
     def refresh_qr_token():
@@ -601,6 +707,48 @@ def create_app() -> Flask:
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/events/upcoming", methods=["GET"])
+    def get_upcoming_events():
+        """Lấy sự kiện sắp tới theo khoảng thời gian"""
+        try:
+            from datetime import datetime, timedelta
+            import pytz
+            
+            # Lấy tham số khoảng thời gian
+            period = request.args.get("period", "all")  # all, 3days, 7days, month
+            now = datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
+            
+            # Tính toán ngày bắt đầu và kết thúc
+            if period == "3days":
+                start_date = now.date()
+                end_date = (now + timedelta(days=3)).date()
+            elif period == "7days":
+                start_date = now.date()
+                end_date = (now + timedelta(days=7)).date()
+            elif period == "month":
+                # Tháng sắp tới (từ ngày mai đến cuối tháng)
+                start_date = (now + timedelta(days=1)).date()
+                # Tính ngày cuối tháng
+                if now.month == 12:
+                    next_month = now.replace(year=now.year + 1, month=1, day=1)
+                else:
+                    next_month = now.replace(month=now.month + 1, day=1)
+                end_date = (next_month - timedelta(days=1)).date()
+            else:  # all
+                start_date = now.date()
+                end_date = None
+            
+            # Query sự kiện
+            query = Event.query.filter(Event.date >= start_date)
+            if end_date:
+                query = query.filter(Event.date <= end_date)
+            
+            events = query.order_by(Event.date.asc()).all()
+            
+            return jsonify([event.to_dict() for event in events]), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/api/events", methods=["POST"])
     def create_event():
         """Tạo sự kiện mới"""
@@ -618,6 +766,10 @@ def create_app() -> Flask:
                 date=datetime.strptime(data["date"], "%Y-%m-%d").date() if data.get("date") else None,
                 time=datetime.strptime(data["time"], "%H:%M").time() if data.get("time") else None,
                 location=data.get("location", ""),
+                venue_address=data.get("venue_address", ""),
+                venue_map_url=data.get("venue_map_url", ""),
+                program_outline=data.get("program_outline"),
+                dress_code=data.get("dress_code", ""),
                 status=data.get("status", "upcoming"),
                 max_guests=data.get("max_guests", 100)
             )
@@ -661,6 +813,14 @@ def create_app() -> Flask:
                         return jsonify({"error": f"Invalid time format: {str(e)}"}), 400
             if "location" in data:
                 event.location = data["location"]
+            if "venue_address" in data:
+                event.venue_address = data.get("venue_address", "")
+            if "venue_map_url" in data:
+                event.venue_map_url = data.get("venue_map_url", "")
+            if "program_outline" in data:
+                event.program_outline = data.get("program_outline")
+            if "dress_code" in data:
+                event.dress_code = data.get("dress_code", "")
             if "status" in data:
                 valid_statuses = ["upcoming", "ongoing", "completed", "cancelled"]
                 if data["status"] not in valid_statuses:
@@ -685,12 +845,25 @@ def create_app() -> Flask:
 
     @app.route("/api/events/<int:event_id>", methods=["DELETE"])
     def delete_event(event_id):
-        """Xóa sự kiện"""
+        """Xóa sự kiện và tất cả khách mời thuộc sự kiện đó"""
         try:
             event = Event.query.get_or_404(event_id)
+            
+            # Đếm số lượng khách mời sẽ bị xóa
+            guest_count = Guest.query.filter_by(event_id=event_id).count()
+            
+            # Xóa sự kiện (cascade delete sẽ tự động xóa khách mời)
             db.session.delete(event)
             db.session.commit()
-            return jsonify({"message": "Event deleted successfully"}), 200
+            
+            message = f"Event deleted successfully"
+            if guest_count > 0:
+                message += f" along with {guest_count} guest(s)"
+            
+            return jsonify({
+                "message": message,
+                "deleted_guests_count": guest_count
+            }), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": str(e)}), 500

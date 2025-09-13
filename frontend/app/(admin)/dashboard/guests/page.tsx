@@ -1,7 +1,7 @@
 "use client"
-import React, { useState, useEffect } from "react"
-import { createPortal } from "react-dom"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
+import Portal from "../../../components/Portal"
 
 interface Guest {
   id: number
@@ -13,7 +13,7 @@ interface Guest {
   email?: string
   phone?: string
   rsvp_status: string
-  checkin_status?: string
+  checkin_status: string
   created_at: string
   event_id?: number
   event_name?: string
@@ -69,21 +69,14 @@ export default function GuestsPage(){
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel')
   const [showExportPopup, setShowExportPopup] = useState(false)
   const [exportScope, setExportScope] = useState<'all' | 'selected'>('selected')
-  const [qrExpiresAt, setQrExpiresAt] = useState<Date | null>(null)
-  const [qrRefreshTimer, setQrRefreshTimer] = useState<NodeJS.Timeout | null>(null)
-
-  const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [mounted, setMounted] = useState(false)
-    useEffect(() => { setMounted(true) }, [])
-    if (!mounted) return null
-    return createPortal(children as React.ReactElement, document.body)
-  }
 
   // Load guests and events on component mount
   useEffect(() => {
+    console.log("GuestsPage mounted, loading data...")
     // Khôi phục sự kiện đã chọn từ localStorage (nếu có)
     try {
       const saved = localStorage.getItem("exp_selected_event")
+      console.log("Saved event from localStorage on mount:", saved)
       if (saved) setEventFilter(saved)
     } catch {}
     loadGuests()
@@ -91,13 +84,6 @@ export default function GuestsPage(){
   }, [])
 
   // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (qrRefreshTimer) {
-        clearTimeout(qrRefreshTimer)
-      }
-    }
-  }, [qrRefreshTimer])
 
   async function loadGuests() {
     setLoading(true)
@@ -120,21 +106,31 @@ export default function GuestsPage(){
 
   const loadEvents = async () => {
     try {
+      console.log("Loading events...")
       const res = await fetch("http://localhost:5001/api/events")
+      console.log("Events response:", res.status, res.statusText)
       if (res.ok) {
         const data = await res.json()
+        console.log("Events data received:", data)
         // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
         const sortedEvents = data.sort((a: Event, b: Event) => {
           const dateA = new Date(a.date)
           const dateB = new Date(b.date)
           return dateA.getTime() - dateB.getTime()
         })
+        console.log("Sorted events:", sortedEvents)
         setEvents(sortedEvents)
         // Nếu có sự kiện đã lưu và còn tồn tại, giữ nguyên; nếu không, để trống
         try {
           const saved = localStorage.getItem("exp_selected_event")
+          console.log("Saved event from localStorage:", saved)
           if (saved && sortedEvents.some((e: Event) => e.id.toString() === saved)) {
             setEventFilter(saved)
+            console.log("Set eventFilter to saved value:", saved)
+          } else if (sortedEvents.length > 0) {
+            // Tự động chọn sự kiện đầu tiên nếu chưa có sự kiện nào được chọn
+            setEventFilter(sortedEvents[0].id.toString())
+            console.log("Auto-selected first event:", sortedEvents[0].id.toString())
           }
         } catch {}
       } else {
@@ -163,24 +159,9 @@ export default function GuestsPage(){
         const tokenData = await tokenResponse.json()
         console.log("Token data received:", tokenData)
         
-        if (tokenData.expires_at) {
-          const expiresAt = new Date(tokenData.expires_at)
-          console.log("Parsed expires_at:", expiresAt)
-          setQrExpiresAt(expiresAt)
-        } else {
-          console.error("No expires_at in token data")
-          setQrExpiresAt(null)
-        }
-        
         // Tạo URL cho QR code với timestamp để tránh cache
         const qrUrl = `http://localhost:5001/api/guests/${guest.id}/qr-image?t=${Date.now()}`
         setQrImageUrl(qrUrl)
-        
-        // Bắt đầu timer để tự động refresh
-        if (tokenData.expires_at) {
-          const expiresAt = new Date(tokenData.expires_at)
-          startQRRefreshTimer(guest, expiresAt)
-        }
       } else {
         alert("Lỗi khi tạo token QR code")
       }
@@ -189,61 +170,6 @@ export default function GuestsPage(){
     }
   }
 
-  function startQRRefreshTimer(guest: Guest, expiresAt: Date) {
-    // Clear existing timer
-    if (qrRefreshTimer) {
-      clearTimeout(qrRefreshTimer)
-    }
-    
-    // Calculate time until expiration (refresh 30 seconds before expiry)
-    const now = new Date()
-    const timeUntilExpiry = expiresAt.getTime() - now.getTime() - 30000 // 30 seconds before
-    
-    if (timeUntilExpiry > 0) {
-      const timer = setTimeout(async () => {
-        await refreshQRCode(guest)
-      }, timeUntilExpiry)
-      
-      setQrRefreshTimer(timer)
-    }
-  }
-
-  async function refreshQRCode(guest: Guest) {
-    try {
-      // Tạo token mới
-      const tokenResponse = await fetch(`http://localhost:5001/api/guests/${guest.id}/qr`, {
-        method: 'POST'
-      })
-      
-      if (tokenResponse.ok) {
-        const tokenData = await tokenResponse.json()
-        console.log("Refresh token data received:", tokenData)
-        
-        if (tokenData.expires_at) {
-          const expiresAt = new Date(tokenData.expires_at)
-          console.log("Refresh parsed expires_at:", expiresAt)
-          setQrExpiresAt(expiresAt)
-        } else {
-          console.error("No expires_at in refresh token data")
-          setQrExpiresAt(null)
-        }
-        
-        // Cập nhật QR code
-        const qrUrl = `http://localhost:5001/api/guests/${guest.id}/qr-image?t=${Date.now()}`
-        setQrImageUrl(qrUrl)
-        
-        // Bắt đầu timer mới
-        if (tokenData.expires_at) {
-          const expiresAt = new Date(tokenData.expires_at)
-          startQRRefreshTimer(guest, expiresAt)
-        }
-        
-        console.log(`QR code đã được làm mới cho ${guest.name}`)
-      }
-    } catch (e) {
-      console.error("Lỗi khi làm mới QR code:", e)
-    }
-  }
 
   async function downloadQR(guestId: number, guestName: string) {
     try {
@@ -392,8 +318,15 @@ export default function GuestsPage(){
 
 
   // CRUD Functions
-  function openGuestModal(guest?: Guest) {
+  const openGuestModal = useCallback((guest?: Guest) => {
+    console.log("Opening guest modal...")
+    console.log("Current eventFilter:", eventFilter)
+    console.log("Available events:", events)
+    console.log("Is editing guest:", !!guest)
+    
     if (guest) {
+      console.log("Guest data for editing:", guest)
+      console.log("Guest checkin_status:", guest.checkin_status)
       setEditingGuest(guest)
       setGuestForm({
         name: guest.name || "",
@@ -404,10 +337,13 @@ export default function GuestsPage(){
         email: guest.email || "",
         phone: guest.phone || "",
         event_id: guest.event_id?.toString() || "",
-        checkin_status: "not_arrived" // Mặc định chưa đến khi sửa
+        checkin_status: guest.checkin_status // Sử dụng trạng thái thực tế của khách
       })
     } else {
       setEditingGuest(null)
+      // Chọn sự kiện đầu tiên nếu không có eventFilter
+      const defaultEventId = eventFilter || (events.length > 0 ? events[0].id.toString() : "")
+      console.log("Default event ID for new guest:", defaultEventId)
       setGuestForm({
         name: "",
         title: "",
@@ -416,14 +352,19 @@ export default function GuestsPage(){
         tag: "",
         email: "",
         phone: "",
-        event_id: eventFilter, // Mặc định chọn sự kiện hiện tại
+        event_id: defaultEventId,
         checkin_status: "not_arrived" // Mặc định chưa đến khi thêm mới
       })
     }
     setShowGuestModal(true)
-  }
+  }, [eventFilter, events])
 
   async function saveGuest() {
+    console.log("Saving guest...")
+    console.log("Guest form data:", guestForm)
+    console.log("Current eventFilter:", eventFilter)
+    console.log("Available events:", events)
+    
     try {
       const url = editingGuest 
         ? `http://localhost:5001/api/guests/${editingGuest.id}`
@@ -432,29 +373,50 @@ export default function GuestsPage(){
       const method = editingGuest ? "PUT" : "POST"
       
       // Đảm bảo luôn gán vào sự kiện được chọn
-      const eventId = guestForm.event_id ? parseInt(guestForm.event_id) : (eventFilter ? parseInt(eventFilter) : NaN)
-      if (isNaN(eventId)) {
-        setResult("❌ Vui lòng chọn sự kiện trước khi lưu khách mời")
-        return
+      let eventId = guestForm.event_id ? parseInt(guestForm.event_id) : (eventFilter ? parseInt(eventFilter) : null)
+      console.log("Event ID for guest:", eventId)
+      
+      // Nếu không có sự kiện nào được chọn, chọn sự kiện đầu tiên
+      if (!eventId || isNaN(eventId)) {
+        if (events.length > 0) {
+          eventId = events[0].id
+          setGuestForm(prev => ({ ...prev, event_id: eventId.toString() }))
+          console.log("Using first available event:", eventId)
+        } else {
+          console.error("No events available")
+          setResult("❌ Vui lòng tạo sự kiện trước khi thêm khách mời")
+          return
+        }
       }
+      
+      const guestData = {
+        name: guestForm.name,
+        title: guestForm.title,
+        role: guestForm.role,
+        organization: guestForm.organization,
+        tag: guestForm.tag,
+        email: guestForm.email,
+        phone: guestForm.phone,
+        event_id: eventId,
+        checkin_status: guestForm.checkin_status
+      }
+      
+      console.log("Sending guest data:", guestData)
+      console.log("API URL:", url)
+      console.log("Method:", method)
       
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: guestForm.name,
-          title: guestForm.title,
-          role: guestForm.role,
-          organization: guestForm.organization,
-          tag: guestForm.tag,
-          email: guestForm.email,
-          phone: guestForm.phone,
-          event_id: eventId,
-          checkin_status: guestForm.checkin_status
-        })
+        body: JSON.stringify(guestData)
       })
       
+      console.log("API response status:", response.status)
+      console.log("API response ok:", response.ok)
+      
       if (response.ok) {
+        const responseData = await response.json()
+        console.log("API response data:", responseData)
         setShowGuestModal(false)
         loadGuests()
         setCopyMessage(editingGuest ? "Cập nhật khách mời thành công!" : "Thêm khách mời thành công!")
@@ -470,9 +432,11 @@ export default function GuestsPage(){
         }, 2000)
       } else {
         const error = await response.text()
+        console.error("API error:", error)
         setResult(`❌ Lỗi: ${error}`)
       }
     } catch (e: any) {
+      console.error("Save guest error:", e)
       setResult(`❌ Lỗi kết nối: ${e.message}`)
     }
   }
@@ -673,19 +637,50 @@ export default function GuestsPage(){
   }
 
   // Filter and search guests
-  const filteredGuests = guests.filter(guest => {
-    const matchesSearch = guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guest.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || guest.rsvp_status === statusFilter
-    // Chỉ hiển thị khách của sự kiện được chọn (không có "Tất cả sự kiện")
-    const matchesEvent = guest.event_id?.toString() === eventFilter
-    return matchesSearch && matchesStatus && matchesEvent
-  })
+  const filteredGuests = useMemo(() => {
+    return guests.filter(guest => {
+      const matchesSearch = guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === "all" || guest.rsvp_status === statusFilter
+      // Chỉ hiển thị khách của sự kiện được chọn (không có "Tất cả sự kiện")
+      const matchesEvent = guest.event_id?.toString() === eventFilter
+      return matchesSearch && matchesStatus && matchesEvent
+    })
+  }, [guests, searchTerm, statusFilter, eventFilter])
+
+  // Memoized form update functions
+  const updateGuestForm = useCallback((field: string, value: string) => {
+    setGuestForm(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  // Memoized dropdown options
+  const titleOptions = useMemo(() => [
+    { value: "", label: "Chọn danh xưng" },
+    { value: "Mr", label: "Mr" },
+    { value: "Ms", label: "Ms" },
+    { value: "Mrs", label: "Mrs" },
+    { value: "Dr", label: "Dr" },
+    { value: "Prof", label: "Prof" }
+  ], [])
+
+  const tagOptions = useMemo(() => [
+    { value: "", label: "Chọn tag" },
+    { value: "VIP", label: "VIP" },
+    { value: "Regular", label: "Regular" },
+    { value: "Speaker", label: "Speaker" },
+    { value: "Sponsor", label: "Sponsor" },
+    { value: "Media", label: "Media" }
+  ], [])
+
+  const checkinStatusOptions = useMemo(() => [
+    { value: "not_arrived", label: "Chưa đến" },
+    { value: "arrived", label: "Đã đến" }
+  ], [])
 
   // Pagination logic
   const totalPages = Math.ceil(filteredGuests.length / guestsPerPage)
@@ -1169,7 +1164,7 @@ export default function GuestsPage(){
             <CustomDropdown
               options={events.map(event => ({
                 value: event.id.toString(),
-                label: `${event.name} - ${new Date(event.date).toLocaleDateString('vi-VN')}`
+                label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
               }))}
               value={eventFilter}
               onChange={(value) => setEventFilter(value)}
@@ -1568,7 +1563,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <input
                   type="text"
                   value={guestForm.name}
-                  onChange={(e) => setGuestForm({...guestForm, name: e.target.value})}
+                  onChange={(e) => updateGuestForm('name', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="Nhập họ và tên"
                   required
@@ -1577,16 +1572,9 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Danh xưng</label>
                 <CustomDropdown
-                  options={[
-                    { value: "", label: "Chọn danh xưng" },
-                    { value: "Mr", label: "Mr" },
-                    { value: "Ms", label: "Ms" },
-                    { value: "Mrs", label: "Mrs" },
-                    { value: "Dr", label: "Dr" },
-                    { value: "Prof", label: "Prof" }
-                  ]}
+                  options={titleOptions}
                   value={guestForm.title}
-                  onChange={(value) => setGuestForm({...guestForm, title: value})}
+                  onChange={(value) => updateGuestForm('title', value)}
                   placeholder="Chọn danh xưng"
                 />
               </div>
@@ -1595,7 +1583,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <input
                   type="text"
                   value={guestForm.role}
-                  onChange={(e) => setGuestForm({...guestForm, role: e.target.value})}
+                  onChange={(e) => updateGuestForm('role', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="CEO, Manager, etc."
                 />
@@ -1605,7 +1593,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <input
                   type="text"
                   value={guestForm.organization}
-                  onChange={(e) => setGuestForm({...guestForm, organization: e.target.value})}
+                  onChange={(e) => updateGuestForm('organization', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="Tên công ty hoặc trường học"
                 />
@@ -1613,16 +1601,9 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Tag</label>
                 <CustomDropdown
-                  options={[
-                    { value: "", label: "Chọn tag" },
-                    { value: "VIP", label: "VIP" },
-                    { value: "Regular", label: "Regular" },
-                    { value: "Speaker", label: "Speaker" },
-                    { value: "Sponsor", label: "Sponsor" },
-                    { value: "Media", label: "Media" }
-                  ]}
+                  options={tagOptions}
                   value={guestForm.tag}
-                  onChange={(value) => setGuestForm({...guestForm, tag: value})}
+                  onChange={(value) => updateGuestForm('tag', value)}
                   placeholder="Chọn tag"
                 />
               </div>
@@ -1631,7 +1612,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <input
                   type="email"
                   value={guestForm.email}
-                  onChange={(e) => setGuestForm({...guestForm, email: e.target.value})}
+                  onChange={(e) => updateGuestForm('email', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="email@example.com"
                 />
@@ -1641,7 +1622,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <input
                   type="tel"
                   value={guestForm.phone}
-                  onChange={(e) => setGuestForm({...guestForm, phone: e.target.value})}
+                  onChange={(e) => updateGuestForm('phone', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="0900000000"
                 />
@@ -1652,12 +1633,9 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
             <div className="mb-6">
               <label className="block text-sm font-medium text-white/80 mb-2">Trạng thái check-in</label>
               <CustomDropdown
-                options={[
-                  { value: "not_arrived", label: "Chưa đến" },
-                  { value: "arrived", label: "Đã đến" }
-                ]}
+                options={checkinStatusOptions}
                 value={guestForm.checkin_status}
-                onChange={(value) => setGuestForm({...guestForm, checkin_status: value})}
+                onChange={(value) => updateGuestForm('checkin_status', value)}
                 placeholder="Chọn trạng thái check-in"
                 className="w-full"
               />
@@ -1751,13 +1729,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 Mã QR - {selectedGuest.name}
               </h3>
               <button
-                onClick={() => {
-                  setShowQRPopup(false)
-                  if (qrRefreshTimer) {
-                    clearTimeout(qrRefreshTimer)
-                    setQrRefreshTimer(null)
-                  }
-                }}
+                onClick={() => setShowQRPopup(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1787,34 +1759,8 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
               <p className="text-sm text-gray-600 mt-2">
                 Mã QR cho {selectedGuest.name}
               </p>
-              <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                {qrExpiresAt ? (
-                  <>
-                    <p className="text-xs text-blue-600">
-                      ⏰ Hết hạn: {qrExpiresAt.toLocaleString('vi-VN', { 
-                        timeZone: 'Asia/Ho_Chi_Minh',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      })}
-                    </p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      QR code sẽ tự động làm mới trước khi hết hạn
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs text-orange-600">
-                      ⚠️ Đang tải thông tin thời gian hết hạn...
-                    </p>
-                    <p className="text-xs text-orange-500 mt-1">
-                      QR code sẽ tự động làm mới
-                    </p>
-                  </>
-                )}
+              <div className="mt-2 p-2 bg-green-50 rounded-lg">
+  
               </div>
             </div>
             
@@ -1829,23 +1775,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 Tải xuống
               </button>
               <button
-                onClick={() => selectedGuest && refreshQRCode(selectedGuest)}
-                className="group relative px-4 py-2 bg-gradient-to-r from-green-500/20 to-teal-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-teal-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20"
-                title="Làm mới QR code ngay"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Làm mới
-              </button>
-              <button
-                onClick={() => {
-                  setShowQRPopup(false)
-                  if (qrRefreshTimer) {
-                    clearTimeout(qrRefreshTimer)
-                    setQrRefreshTimer(null)
-                  }
-                }}
+                onClick={() => setShowQRPopup(false)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Đóng

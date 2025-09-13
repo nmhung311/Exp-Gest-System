@@ -1,0 +1,48 @@
+Uri: https://expsolution.io/assets/index-C2ankbma.css
+File Name: C:\Downloaded Web Sites\expsolution.io\assets\index-C2ankbma.css
+Content Type: text/css
+
+Uri: https://expsolution.io/assets/index-Dupb-T7E.js
+File Name: C:\Downloaded Web Sites\expsolution.io\assets\index-Dupb-T7E.js
+Content Type: application/javascript
+
+Uri: https://expsolution.io/favicon.ico
+File Name: C:\Downloaded Web Sites\expsolution.io\favicon.ico
+Content Type: image/x-icon
+
+Uri: https://expsolution.io/login
+File Name: C:\Downloaded Web Sites\expsolution.io\login.html
+Content Type: text/html
+
+Uri: https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap
+File Name: C:\Downloaded Web Sites\expsolution.io\css2
+Content Type: text/css
+
+Uri: https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxjPQ.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\jetbrainsmono\v24\tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxjPQ.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8L6tjPQ.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\jetbrainsmono\v24\tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8L6tjPQ.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\jetbrainsmono\v24\tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj42Vksj.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\spacegrotesk\v22\V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj42Vksj.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\spacegrotesk\v22\V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUUsj.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\spacegrotesk\v22\V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUUsj.ttf
+Content Type: font/ttf
+
+Uri: https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7oUUsj.ttf
+File Name: C:\Downloaded Web Sites\expsolution.io\s\spacegrotesk\v22\V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7oUUsj.ttf
+Content Type: font/ttf
+

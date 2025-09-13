@@ -1,5 +1,4 @@
 "use client"
-import "../../globals.css"
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
@@ -202,18 +201,12 @@ export default function InvitePage() {
         <div className="max-w-2xl mx-auto p-6 space-y-6 py-12">
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
-              {/* Khung gradient ngoài */}
-              <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 p-0.5 overflow-hidden">
-                {/* Logo fill hết khung, khít viền */}
-                <Image
-                  src="/logothiep.png"
-                  alt="Invitation Header"
-                  fill
-                  sizes="64px"
-                  className="object-cover rounded-full"
-                  priority
-                />
-              </div>
+              {/* Logo công ty */}
+              <img
+                src="/assets/logo-DytfE-Xm.png"
+                alt="Company Logo"
+                className="h-16 w-16 object-contain"
+              />
 
               {/* Text bên cạnh */}
               <div>
@@ -223,7 +216,7 @@ export default function InvitePage() {
               </div>
             </div>
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-white mb-2">Sự kiện</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">{guest?.event?.name || 'Sự kiện'}</h2>
             <div className="w-24 h-1 bg-gradient-to-r from-cyan-400 to-purple-500 mx-auto rounded-full"></div>
           </div>
         </div>
@@ -237,10 +230,7 @@ export default function InvitePage() {
           
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                </svg>
+              <h3 className="text-lg font-semibold text-white">
                 Thời gian & Địa điểm
               </h3>
               <div className="space-y-2 text-white/80">
@@ -248,70 +238,87 @@ export default function InvitePage() {
                   <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
-                  <span>Thời gian sự kiện</span>
+                  <span>{guest?.event?.date} {guest?.event?.time || ''}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Địa điểm sự kiện')}`}
+                    href={guest?.event?.venue_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(guest?.event?.location || 'Địa điểm sự kiện')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-cyan-300 hover:text-cyan-200 underline decoration-dotted underline-offset-4"
                   >
-                    Địa điểm sự kiện
+                    {guest?.event?.location || 'Địa điểm sự kiện'}
                   </a>
                 </div>
+                {guest?.event?.venue_address && (
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                   </svg>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Địa chỉ chi tiết')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-300 hover:text-cyan-200 underline decoration-dotted underline-offset-4"
-                  >
-                    Địa chỉ chi tiết
-                  </a>
+                  <span className="text-white/70">{guest.event.venue_address}</span>
                 </div>
+                )}
+                {guest?.event?.dress_code && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-white/60"></div>
+                  <span className="text-white/70">Trang phục: {guest.event.dress_code}</span>
+                </div>
+                )}
               </div>
             </div>
             
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                </svg>
+              <h3 className="text-lg font-semibold text-white">
                 Chương trình
               </h3>
               <div className="relative pl-6 text-sm">
                 <div className="absolute left-2 top-0 bottom-0 w-px bg-white/10" />
-                <div className="relative flex items-start gap-3 py-2">
-                  <div className="text-cyan-400 w-16 font-medium">18:00</div>
-                  <div className="text-white/85 flex-1">Đón khách & Check-in</div>
-                </div>
-                <div className="relative flex items-start gap-3 py-2">
-                  <div className="text-cyan-400 w-16 font-medium">18:30</div>
-                  <div className="text-white/85 flex-1">Khai mạc</div>
-                </div>
-                <div className="relative flex items-start gap-3 py-2">
-                  <div className="text-cyan-400 w-16 font-medium">19:00</div>
-                  <div className="text-white/85 flex-1">Vinh danh & Tri ân</div>
-                </div>
-                <div className="relative flex items-start gap-3 py-2">
-                  <div className="text-cyan-400 w-16 font-medium">20:00</div>
-                  <div className="text-white/85 flex-1">Gala & Networking</div>
-                </div>
+                {guest?.event?.program_outline ? (
+                  (() => {
+                    try {
+                      const program = JSON.parse(guest.event.program_outline);
+                      if (Array.isArray(program) && program.length > 0) {
+                        return program.map((item, index) => (
+                          <div key={index} className="relative flex items-start gap-3 py-2">
+                            <div className="text-cyan-400 w-16 font-medium">{item.time || ''}</div>
+                            <div className="text-white/85 flex-1">{item.item || ''}</div>
+                          </div>
+                        ));
+                      }
+                    } catch (e) {
+                      // Fallback for simple text format
+                      if (guest.event.program_outline.includes(';')) {
+                        const items = guest.event.program_outline.split(';').filter(item => item.trim());
+                        return items.map((item, index) => {
+                          const parts = item.split('-');
+                          if (parts.length >= 2) {
+                            return (
+                              <div key={index} className="relative flex items-start gap-3 py-2">
+                                <div className="text-cyan-400 w-16 font-medium">{parts[0].trim()}</div>
+                                <div className="text-white/85 flex-1">{parts.slice(1).join('-').trim()}</div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }).filter(Boolean);
+                      }
+                    }
+                    return (
+                      <div className="text-white/60 italic">Chương trình sẽ được cập nhật</div>
+                    );
+                  })()
+                ) : (
+                  <div className="text-white/60 italic">Chương trình sẽ được cập nhật</div>
+                )}
               </div>
             </div>
           </div>
           
           <div className="text-center pt-4 border-t border-white/10">
-              <p className="text-white/60 text-sm">
-              <strong>Trang phục:</strong> Business casual
-            </p>
+              
             <p className="text-white/60 text-sm mt-1">
               Vui lòng xác nhận tham dự trước hạn chót
             </p>
@@ -424,23 +431,7 @@ export default function InvitePage() {
 
             {/* Ẩn các thẻ phụ sau khi đã check-in để giao diện tinh tế hơn */}
             
-            {guest?.checkin_status !== 'arrived' && (
-            <div className="text-sm text-white/60 space-y-1 mb-6">
-              <p><strong>Thời gian:</strong> Thời gian sự kiện</p>
-                <p>
-                  <strong>Địa điểm:</strong> 
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Địa điểm sự kiện')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-300 hover:text-cyan-200 underline decoration-dotted underline-offset-4 ml-1"
-                  >
-                    Địa điểm sự kiện
-                  </a>
-                </p>
-              <p><strong>Trang phục:</strong> Business casual</p>
-            </div>
-            )}
+            
             
             {guest?.checkin_status !== 'arrived' && (
               <div className="mb-4 text-white/70 text-sm text-center">
@@ -553,19 +544,11 @@ export default function InvitePage() {
         {/* Footer */}
         <div className="text-center pt-8 border-t border-white/10">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 p-0.5">
-              <div className="h-full w-full rounded-full bg-black flex items-center justify-center overflow-hidden">
-                <div className="relative h-6 w-6">
-                <Image 
-                    src="/logothiep.png" 
-                  alt="EXP Logo" 
-                    fill
-                    sizes="24px"
-                    className="object-cover rounded-full"
-                  />
-                </div>
-              </div>
-            </div>
+            <img
+              src="/assets/logo-DytfE-Xm.png"
+              alt="Company Logo"
+              className="h-8 w-8 object-contain"
+            />
             <span className="text-white/80 font-medium">EXP Technology Company Limited</span>
           </div>
           <p className="text-white/60 text-sm mb-2">15 Years of Excellence</p>

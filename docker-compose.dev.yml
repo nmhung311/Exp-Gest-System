@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Frontend (Next.js) - Development
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # Backend (Flask) - Development
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

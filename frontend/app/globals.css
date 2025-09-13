@@ -1,423 +1,8 @@
-/* JetBrains Mono Font Faces */
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx3cwhsk.woff2) format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxTcwhsk.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxPcwhsk.woff2) format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx_cwhsk.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx3cwhsk.woff2) format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxTcwhsk.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxPcwhsk.woff2) format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx_cwhsk.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx3cwhsk.woff2) format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxTcwhsk.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxPcwhsk.woff2) format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx_cwhsk.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v23/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Space Grotesk Font Faces */
-/* vietnamese */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb54C-s0.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb94C-s0.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb54C-s0.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb94C-s0.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb54C-s0.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb94C-s0.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb54C-s0.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb94C-s0.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base Styles */
-body {
-  background-color: hsl(var(--background));
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  color: hsl(var(--foreground));
-  margin: 0;
-  line-height: inherit;
-  transition: opacity ease-in 0.2s;
-}
-
-html, :host {
-  line-height: 1.5;
-  -webkit-text-size-adjust: 100%;
-  -moz-tab-size: 4;
-  -o-tab-size: 4;
-  tab-size: 4;
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: normal;
-  font-variation-settings: normal;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Global Box Sizing */
-*, :before, :after {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: #e5e7eb;
-}
-
-/* Tailwind CSS Variables */
-*, :before, :after {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x: ;
-  --tw-pan-y: ;
-  --tw-pinch-zoom: ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position: ;
-  --tw-gradient-via-position: ;
-  --tw-gradient-to-position: ;
-  --tw-ordinal: ;
-  --tw-slashed-zero: ;
-  --tw-numeric-figure: ;
-  --tw-numeric-spacing: ;
-  --tw-numeric-fraction: ;
-  --tw-ring-inset: ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / .5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur: ;
-  --tw-brightness: ;
-  --tw-contrast: ;
-  --tw-grayscale: ;
-  --tw-hue-rotate: ;
-  --tw-invert: ;
-  --tw-saturate: ;
-  --tw-sepia: ;
-  --tw-drop-shadow: ;
-  --tw-backdrop-blur: ;
-  --tw-backdrop-brightness: ;
-  --tw-backdrop-contrast: ;
-  --tw-backdrop-grayscale: ;
-  --tw-backdrop-hue-rotate: ;
-  --tw-backdrop-invert: ;
-  --tw-backdrop-opacity: ;
-  --tw-backdrop-saturate: ;
-  --tw-backdrop-sepia: ;
-  --tw-contain-size: ;
-  --tw-contain-layout: ;
-  --tw-contain-paint: ;
-}
-
-:before, :after {
-  --tw-content: "";
-}
-
-::backdrop {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x: ;
-  --tw-pan-y: ;
-  --tw-pinch-zoom: ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position: ;
-  --tw-gradient-via-position: ;
-  --tw-gradient-to-position: ;
-  --tw-ordinal: ;
-  --tw-slashed-zero: ;
-  --tw-numeric-figure: ;
-  --tw-numeric-spacing: ;
-  --tw-numeric-fraction: ;
-  --tw-ring-inset: ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / .5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur: ;
-  --tw-brightness: ;
-  --tw-contrast: ;
-  --tw-grayscale: ;
-  --tw-hue-rotate: ;
-  --tw-invert: ;
-  --tw-saturate: ;
-  --tw-sepia: ;
-  --tw-drop-shadow: ;
-  --tw-backdrop-blur: ;
-  --tw-backdrop-brightness: ;
-  --tw-backdrop-contrast: ;
-  --tw-backdrop-grayscale: ;
-  --tw-backdrop-hue-rotate: ;
-  --tw-backdrop-invert: ;
-  --tw-backdrop-opacity: ;
-  --tw-backdrop-saturate: ;
-  --tw-backdrop-sepia: ;
-  --tw-contain-size: ;
-  --tw-contain-layout: ;
-  --tw-contain-paint: ;
-}
-
-/* Color Variables */
+/* CSS Variables for shadcn/ui */
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -438,23 +23,12 @@ html, :host {
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
-  --radius: .5rem;
-  --brand: 224.3 76.3% 48%;
-  --brand-2: 268 83% 65%;
-  --brand-3: 190 95% 39%;
-  --gradient-primary: radial-gradient(1200px 1200px at 50% 50%, hsl(var(--brand) / .25), transparent 50%), linear-gradient(180deg, hsl(222.2 84% 6%) 0%, hsl(222.2 84% 4.9%) 40%, hsl(222.2 84% 4%) 100%);
-  --gradient-accent: linear-gradient(135deg, hsl(var(--brand)), hsl(var(--brand-2)) 60%, hsl(var(--brand-3)) 100%);
-  --shadow-glow: 0 20px 60px -10px hsl(var(--brand) / .35);
-  --transition-smooth: all .35s cubic-bezier(.4, 0, .2, 1);
-  --ring-strong: 0 0 0 2px hsl(var(--brand) / .5);
-  --sidebar-background: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --radius: 0.5rem;
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
 }
 
 .dark {
@@ -477,145 +51,142 @@ html, :host {
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 212.7 26.8% 83.9%;
-  --sidebar-background: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
 }
 
-/* Typography System */
-h1 {
+/* Base styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 700;
-  letter-spacing: normal;
 }
 
-h1.large {
-  font-size: 30px;
-  line-height: 36px;
-  font-weight: 700;
-  letter-spacing: normal;
+/* Custom Tailwind Components */
+@layer components {
+  .gradient-bg {
+    @apply bg-gradient-exp;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  .exp-card {
+    @apply bg-exp-surface border border-exp-border rounded-xl p-6 shadow-elevate;
+  }
+  
+  .exp-button-primary {
+    @apply bg-exp-accent hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300;
+  }
+  
+  .exp-button-secondary {
+    @apply bg-exp-surface hover:bg-exp-border text-exp-muted hover:text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 border border-exp-border;
+  }
+  
+  .exp-input {
+    @apply bg-exp-surface border border-exp-border text-white placeholder-exp-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-exp-accent focus:border-transparent;
+  }
+  
+  .exp-text-primary {
+    @apply text-white;
+  }
+  
+  .exp-text-secondary {
+    @apply text-exp-muted;
+  }
+  
+  .exp-text-accent {
+    @apply text-exp-accent;
+  }
+  
+  .exp-heading-1 {
+    @apply text-4xl font-bold text-white;
+  }
+  
+  .exp-heading-2 {
+    @apply text-3xl font-semibold text-white;
+  }
+  
+  .exp-heading-3 {
+    @apply text-2xl font-semibold text-white;
+  }
+  
+  .exp-heading-4 {
+    @apply text-xl font-semibold text-white;
+  }
+  
+  .exp-body-large {
+    @apply text-lg text-exp-muted;
+  }
+  
+  .exp-body-medium {
+    @apply text-base text-exp-muted;
+  }
+  
+  .exp-body-small {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .exp-body-regular {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .login-left-column {
+    @apply bg-gradient-to-b from-slate-900/95 via-purple-900/90 to-cyan-900/85 bg-[length:200%_200%] animate-pulse;
+  }
+  
+  .login-right-column {
+    @apply bg-gradient-to-br from-slate-900 to-slate-800;
+  }
+  
+  .exp-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .exp-section {
+    @apply py-16;
+  }
+  
+  .exp-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-8;
+  }
+  
+  .exp-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .exp-grid-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
 }
 
-h1.medium {
-  font-size: 20px;
-  line-height: 28px;
-  font-weight: 700;
-  letter-spacing: normal;
+/* Animation keyframes */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-h2 {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-size: 30px;
-  line-height: 36px;
-  font-weight: 700;
-  letter-spacing: normal;
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
 }
 
-h3 {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-  letter-spacing: normal;
-}
-
-h3.large {
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 700;
-  letter-spacing: -0.6px;
-}
-
-p {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-  letter-spacing: normal;
-}
-
-p.large {
-  font-size: 18px;
-  line-height: 29.25px;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-p.medium {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-p.small {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-p.regular {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-/* Legacy Variables */
-:root {
-  --primary:#0B2A4A; --accent:#1E88E5;
-  --bg:#0F1522; --surface:#0F1B2D;
-  --muted:#8AA0B5; --border:#203045;
-  --success:#16A34A; --warning:#F59E0B; --danger:#EF4444;
-  --g1: linear-gradient(135deg,#0B2A4A 0%, #1E88E5 100%);
-  --g2: radial-gradient(1200px 600px at 20% -10%, rgba(30,136,229,.25), transparent 60%);
-}
-html { color-scheme: dark; }
-body { background: var(--bg); color: #E6EDF6; font-feature-settings: 'ss01' on; font-family: Inter, 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-
-/* Login Page Styles */
-.root {
-  display: flex;
-  height: 100vh;
-  background: linear-gradient(to bottom right, #0b0f1a, #0f172a);
-  color: #fff;
-}
-
-.left {
-  flex: 1;
-  padding: 3rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2rem;
-}
-
-.right {
-  flex: 1;
-  padding: 3rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.input {
-  background: #111827;
-  border: 1px solid #1f2937;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  color: white;
+/* Responsive utilities */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
 }
