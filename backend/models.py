@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import pytz
 
-from .db import db
+from db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Múi giờ +7 (Hanoi/Bangkok)

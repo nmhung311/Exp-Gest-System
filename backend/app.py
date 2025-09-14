@@ -4,8 +4,8 @@ from datetime import datetime
 import json
 from queue import Queue, Empty
 import pytz
-from .db import db
-from .models import Guest, Token, Checkin, Event, User
+from db import db
+from models import Guest, Token, Checkin, Event, User
 import secrets
 import csv
 import io
