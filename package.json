@@ -1,19 +1,19 @@
 {
   "name": "exp-gest-system",
+  "private": true,
   "version": "1.0.0",
-  "description": "Guest Management System with Cloudflare deployment",
-  "scripts": {
-    "deploy:frontend": "./deploy-cloudflare.sh",
-    "deploy:full": "./deploy-full.sh",
-    "build:frontend": "cd frontend && npm run build",
-    "install:frontend": "cd frontend && npm install",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && python app.py"
+  "description": "Monorepo: frontend (Next.js) + backend (Flask)",
+  "engines": {
+    "node": ">=18.17"
   },
-  "dependencies": {
-    "tailwindcss-animate": "^1.0.7"
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "install:frontend": "npm --prefix frontend ci || npm --prefix frontend install",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start:frontend": "npm --prefix frontend run start",
+    "dev:backend": "python backend/app.py"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "@cloudflare/next-on-pages": "^1.13.16"
   }
 }

@@ -1,6 +1,0 @@
-# Cấu hình cho Cloudflare Pages
-name = "exp-gest-system"
-compatibility_date = "2024-01-01"
-
-[env.production]
-name = "exp-gest-system"
