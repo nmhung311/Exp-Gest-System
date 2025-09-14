@@ -35,3 +35,4 @@ else
     echo "❌ Build thất bại! Không tìm thấy thư mục out."
     echo "Hãy kiểm tra logs build để xem lỗi gì."
 fi
+

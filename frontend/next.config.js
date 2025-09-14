@@ -5,8 +5,10 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
+  // Không cần basePath cho Cloudflare Pages
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
+  // basePath: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
 }
 
 module.exports = nextConfig
+
