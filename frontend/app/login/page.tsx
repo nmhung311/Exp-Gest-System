@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
+import { API_ENDPOINTS } from '@/lib/api'
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -14,7 +15,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const res = await fetch('http://localhost:5001/api/auth/login', {
+      const res = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -40,27 +41,33 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+      
+      <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">EXP</span>
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <span className="text-white font-bold text-2xl">EXP</span>
           </div>
-          <h1 className="text-xl font-bold text-white mb-1">EXP TECHNOLOGY</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">EXP TECHNOLOGY</h1>
           <p className="text-gray-400 text-sm">AI • Blockchain • Digital Solutions</p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-          <div className="text-center mb-6">
-            <h2 className="text-lg font-semibold text-white mb-1">Đăng nhập</h2>
-            <p className="text-gray-400 text-sm">Chào mừng bạn quay trở lại</p>
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-2">Đăng nhập</h2>
+            <p className="text-gray-400">Chào mừng bạn quay trở lại</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-3">
                 Tên đăng nhập hoặc Email
               </label>
               <input
@@ -68,14 +75,14 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 backdrop-blur-sm"
                 placeholder="Nhập tên đăng nhập hoặc email"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-3">
                 Mật khẩu
               </label>
               <input
@@ -83,14 +90,14 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 backdrop-blur-sm"
                 placeholder="Nhập mật khẩu"
                 required
               />
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm">
                 <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
@@ -98,16 +105,16 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <p className="text-gray-400 text-sm">
               Chưa có tài khoản?{" "}
-              <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium">
+              <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
                 Đăng ký ngay
               </Link>
             </p>
@@ -115,9 +122,12 @@ export default function LoginPage() {
         </div>
 
         {/* Back to Home */}
-        <div className="text-center mt-4">
-          <Link href="/" className="text-gray-500 hover:text-gray-300 text-sm">
-            ← Quay lại trang chủ
+        <div className="text-center mt-6">
+          <Link href="/" className="text-gray-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Quay lại trang chủ
           </Link>
         </div>
       </div>

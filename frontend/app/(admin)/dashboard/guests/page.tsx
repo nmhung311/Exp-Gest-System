@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
 import Portal from "../../../components/Portal"
+import { API_ENDPOINTS } from '@/lib/api'
 
 interface Guest {
   id: number
@@ -88,7 +89,7 @@ export default function GuestsPage(){
   async function loadGuests() {
     setLoading(true)
     try {
-      const res = await fetch("http://localhost:5001/api/guests")
+      const res = await fetch(API_ENDPOINTS.GUESTS.LIST)
       console.log("Load guests response:", res.status)
       if (res.ok) {
         const data = await res.json()

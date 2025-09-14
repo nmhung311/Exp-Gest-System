@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from "react"
+import { API_ENDPOINTS } from '@/lib/api'
 
 interface DashboardStats {
   totalGuests: number
@@ -54,15 +55,15 @@ export default function DashboardPage(){
       setLoading(true)
       
       // Load guests data
-      const guestsRes = await fetch("http://localhost:5001/api/guests")
+      const guestsRes = await fetch(API_ENDPOINTS.GUESTS.LIST)
       const guests = guestsRes.ok ? await guestsRes.json() : []
       
       // Load checked-in guests
-      const checkinRes = await fetch("http://localhost:5001/api/guests/checked-in")
+      const checkinRes = await fetch(API_ENDPOINTS.GUESTS.CHECKED_IN)
       const checkedInGuests = checkinRes.ok ? await checkinRes.json() : []
       
       // Load events data
-      const eventsRes = await fetch("http://localhost:5001/api/events")
+      const eventsRes = await fetch(API_ENDPOINTS.EVENTS.LIST)
       const events = eventsRes.ok ? await eventsRes.json() : []
       
       // Calculate today's check-ins
@@ -99,7 +100,7 @@ export default function DashboardPage(){
 
   const loadUpcomingEvents = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/events/upcoming?period=${selectedPeriod}`)
+      const response = await fetch(API_ENDPOINTS.EVENTS.UPCOMING(selectedPeriod))
       if (response.ok) {
         const events = await response.json()
         setUpcomingEvents(events)
