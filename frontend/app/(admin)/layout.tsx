@@ -1,5 +1,6 @@
-// CSS được import từ root layout
+"use client"
 import Image from "next/image"
+import { useState } from "react"
 import MeshBackground from "../components/MeshBackground"
 
 export default function AdminLayout({
@@ -7,30 +8,92 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   return (
     <MeshBackground>
       <header className="sticky top-0 z-50 border-b border-white/20 bg-black backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-            <div className="company-logo relative h-12 w-52 md:h-14 md:w-64 overflow-hidden">
-              <Image
-                src="/logo.png"
-                alt="Company Logo"
-                fill
-                sizes="(min-width: 768px) 256px, 208px"
-                className="object-contain"
-                priority
-              />
-            </div>
-          <nav className="flex items-center gap-4 text-sm text-white/80">
+          <div className="company-logo relative h-10 w-40 md:h-14 md:w-64 overflow-hidden">
+            <Image
+              src="/logo.png"
+              alt="Company Logo"
+              fill
+              sizes="(min-width: 768px) 256px, 160px"
+              className="object-contain"
+              priority
+            />
+          </div>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-4 text-sm text-white/80">
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard">Bảng điều khiển</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/guests">Khách mời</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/checkin">Check-in</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/events">Sự kiện</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/stats">Thống kê</a>
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-white/20 bg-black/95 backdrop-blur-md">
+            <nav className="px-4 py-4 space-y-2">
+              <a 
+                className="block hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm text-white/80" 
+                href="/dashboard"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Bảng điều khiển
+              </a>
+              <a 
+                className="block hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm text-white/80" 
+                href="/dashboard/guests"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Khách mời
+              </a>
+              <a 
+                className="block hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm text-white/80" 
+                href="/dashboard/checkin"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Check-in
+              </a>
+              <a 
+                className="block hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm text-white/80" 
+                href="/dashboard/events"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sự kiện
+              </a>
+              <a 
+                className="block hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm text-white/80" 
+                href="/dashboard/stats"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Thống kê
+              </a>
+            </nav>
+          </div>
+        )}
       </header>
-      <main className="w-full px-14 py-8 space-y-6">{children}</main>
+      <main className="w-full px-4 md:px-14 py-4 md:py-8 space-y-4 md:space-y-6">{children}</main>
       <footer className="mx-auto max-w-6xl px-4 py-10 text-xs text-white/60">© 2025 EXP Technology Company Limited</footer>
     </MeshBackground>
   )

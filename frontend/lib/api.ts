@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = 'https://exp-gest-system.vercel.app/api'
+export const API_BASE_URL = 'http://localhost:3000/api'
 
 // API Endpoints
 export const API_ENDPOINTS = {
