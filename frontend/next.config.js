@@ -5,9 +5,12 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  // Không cần basePath cho Cloudflare Pages
-  // assetPrefix: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
-  // basePath: process.env.NODE_ENV === 'production' ? '/Exp-Gest-System' : '',
+  // Cấu hình cho Cloudflare Pages
+  distDir: 'out',
+  // Tối ưu cho static export
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
 }
 
 module.exports = nextConfig

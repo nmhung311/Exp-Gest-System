@@ -1,5 +1,19 @@
 {
+  "name": "exp-gest-system",
+  "version": "1.0.0",
+  "description": "Guest Management System with Cloudflare deployment",
+  "scripts": {
+    "deploy:frontend": "./deploy-cloudflare.sh",
+    "deploy:full": "./deploy-full.sh",
+    "build:frontend": "cd frontend && npm run build",
+    "install:frontend": "cd frontend && npm install",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && python app.py"
+  },
   "dependencies": {
     "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
   }
 }
