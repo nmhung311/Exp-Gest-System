@@ -43,12 +43,14 @@ interface EditCheckinState {
 
 export default function CheckinPage(){
   const [checkedInGuests, setCheckedInGuests] = useState<CheckedInGuest[]>([])
+  const [allGuests, setAllGuests] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [qrCode, setQrCode] = useState("")
   const [isScannerActive, setIsScannerActive] = useState(false)
   const [events, setEvents] = useState<Event[]>([])
+  const [selectedCard, setSelectedCard] = useState<'total' | 'scanned' | 'notScanned' | null>(null)
   
   // Debug log khi isScannerActive thay đổi
   useEffect(() => {
@@ -70,7 +72,8 @@ export default function CheckinPage(){
   // Load events
   const loadEvents = async () => {
     try {
-      const data = await api.getEvents()
+      const response = await api.getEvents()
+      const data = await response.json()
       // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
       const sortedEvents = data.sort((a: Event, b: Event) => {
         const dateA = new Date(a.date)
@@ -89,6 +92,11 @@ export default function CheckinPage(){
 
   // Initial load checked-in guests
   useEffect(() => { loadCheckedInGuests() }, [])
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    loadCheckedInGuests(true)
+  }
 
   // Function to add notification with enhanced features
   const addNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', undoAction?: () => void) => {
@@ -155,12 +163,23 @@ export default function CheckinPage(){
     }, autoHideMs)
   }
 
-  async function loadCheckedInGuests() {
+  async function loadCheckedInGuests(showNotification: boolean = false) {
     setLoading(true)
     try {
+      console.log('Refreshing checked-in guests...')
       // Đồng bộ nguồn dữ liệu với trang Khách mời: dùng /api/guests rồi lọc
-      const payload = await api.getGuests()
-      const allGuests = Array.isArray(payload?.guests) ? payload.guests : []
+      const response = await api.getGuests()
+      console.log('API response status:', response.status)
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const payload = await response.json()
+      console.log('API payload:', payload)
+      const allGuestsData = Array.isArray(payload?.guests) ? payload.guests : []
+      console.log('All guests count:', allGuestsData.length)
+      setAllGuests(allGuestsData)
         // Đọc sự kiện người dùng đã chọn ở trang Khách mời (nếu có)
         let selectedEventId: number | null = null
         try {
@@ -171,7 +190,7 @@ export default function CheckinPage(){
           }
         } catch {}
 
-        const arrived = allGuests
+        const arrived = allGuestsData
           .filter((g: any) => g?.checkin_status === 'arrived')
           .filter((g: any) => selectedEventId ? (g?.event_id === selectedEventId) : true)
           .map((g: any) => ({
@@ -188,10 +207,20 @@ export default function CheckinPage(){
             event_id: g.event_id,
             event_name: g.event_name,
           }))
+        
+        console.log('Selected event ID:', selectedEventId)
+        console.log('Filtered arrived guests count:', arrived.length)
+        console.log('Arrived guests:', arrived)
         setCheckedInGuests(arrived)
+        
+        // Thông báo refresh thành công (chỉ khi được yêu cầu)
+        if (showNotification) {
+          addNotification(`Đã làm mới danh sách\nTìm thấy ${arrived.length} khách đã check-in`, "success")
+        }
     } catch (error) {
       console.error("Error loading guests:", error)
       setCheckedInGuests([])
+      addNotification("Lỗi khi làm mới danh sách\nVui lòng thử lại", "error")
     } finally {
       setLoading(false)
     }
@@ -208,6 +237,17 @@ export default function CheckinPage(){
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
+  // Lắng nghe thay đổi dữ liệu khách mời từ các trang khác
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'exp_guests_updated') {
+        loadCheckedInGuests()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   async function handleCheckIn() {
     if (!qrCode.trim()) {
       addNotification("Vui lòng nhập mã QR", "warning")
@@ -215,26 +255,35 @@ export default function CheckinPage(){
     }
     
     try {
-      const data = await api.checkinGuest({ qr_code: qrCode })
+      console.log('=== MANUAL CHECK-IN START ===')
+      console.log('QR Code input:', qrCode)
+      console.log('QR Code length:', qrCode.length)
+      
+      const response = await api.checkinGuest({ qr_code: qrCode })
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+      
+      const data = await response.json()
+      console.log('Response data:', data)
 
-      if (data) {
+      if (data && data.message === "ok") {
         const checkinTime = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-        addNotification(`✅ Check-in thành công!\n👋 Chào mừng ${data.guest.name}\n🕐 ${checkinTime}`, "success")
+        addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${checkinTime}`, "success")
         setQrCode("")
         loadCheckedInGuests()
       } else {
         if (response.status === 409) {
           const checkinTime = new Date(data.checked_in_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-          addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in\n🕐 Lúc: ${checkinTime}`, "warning")
+          addNotification(`${data.guest?.name || "Khách"} đã check-in\nLúc: ${checkinTime}`, "warning")
         } else if (response.status === 410) {
-          addNotification("❌ Token đã hết hạn\n🔄 Vui lòng tạo mã QR mới", "error")
+          addNotification("Token đã hết hạn\nVui lòng tạo mã QR mới", "error")
         } else {
-          addNotification(`❌ Check-in thất bại\n📝 ${data.message || "Lỗi không xác định"}`, "error")
+          addNotification(`Check-in thất bại\n${data.message || "Lỗi không xác định"}`, "error")
         }
       }
     } catch (error) {
       console.error("Check-in error:", error)
-      addNotification("❌ Lỗi kết nối\n🔄 Vui lòng thử lại", "error")
+      addNotification("Lỗi kết nối\nVui lòng thử lại", "error")
     }
   }
 
@@ -252,26 +301,27 @@ export default function CheckinPage(){
       
       // Debounce đã được xử lý trong WorkingQRScanner component
       
-      const data = await api.checkinGuest({ qr_code: token })
+      const response = await api.checkinGuest({ qr_code: token })
+      const data = await response.json()
       console.log('Check-in data:', data)
 
       if (data) {
         const checkinTime = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-        addNotification(`✅ Check-in thành công!\n👋 Chào mừng ${data.guest.name}\n🕐 ${checkinTime}`, "success")
+        addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${checkinTime}`, "success")
         loadCheckedInGuests()
       } else {
         if (response.status === 409) {
           const checkinTime = new Date(data.checked_in_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-          addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in\n🕐 Lúc: ${checkinTime}`, "warning")
+          addNotification(`${data.guest?.name || "Khách"} đã check-in\nLúc: ${checkinTime}`, "warning")
         } else if (response.status === 410) {
-          addNotification("❌ Token đã hết hạn\n🔄 Vui lòng tạo mã QR mới", "error")
+          addNotification("Token đã hết hạn\nVui lòng tạo mã QR mới", "error")
         } else {
-          addNotification(`❌ Check-in thất bại\n📝 ${data.message || "Lỗi không xác định"}`, "error")
+          addNotification(`Check-in thất bại\n${data.message || "Lỗi không xác định"}`, "error")
         }
       }
     } catch (error) {
       console.error("Check-in error:", error)
-      addNotification("❌ Lỗi kết nối\n🔄 Vui lòng thử lại", "error")
+      addNotification("Lỗi kết nối\nVui lòng thử lại", "error")
     }
   }
 
@@ -315,27 +365,128 @@ export default function CheckinPage(){
         
         // Thêm thông báo với chức năng hoàn tác
         addNotification(
-          `🗑️ Đã xóa ${guest.name}\n↩️ Khỏi danh sách check-in`,
+          `Đã xóa ${guest.name}\nKhỏi danh sách check-in`,
           'success',
           () => {
             // Hoàn tác: thêm lại vào danh sách
             setCheckedInGuests(prev => [...prev, originalGuest])
-            addNotification(`↩️ Đã hoàn tác\n👋 ${guest.name} đã được thêm lại`, 'info')
           }
         )
         
         closeEditPopup()
       } else {
-        addNotification('❌ Lỗi khi xóa check-in\n🔄 Vui lòng thử lại', 'error')
+        addNotification('Lỗi khi xóa check-in\nVui lòng thử lại', 'error')
       }
     } catch (error) {
       console.error('Error deleting check-in:', error)
-      addNotification('❌ Lỗi kết nối khi xóa check-in\n🔄 Vui lòng thử lại', 'error')
+      addNotification('Lỗi kết nối khi xóa check-in\nVui lòng thử lại', 'error')
     }
   }
 
+  // Calculate statistics - across all checked-in guests
+  const eventCheckedInGuests = checkedInGuests
+  
+  // Lấy sự kiện đã chọn từ localStorage
+  let selectedEventId: number | null = null
+  try {
+    const saved = localStorage.getItem('exp_selected_event')
+    if (saved && saved !== '""' && saved !== 'null' && saved !== 'undefined') {
+      const parsed = Number(saved.replace(/"/g, ''))
+      if (!Number.isNaN(parsed)) selectedEventId = parsed
+    }
+  } catch {}
+  
+  // Tính số khách đã xác nhận nhưng chưa check-in
+  const acceptedButNotCheckedIn = allGuests.filter((g: any) => {
+    const isAccepted = g?.rsvp_status === 'accepted'
+    const isNotCheckedIn = g?.checkin_status !== 'arrived'
+    const isForSelectedEvent = selectedEventId ? (g?.event_id === selectedEventId) : true
+    const result = isAccepted && isNotCheckedIn && isForSelectedEvent
+    
+    // Debug log
+    if (result) {
+      console.log('Found accepted but not checked in guest:', {
+        name: g.name,
+        rsvp_status: g.rsvp_status,
+        checkin_status: g.checkin_status,
+        event_id: g.event_id,
+        selectedEventId
+      })
+    }
+    
+    return result
+  }).length
+  
+  console.log('Debug stats calculation:', {
+    allGuestsCount: allGuests.length,
+    selectedEventId,
+    acceptedButNotCheckedIn,
+    allGuests: allGuests.map(g => ({
+      name: g.name,
+      rsvp_status: g.rsvp_status,
+      checkin_status: g.checkin_status,
+      event_id: g.event_id
+    }))
+  })
+
+  // Tính danh sách khách đã xác nhận và đã check-in
+  const scannedGuests = allGuests.filter((g: any) => {
+    const isAccepted = g?.rsvp_status === 'accepted'
+    const isCheckedIn = g?.checkin_status === 'arrived'
+    const isForSelectedEvent = selectedEventId ? (g?.event_id === selectedEventId) : true
+    return isAccepted && isCheckedIn && isForSelectedEvent
+  }).map((g: any) => ({
+    id: g.id,
+    name: g.name,
+    title: g.title,
+    position: g.position,
+    company: g.company,
+    tag: g.tag,
+    email: g.email,
+    phone: g.phone,
+    checked_in_at: g.checked_in_at || '',
+    checkin_method: g.checkin_method || 'manual',
+    event_id: g.event_id,
+    event_name: g.event_name,
+  }))
+
+  // Tính danh sách khách đã xác nhận nhưng chưa check-in
+  const notScannedGuests = allGuests.filter((g: any) => {
+    const isAccepted = g?.rsvp_status === 'accepted'
+    const isNotCheckedIn = g?.checkin_status !== 'arrived'
+    const isForSelectedEvent = selectedEventId ? (g?.event_id === selectedEventId) : true
+    return isAccepted && isNotCheckedIn && isForSelectedEvent
+  }).map((g: any) => ({
+    id: g.id,
+    name: g.name,
+    title: g.title,
+    position: g.position,
+    company: g.company,
+    tag: g.tag,
+    email: g.email,
+    phone: g.phone,
+    rsvp_status: g.rsvp_status,
+    event_id: g.event_id,
+    event_name: g.event_name,
+  }))
+    
+  const stats = {
+    total: eventCheckedInGuests.length,
+    scanned: eventCheckedInGuests.length,
+    notScanned: acceptedButNotCheckedIn
+  }
+
+  // Lấy danh sách hiển thị dựa trên card được chọn
+  const getDisplayGuests = () => {
+    if (selectedCard === 'scanned') return scannedGuests
+    if (selectedCard === 'notScanned') return notScannedGuests
+    return checkedInGuests // Mặc định hiển thị danh sách đã check-in
+  }
+
+  const displayGuests = getDisplayGuests()
+
   // Filter guests based on search term
-  const filteredGuests = checkedInGuests.filter(guest => {
+  const filteredGuests = displayGuests.filter(guest => {
     const matchesSearch = guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          guest.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          guest.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -357,30 +508,6 @@ export default function CheckinPage(){
     setCurrentPage(1)
   }, [searchTerm])
 
-  // Calculate statistics - across all checked-in guests
-  const eventCheckedInGuests = checkedInGuests
-    
-  const stats = {
-    total: eventCheckedInGuests.length,
-    today: eventCheckedInGuests.filter(g => {
-      const today = new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-      const checkinDate = new Date(g.checked_in_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-      return today === checkinDate
-    }).length,
-    thisWeek: eventCheckedInGuests.filter(g => {
-      const now = new Date()
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const checkinTime = new Date(g.checked_in_at)
-      return checkinTime >= weekAgo
-    }).length,
-    thisMonth: eventCheckedInGuests.filter(g => {
-      const now = new Date()
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      const checkinTime = new Date(g.checked_in_at)
-      return checkinTime >= monthAgo
-    }).length
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Event selection section removed as requested */}
@@ -393,11 +520,11 @@ export default function CheckinPage(){
         }
       `}</style>
       <Portal>
-        <div className="fixed top-2 sm:top-4 right-2 sm:right-4 left-2 sm:left-auto z-[99999] space-y-2 max-w-[95vw] sm:max-w-xs">
+        <div className="fixed top-16 right-0 z-[99999] space-y-2 w-[200px] sm:max-w-xs">
           {notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`px-3 sm:px-4 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-md border transition-all duration-500 transform ${
+              className={`px-3 sm:px-4 py-3 sm:py-4 rounded-l-xl sm:rounded-l-2xl shadow-2xl backdrop-blur-md border transition-all duration-500 transform ${
                 notification.visible 
                   ? 'translate-x-0 opacity-100 scale-100' 
                   : 'translate-x-full opacity-0 scale-95'
@@ -411,44 +538,45 @@ export default function CheckinPage(){
                   : 'border-cyan-400/30 bg-gradient-to-br from-cyan-600/40 via-cyan-500/30 to-cyan-400/20 text-white'
               }`}
             >
-              <div className="flex items-start justify-between gap-2 sm:gap-3">
-                <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
-                  {notification.type === 'success' && (
-                    <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-emerald-500/20 rounded-full flex-none flex items-center justify-center border border-emerald-400/30 mt-0.5">
-                      <Icons.Success className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300" />
-                    </span>
-                  )}
-                  {notification.type === 'error' && (
-                    <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-rose-500/20 rounded-full flex-none flex items-center justify-center border border-rose-400/30 mt-0.5">
-                      <Icons.Error className="w-3 h-3 sm:w-4 sm:h-4 text-rose-300" />
-                    </span>
-                  )}
-                  {notification.type === 'warning' && (
-                    <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-amber-500/20 rounded-full flex-none flex items-center justify-center border border-amber-400/30 mt-0.5">
-                      <Icons.Warning className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300" />
-                    </span>
-                  )}
-                  {notification.type === 'info' && (
-                    <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-cyan-500/20 rounded-full flex-none flex items-center justify-center border border-cyan-400/30 mt-0.5">
-                      <Icons.Info className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-300" />
-                    </span>
-                  )}
-                  <div className="relative overflow-hidden flex-1 min-w-0">
-                    <div className="text-xs sm:text-sm font-medium leading-relaxed whitespace-pre-line">
-                      {notification.message}
-                    </div>
-                  </div>
-                </div>
-                {notification.undoAction && (
-                  <button
-                    onClick={notification.undoAction}
-                    className="flex-shrink-0 text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap mt-0.5"
-                  >
-                    <Icons.Undo className="w-3 h-3" />
-                    <span className="hidden sm:inline">Hoàn tác</span>
-                    <span className="sm:hidden">↩️</span>
-                  </button>
+              <div className="flex items-start gap-2 sm:gap-3">
+                {notification.type === 'success' && (
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-emerald-500/20 rounded-full flex-none flex items-center justify-center border border-emerald-400/30">
+                    <Icons.Success className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300" />
+                  </span>
                 )}
+                {notification.type === 'error' && (
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-rose-500/20 rounded-full flex-none flex items-center justify-center border border-rose-400/30">
+                    <Icons.Error className="w-3 h-3 sm:w-4 sm:h-4 text-rose-300" />
+                  </span>
+                )}
+                {notification.type === 'warning' && (
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-amber-500/20 rounded-full flex-none flex items-center justify-center border border-amber-400/30">
+                    <Icons.Warning className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300" />
+                  </span>
+                )}
+                {notification.type === 'info' && (
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 aspect-square bg-cyan-500/20 rounded-full flex-none flex items-center justify-center border border-cyan-400/30">
+                    <Icons.Info className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-300" />
+                  </span>
+                )}
+                <div className="relative overflow-hidden flex-1 min-w-0">
+                  <div className="text-sm font-medium leading-relaxed whitespace-pre-line">
+                    {notification.message}
+                  </div>
+                  {notification.undoAction && (
+                    <button
+                      onClick={() => {
+                        notification.undoAction?.()
+                        // Đóng thông báo ngay lập tức
+                        setNotifications(prev => prev.filter(notif => notif.id !== notification.id))
+                      }}
+                      className="mt-2 text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors items-center gap-1.5 flex w-fit"
+                    >
+                      <Icons.Undo className="w-3 h-3" />
+                      <span>Hoàn tác</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -458,7 +586,7 @@ export default function CheckinPage(){
       <div className="flex items-center justify-between gap-3 sm:gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Check-in</h1>
         <button 
-          onClick={loadCheckedInGuests}
+          onClick={handleRefresh}
           className="px-3 sm:px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors flex items-center gap-2 text-sm sm:text-base"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,20 +601,43 @@ export default function CheckinPage(){
       <>
 
       {/* Statistics Cards - Mobile Optimized */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         {/* Total Check-ins Card */}
-        <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
+        <div 
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            selectedCard === 'total' 
+              ? 'bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30' 
+              : 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/20'
+          }`}
+          onClick={() => setSelectedCard(selectedCard === 'total' ? null : 'total')}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3">
+              {/* Mobile: Text above, icon+number below */}
+              <div className="text-center sm:text-left mb-2 sm:mb-0 sm:hidden">
+                <div className="text-xs text-cyan-300/80 font-medium">Tổng</div>
               </div>
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{stats.total}</div>
-                <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng</div>
+              <div className="flex items-center justify-center sm:justify-end gap-2 sm:hidden">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="text-xl font-bold text-white">{stats.scanned}</div>
+              </div>
+              
+              {/* Desktop: Icon - Text - Number */}
+              <div className="hidden sm:flex sm:items-center sm:justify-between sm:w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-cyan-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-sm text-cyan-300/80 font-medium">Tổng</div>
+                </div>
+                <div className="text-3xl font-bold text-white">{stats.scanned}</div>
               </div>
             </div>
             <div className="h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
@@ -495,68 +646,94 @@ export default function CheckinPage(){
           </div>
         </div>
 
-        {/* Today Card */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+        {/* Đã quét Card */}
+        <div 
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            selectedCard === 'scanned' 
+              ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30' 
+              : 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 hover:shadow-lg hover:shadow-green-500/20'
+          }`}
+          onClick={() => setSelectedCard(selectedCard === 'scanned' ? null : 'scanned')}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3">
+              {/* Mobile: Text above, icon+number below */}
+              <div className="text-center sm:text-left mb-2 sm:mb-0 sm:hidden">
+                <div className="text-xs text-green-300/80 font-medium">Đã quét</div>
               </div>
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{stats.today}</div>
-                <div className="text-xs sm:text-sm text-green-300/80 font-medium">Hôm nay</div>
+              <div className="flex items-center justify-center sm:justify-end gap-2 sm:hidden">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <div className="text-xl font-bold text-white">{stats.scanned}</div>
+              </div>
+              
+              {/* Desktop: Icon - Text - Number */}
+              <div className="hidden sm:flex sm:items-center sm:justify-between sm:w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                  </div>
+                  <div className="text-sm text-green-300/80 font-medium">Đã quét</div>
+                </div>
+                <div className="text-3xl font-bold text-white">{stats.scanned}</div>
               </div>
             </div>
             <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.today / stats.total) * 100 : 0}%`}}></div>
+              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full w-full"></div>
             </div>
           </div>
         </div>
 
-        {/* This Week Card */}
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-blue-500/20 hover:to-indigo-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        {/* Chưa quét Card */}
+        <div 
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            selectedCard === 'notScanned' 
+              ? 'bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30' 
+              : 'bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 hover:from-orange-500/20 hover:to-red-500/20 hover:border-orange-400/40 hover:shadow-lg hover:shadow-orange-500/20'
+          }`}
+          onClick={() => setSelectedCard(selectedCard === 'notScanned' ? null : 'notScanned')}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3">
+              {/* Mobile: Text above, icon+number below */}
+              <div className="text-center sm:text-left mb-2 sm:mb-0 sm:hidden">
+                <div className="text-xs text-orange-300/80 font-medium">Chưa quét</div>
               </div>
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{stats.thisWeek}</div>
-                <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tuần này</div>
+              <div className="flex items-center justify-center sm:justify-end gap-2 sm:hidden">
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="text-xl font-bold text-white">{stats.notScanned}</div>
+              </div>
+              
+              {/* Desktop: Icon - Text - Number */}
+              <div className="hidden sm:flex sm:items-center sm:justify-between sm:w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-orange-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div className="text-sm text-orange-300/80 font-medium">Chưa quét</div>
+                </div>
+                <div className="text-3xl font-bold text-white">{stats.notScanned}</div>
               </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.thisWeek / stats.total) * 100 : 0}%`}}></div>
+            <div className="h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{width: `${stats.scanned + stats.notScanned > 0 ? (stats.notScanned / (stats.scanned + stats.notScanned)) * 100 : 0}%`}}></div>
             </div>
           </div>
         </div>
 
-        {/* This Month Card */}
-        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{stats.thisMonth}</div>
-                <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Tháng này</div>
-              </div>
-            </div>
-            <div className="h-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.thisMonth / stats.total) * 100 : 0}%`}}></div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* QR Scanner Section - Mobile Optimized */}
@@ -572,12 +749,12 @@ export default function CheckinPage(){
           <div className="space-y-3 sm:space-y-4">
             <button
               onClick={() => setIsScannerActive(true)}
-              className="group relative w-full px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 sm:gap-3 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20"
+              className="group relative w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white rounded-xl hover:from-cyan-600 hover:to-indigo-600 transition-all duration-300 font-semibold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:shadow-cyan-500/25 text-base"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
               </svg>
-              <span className="text-sm sm:text-base">Bật camera quét QR</span>
+              <span>Bật camera quét QR</span>
             </button>
             
             <div className="text-center text-white/60 text-xs sm:text-sm">
@@ -595,12 +772,12 @@ export default function CheckinPage(){
               />
               <button
                 onClick={handleCheckIn}
-                className="group relative px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                className="group relative px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg hover:from-cyan-500/30 hover:to-indigo-500/30 hover:border-cyan-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/20"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-sm sm:text-base">Ghi nhận</span>
+                <span className="text-sm sm:text-base">Xác nhận check-in</span>
               </button>
             </div>
           </div>
@@ -657,19 +834,28 @@ export default function CheckinPage(){
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
             </svg>
-            <span className="text-sm sm:text-base">Danh sách đã check-in</span>
+            <span className="text-sm sm:text-base">
+              {selectedCard === 'scanned' ? 'Danh sách đã quét' : 
+               selectedCard === 'notScanned' ? 'Danh sách chưa quét' : 
+               'Danh sách đã check-in'}
+            </span>
             <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
               {filteredGuests.length}
             </span>
           </h2>
           <div className="flex gap-2 sm:gap-4">
-            <input
-              type="text"
-              placeholder="Tìm kiếm..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm"
-            />
+            <div className="relative flex-1 sm:flex-none">
+              <input
+                type="text"
+                placeholder="Tìm kiếm khách mời..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+              />
+              <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -679,18 +865,33 @@ export default function CheckinPage(){
           </div>
         ) : filteredGuests.length === 0 ? (
           <div className="text-center py-8 sm:py-12">
-            <svg className="w-12 h-12 sm:w-16 sm:h-16 text-white/30 mx-auto mb-3 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-white/60 text-base sm:text-lg">Chưa có khách nào check-in</p>
-            <p className="text-white/40 text-xs sm:text-sm mt-2">Sử dụng form check-in nhanh ở trên để check-in khách mời</p>
+            <div className="relative mb-6">
+              <svg className="w-16 h-16 sm:w-20 sm:h-20 text-white/20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <h3 className="text-white/80 text-lg sm:text-xl font-medium mb-2">Chưa ai check-in</h3>
+            <p className="text-white/60 text-sm sm:text-base mb-4">Quét QR để bắt đầu nhé</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 rounded-lg">
+              <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-white/60 text-xs">Sử dụng nút "Bật camera quét QR" ở trên</span>
+            </div>
           </div>
         ) : (
           <>
             {/* Mobile Card View */}
             <div className="block lg:hidden space-y-3">
               {currentGuests.map((guest, index) => (
-                <div key={guest.id} className="bg-black/20 border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-colors">
+                <div key={guest.id} className="bg-black/20 border border-white/10 rounded-2xl p-4 hover:bg-black/30 transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -704,44 +905,53 @@ export default function CheckinPage(){
                         <p className="text-white/60 text-xs truncate">{guest.email}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => openEditPopup(guest)}
-                      className="flex-shrink-0 p-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
+                    {selectedCard !== 'notScanned' && 'checked_in_at' in guest && (
+                      <button
+                        onClick={() => openEditPopup(guest as CheckedInGuest)}
+                        className="flex-shrink-0 p-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
                       <span className="text-white/60">Vai trò:</span>
-                      <p className="text-white/80 truncate">{guest.position || '-'}</p>
-                    </div>
-                    <div>
+                      <span className="text-white/80 truncate">{guest.position || '-'}</span>
+                      <span className="text-white/40">•</span>
                       <span className="text-white/60">Tổ chức:</span>
-                      <p className="text-white/80 truncate">{guest.company || '-'}</p>
+                      <span className="text-white/80 truncate">{guest.company || '-'}</span>
                     </div>
-                    <div>
-                      <span className="text-white/60">Check-in:</span>
-                      <p className="text-white/80">
-                        {new Date(guest.checked_in_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                      </p>
-                      <p className="text-white/60">
-                        {new Date(guest.checked_in_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-white/60">Phương thức:</span>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded-full flex items-center gap-1 w-fit">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
-                          </svg>
-                          QR
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {selectedCard === 'notScanned' ? (
+                        <>
+                          <span className="text-white/60">Trạng thái:</span>
+                          <span className="px-2 py-0.5 text-xs bg-orange-500/20 text-orange-400 rounded-full border border-orange-500/30">
+                            Chưa check-in
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-white/60">Check-in:</span>
+                          <span className="text-white/80">
+                            {'checked_in_at' in guest && guest.checked_in_at ? new Date(guest.checked_in_at).toLocaleString('vi-VN', { 
+                              timeZone: 'Asia/Ho_Chi_Minh',
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '-'}
+                          </span>
+                          <span className="text-white/40">•</span>
+                          <span className="text-white/60">Phương thức:</span>
+                          <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full border border-white/20">
+                            {'checkin_method' in guest ? (guest.checkin_method || '-') : '-'}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   
@@ -795,31 +1005,52 @@ export default function CheckinPage(){
                         )}
                       </td>
                       <td className="px-4 py-4 text-white/80">
-                        <div className="text-sm">
-                          {new Date(guest.checked_in_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                        </div>
-                        <div className="text-xs text-white/60">
-                          {new Date(guest.checked_in_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                        </div>
+                        {selectedCard === 'notScanned' ? (
+                          <span className="text-white/40">-</span>
+                        ) : (
+                          <>
+                            <div className="text-sm">
+                              {'checked_in_at' in guest && guest.checked_in_at ? new Date(guest.checked_in_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
+                            </div>
+                            <div className="text-xs text-white/60">
+                              {'checked_in_at' in guest && guest.checked_in_at ? new Date(guest.checked_in_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
+                            </div>
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-4">
-                        <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded-full flex items-center gap-1 w-fit">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
-                          </svg>
-                          QR Code
-                        </span>
+                        {selectedCard === 'notScanned' ? (
+                          <span className="px-2 py-1 text-xs bg-orange-500/20 text-orange-400 rounded-full flex items-center gap-1 w-fit">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            Chưa check-in
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded-full flex items-center gap-1 w-fit">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
+                            </svg>
+                            QR Code
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => openEditPopup(guest)}
-                          className="group relative px-3 py-1 text-xs bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 rounded-full transition-all duration-300 flex items-center gap-1 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Chỉnh sửa
-                        </button>
+                        {selectedCard === 'notScanned' ? (
+                          <span className="text-white/40 text-xs">-</span>
+                        ) : (
+                          'checked_in_at' in guest && (
+                            <button
+                              onClick={() => openEditPopup(guest as CheckedInGuest)}
+                              className="group relative px-3 py-1 text-xs bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 rounded-full transition-all duration-300 flex items-center gap-1 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Chỉnh sửa
+                            </button>
+                          )
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1014,5 +1245,7 @@ export default function CheckinPage(){
     </div>
   )
 }
+
+
 
 

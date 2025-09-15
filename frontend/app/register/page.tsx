@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { API_ENDPOINTS } from '@/lib/api'
+import BackgroundOverlay from "../components/BackgroundOverlay"
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("")
@@ -47,7 +48,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex">
+    <>
+      <BackgroundOverlay />
+      <div className="min-h-screen flex">
       {/* Left Section - Information Panel */}
       <div className="hidden lg:flex lg:w-2/3 bg-slate-900 relative overflow-hidden">
         {/* Background Effects */}
@@ -324,6 +327,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

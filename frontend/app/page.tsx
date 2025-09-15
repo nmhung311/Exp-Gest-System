@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import BackgroundOverlay from "./components/BackgroundOverlay"
 
 export default function HomePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -24,8 +25,10 @@ export default function HomePage() {
   }, [isMobileMenuOpen])
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Header */}
+    <>
+      <BackgroundOverlay />
+      <div className="min-h-screen">
+        {/* Header */}
       <header className="relative z-50 px-3 sm:px-6 py-3 sm:py-4 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3">
@@ -401,6 +404,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   )
 }

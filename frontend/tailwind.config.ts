@@ -81,9 +81,6 @@ export default {
       },
       backgroundImage: {
         "gradient-exp": "linear-gradient(135deg, #0B2A4A 0%, #1E88E5 100%)",
-        "gradient-exp-radial": "radial-gradient(1200px 600px at 20% -10%, rgba(30,136,229,.25), transparent 60%)",
-        // Gradients from expsolution.io
-        "gradient-primary": "radial-gradient(1200px 1200px at 50% 50%, hsl(var(--brand)/.25), transparent 50%), linear-gradient(180deg, hsl(222.2 84% 6%) 0%, hsl(222.2 84% 4.9%) 40%, hsl(222.2 84% 4%) 100%)",
         "gradient-accent": "linear-gradient(135deg, hsl(var(--brand)), hsl(var(--brand-2)) 60%, hsl(var(--brand-3)) 100%)",
         // Custom radial gradient for background
         "gradient-radial": "radial-gradient(ellipse at center, var(--tw-gradient-stops))",

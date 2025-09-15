@@ -58,12 +58,12 @@ export default function CustomDropdown({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white text-sm
-          hover:bg-white/20 transition-colors duration-200
-          focus:outline-none focus:ring-2 focus:ring-blue-500/50
+          w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm
+          hover:bg-white/10 hover:border-white/30 transition-all duration-200
+          focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50
           disabled:opacity-50 disabled:cursor-not-allowed
           flex items-center justify-between
-          ${isOpen ? 'bg-white/20' : ''}
+          ${isOpen ? 'bg-white/10 border-white/30' : ''}
         `}
       >
         <span className="truncate">
@@ -81,7 +81,7 @@ export default function CustomDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-[9999] w-full mt-1 bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl overflow-hidden">
           <div className="max-h-60 overflow-y-auto">
             {options.map((option, index) => (
               <button
@@ -93,7 +93,7 @@ export default function CustomDropdown({
                   w-full px-3 py-2 text-left text-sm transition-colors duration-150
                   hover:bg-white/10 focus:bg-white/10 focus:outline-none
                   ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                  ${option.value === value ? 'bg-blue-500/20 text-blue-400' : 'text-white'}
+                  ${option.value === value ? 'bg-blue-500/30 text-blue-300 border-l-2 border-blue-400' : 'text-white/90'}
                   ${index === 0 ? 'rounded-t-lg' : ''}
                   ${index === options.length - 1 ? 'rounded-b-lg' : ''}
                 `}

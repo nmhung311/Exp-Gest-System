@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
     LOGIN: `${API_BASE_URL}/api/auth/login`,
     REGISTER: `${API_BASE_URL}/api/auth/register`,
     USERS: `${API_BASE_URL}/api/auth/users`,
+    ME: `${API_BASE_URL}/api/auth/me`,
   },
 } as const
 

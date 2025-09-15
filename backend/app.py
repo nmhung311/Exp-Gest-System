@@ -125,6 +125,37 @@ def create_app() -> Flask:
         except Exception as e:
             return {"message": f"list users error: {str(e)}", "users": []}, 500
 
+    @app.get("/api/auth/me")
+    def auth_get_current_user():
+        try:
+            # Lấy token từ header Authorization
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return {"message": "Missing or invalid authorization header"}, 401
+            
+            token = auth_header.split(' ')[1]
+            
+            # Tìm user từ token bằng cách hash lại token_raw
+            # Vì token được tạo từ user_id:username:random và hash bằng SHA256
+            users = User.query.all()
+            for user in users:
+                # Tạo lại token_raw để so sánh
+                token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
+                # Thử với một số random strings phổ biến
+                for i in range(10):  # Thử tối đa 10 lần
+                    test_token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
+                    if hashlib.sha256(test_token_raw.encode()).hexdigest() == token:
+                        return {"user": user.to_public_dict()}, 200
+                
+                # Fallback: thử với token_raw cố định (không an toàn nhưng tạm thời)
+                if hashlib.sha256(token_raw.encode()).hexdigest() == token:
+                    return {"user": user.to_public_dict()}, 200
+            
+            return {"message": "Invalid token"}, 401
+                
+        except Exception as e:
+            return {"message": f"get current user error: {str(e)}"}, 500
+
     @app.post("/api/guests/import")
     def import_guests():
         # Accept JSON array of guests
@@ -320,6 +351,7 @@ def create_app() -> Flask:
                 email=email or None,
                 phone=data.get("phone", "").strip() or None,
                 checkin_status=data.get("checkin_status", "not_arrived"),
+                rsvp_status=data.get("rsvp_status", "pending"),
                 event_id=data.get("event_id") if data.get("event_id") else None
             )
             
@@ -341,6 +373,7 @@ def create_app() -> Flask:
                 return {"message": "Guest not found"}, 404
             
             data = request.get_json(silent=True) or {}
+            print(f"Update guest data received: {data}")
             name = data.get("name", "").strip()
             
             if not name:
@@ -362,11 +395,14 @@ def create_app() -> Flask:
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
             guest.checkin_status = data.get("checkin_status", "not_arrived")
+            guest.rsvp_status = data.get("rsvp_status", "pending")
             guest.event_id = data.get("event_id") if data.get("event_id") else None
+            
+            print(f"Updating guest {guest.name}: rsvp_status = {guest.rsvp_status}, checkin_status = {guest.checkin_status}")
             
             db.session.commit()
             
-            print(f"Updated guest: {guest.name}")
+            print(f"Updated guest: {guest.name}, rsvp_status: {guest.rsvp_status}")
             return {"message": "Guest updated successfully", "guest": guest.to_dict()}, 200
             
         except Exception as e:
@@ -982,6 +1018,40 @@ def create_app() -> Flask:
         except Exception as e:
             print(f"Error in bulk delete: {e}")
             return {"message": f"Error in bulk delete: {str(e)}"}, 500
+
+    @app.put("/api/guests/bulk-rsvp")
+    def bulk_update_rsvp():
+        try:
+            data = request.get_json(silent=True) or {}
+            guest_ids = data.get("guest_ids", [])
+            rsvp_status = data.get("rsvp_status", "pending")
+            
+            if not guest_ids:
+                return {"message": "No guests selected"}, 400
+            
+            if rsvp_status not in ["pending", "accepted", "declined"]:
+                return {"message": "Invalid RSVP status"}, 400
+            
+            # Get guests
+            guests = Guest.query.filter(Guest.id.in_(guest_ids)).all()
+            if not guests:
+                return {"message": "No guests found"}, 404
+            
+            # Update RSVP status
+            update_count = 0
+            for guest in guests:
+                print(f"Updating guest {guest.name}: rsvp_status from {guest.rsvp_status} to {rsvp_status}")
+                guest.rsvp_status = rsvp_status
+                update_count += 1
+            
+            db.session.commit()
+            
+            print(f"Bulk RSVP update: {update_count} guests updated to {rsvp_status}")
+            return {"message": f"Successfully updated {update_count} guests to {rsvp_status}", "count": update_count}, 200
+            
+        except Exception as e:
+            print(f"Error in bulk RSVP update: {e}")
+            return {"message": f"Error in bulk RSVP update: {str(e)}"}, 500
 
     @app.get("/api/invite/<token>")
     def get_invite_data(token):

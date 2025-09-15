@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { api } from '@/lib/api'
+import BackgroundOverlay from "../components/BackgroundOverlay"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -23,6 +24,10 @@ export default function LoginPage() {
         
         if (data && data.token) {
           localStorage.setItem('auth_token', data.token)
+          // Lưu thông tin user vào localStorage
+          if (data.user) {
+            localStorage.setItem('current_user', JSON.stringify(data.user))
+          }
           window.location.href = '/dashboard'
         } else {
           setError(data.message || 'Đăng nhập thất bại')
@@ -39,7 +44,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex">
+    <>
+      <BackgroundOverlay />
+      <div className="min-h-screen flex">
       {/* Left Section - Information Panel */}
       <div className="hidden lg:flex lg:w-2/3 bg-slate-900 relative overflow-hidden">
         {/* Background Effects */}
@@ -242,6 +249,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

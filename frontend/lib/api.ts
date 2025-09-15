@@ -101,6 +101,22 @@ export const api = {
     body: JSON.stringify(data),
   }),
   getUsers: () => apiCall(API_ENDPOINTS.AUTH.USERS),
+  getCurrentUser: async () => {
+    const token = localStorage.getItem('auth_token')
+    const response = await apiCall(API_ENDPOINTS.AUTH.ME, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      return { ok: true, data }
+    } else {
+      const error = await response.json()
+      return { ok: false, error }
+    }
+  },
 }
 
 // Export API_ENDPOINTS for components that need it

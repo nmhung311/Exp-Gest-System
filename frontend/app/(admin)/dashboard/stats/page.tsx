@@ -32,12 +32,30 @@ export default function StatsPage() {
   const [checkedInGuests, setCheckedInGuests] = useState<Guest[]>([])
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'all'>('all')
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   // Load guests data
   useEffect(() => {
     loadGuests()
     loadCheckedInGuests()
   }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isDropdownOpen) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.dropdown-container')) {
+          setIsDropdownOpen(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isDropdownOpen])
 
   const loadGuests = async () => {
     try {
@@ -142,66 +160,130 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="space-y-6">
-        {/* Header */}
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+        {/* Header - Mobile Optimized */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-2">
             Thống Kê Hệ Thống
           </h1>
-          <p className="text-white/70 text-lg">Báo cáo chi tiết về khách mời và check-in</p>
+          <p className="text-white/70 text-sm sm:text-base lg:text-lg">Báo cáo chi tiết về khách mời và check-in</p>
         </div>
 
-        {/* Time Range Selector */}
+        {/* Time Range Dropdown - Mobile Optimized */}
         <div className="flex justify-center">
-          <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-2">
-            <div className="flex gap-2">
-              {[
-                { key: 'all', label: 'Tất cả' },
-                { key: 'month', label: 'Tháng này' },
-                { key: 'week', label: 'Tuần này' },
-                { key: 'today', label: 'Hôm nay' }
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setTimeRange(key as any)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    timeRange === key
-                      ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400'
-                      : 'text-white/60 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div className="relative w-full max-w-xs dropdown-container">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between hover:bg-black/30 hover:border-white/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+            >
+              <span className="text-sm sm:text-base">
+                {timeRange === 'all' && 'Tất cả thời gian'}
+                {timeRange === 'month' && 'Tháng này'}
+                {timeRange === 'week' && 'Tuần này'}
+                {timeRange === 'today' && 'Hôm nay'}
+              </span>
+              <svg 
+                className={`w-5 h-5 text-white/60 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+                {[
+                  { 
+                    key: 'all', 
+                    label: 'Tất cả thời gian', 
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    key: 'month', 
+                    label: 'Tháng này', 
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    key: 'week', 
+                    label: 'Tuần này', 
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    key: 'today', 
+                    label: 'Hôm nay', 
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )
+                  }
+                ].map(({ key, label, icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setTimeRange(key as any)
+                      setIsDropdownOpen(false)
+                    }}
+                    className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-white/10 transition-colors duration-200 ${
+                      timeRange === key 
+                        ? 'bg-blue-500/20 text-blue-400 border-l-2 border-blue-400' 
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-blue-400">{icon}</span>
+                    <span className="text-sm sm:text-base">{label}</span>
+                    {timeRange === key && (
+                      <svg className="w-4 h-4 ml-auto text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Guest Statistics */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Guest Statistics - Mobile Optimized */}
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            Thống Kê Khách Mời
+            <span className="text-sm sm:text-base lg:text-lg">Thống Kê Khách Mời</span>
           </h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {/* Total Guests */}
-            <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-6 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+            {/* Total Guests - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-blue-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.total}</div>
-                    <div className="text-sm text-blue-300/80 font-medium">Tổng khách mời</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.total}</div>
+                    <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tổng</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-full overflow-hidden">
@@ -210,19 +292,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Pending */}
-            <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-2xl p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Pending - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-yellow-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.pending}</div>
-                    <div className="text-sm text-yellow-300/80 font-medium">Chờ phản hồi</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.pending}</div>
+                    <div className="text-xs sm:text-sm text-yellow-300/80 font-medium">Chờ</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-full overflow-hidden">
@@ -231,19 +313,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Accepted */}
-            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-2xl p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Accepted - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-green-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.accepted}</div>
-                    <div className="text-sm text-green-300/80 font-medium">Đã xác nhận</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.accepted}</div>
+                    <div className="text-xs sm:text-sm text-green-300/80 font-medium">Xác nhận</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
@@ -252,19 +334,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Declined */}
-            <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-2xl p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Declined - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-red-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-red-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.declined}</div>
-                    <div className="text-sm text-red-300/80 font-medium">Đã từ chối</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.declined}</div>
+                    <div className="text-xs sm:text-sm text-red-300/80 font-medium">Từ chối</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-full overflow-hidden">
@@ -273,19 +355,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Response Rate */}
-            <div className="group relative bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-500/20 rounded-2xl p-6 hover:from-indigo-500/20 hover:to-purple-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Response Rate - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-indigo-500/20 hover:to-purple-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-indigo-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.responseRate}%</div>
-                    <div className="text-sm text-indigo-300/80 font-medium">Tỷ lệ phản hồi</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.responseRate}%</div>
+                    <div className="text-xs sm:text-sm text-indigo-300/80 font-medium">Phản hồi</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full overflow-hidden">
@@ -294,19 +376,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Acceptance Rate */}
-            <div className="group relative bg-gradient-to-br from-teal-500/10 to-cyan-500/10 backdrop-blur-sm border border-teal-500/20 rounded-2xl p-6 hover:from-teal-500/20 hover:to-cyan-500/20 hover:border-teal-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Acceptance Rate - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-teal-500/10 to-cyan-500/10 backdrop-blur-sm border border-teal-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-teal-500/20 hover:to-cyan-500/20 hover:border-teal-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-teal-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-teal-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{guestStats.acceptanceRate}%</div>
-                    <div className="text-sm text-teal-300/80 font-medium">Tỷ lệ chấp nhận</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.acceptanceRate}%</div>
+                    <div className="text-xs sm:text-sm text-teal-300/80 font-medium">Chấp nhận</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-teal-500/30 to-cyan-500/30 rounded-full overflow-hidden">
@@ -317,31 +399,31 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* Check-in Statistics */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Check-in Statistics - Mobile Optimized */}
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-green-500/20 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            Thống Kê Check-in
+            <span className="text-sm sm:text-base lg:text-lg">Thống Kê Check-in</span>
           </h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {/* Total Check-ins */}
-            <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {/* Total Check-ins - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-cyan-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{checkinStats.total}</div>
-                    <div className="text-sm text-cyan-300/80 font-medium">Tổng đã check-in</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.total}</div>
+                    <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
@@ -350,19 +432,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Today */}
-            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-2xl p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Today - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-green-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{checkinStats.today}</div>
-                    <div className="text-sm text-green-300/80 font-medium">Hôm nay</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.today}</div>
+                    <div className="text-xs sm:text-sm text-green-300/80 font-medium">Hôm nay</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
@@ -371,19 +453,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* This Week */}
-            <div className="group relative bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-6 hover:from-blue-500/20 hover:to-indigo-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* This Week - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-blue-500/20 hover:to-indigo-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-blue-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{checkinStats.thisWeek}</div>
-                    <div className="text-sm text-blue-300/80 font-medium">Tuần này</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.thisWeek}</div>
+                    <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tuần</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
@@ -392,19 +474,19 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* This Month */}
-            <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* This Month - Mobile Optimized */}
+            <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-purple-500/20 rounded-xl">
-                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white mb-1">{checkinStats.thisMonth}</div>
-                    <div className="text-sm text-purple-300/80 font-medium">Tháng này</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.thisMonth}</div>
+                    <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Tháng</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full overflow-hidden">
@@ -415,42 +497,46 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* Recent Check-ins */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Recent Check-ins - Mobile Optimized */}
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-orange-500/20 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            Check-in Gần Đây ({timeRange === 'all' ? 'Tất cả' : timeRange === 'month' ? 'Tháng này' : timeRange === 'week' ? 'Tuần này' : 'Hôm nay'})
+            <span className="text-sm sm:text-base lg:text-lg">
+              Check-in Gần Đây 
+              <span className="hidden sm:inline">({timeRange === 'all' ? 'Tất cả' : timeRange === 'month' ? 'Tháng này' : timeRange === 'week' ? 'Tuần này' : 'Hôm nay'})</span>
+              <span className="sm:hidden">({timeRange === 'all' ? 'Tất cả' : timeRange === 'month' ? 'Tháng' : timeRange === 'week' ? 'Tuần' : 'Hôm nay'})</span>
+            </span>
           </h2>
 
-          <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-6">
+          <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 lg:p-6">
             {filteredData.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-white/60 text-lg">Chưa có check-in nào trong khoảng thời gian này</p>
+                <p className="text-white/60 text-sm sm:text-base lg:text-lg">Chưa có check-in nào trong khoảng thời gian này</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredData.slice(0, 10).map((guest, index) => (
-                  <div key={guest.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold">{index + 1}</span>
+                  <div key={guest.id} className="flex items-center justify-between p-3 sm:p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm sm:text-base">{index + 1}</span>
                       </div>
-                      <div>
-                        <h3 className="text-white font-medium">{guest.name}</h3>
-                        <p className="text-white/60 text-sm">{guest.email}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-white font-medium text-sm sm:text-base truncate">{guest.name}</h3>
+                        <p className="text-white/60 text-xs sm:text-sm truncate">{guest.email}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-white/80 text-sm">
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <p className="text-white/80 text-xs sm:text-sm">
                         {new Date(guest.checked_in_at!).toLocaleString('vi-VN', { 
                           timeZone: 'Asia/Ho_Chi_Minh',
                           year: 'numeric',
@@ -461,18 +547,19 @@ export default function StatsPage() {
                           second: '2-digit'
                         })}
                       </p>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs bg-green-500/20 text-green-400">
+                        <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
-                        Đã check-in
+                        <span className="hidden sm:inline">Đã check-in</span>
+                        <span className="sm:hidden">✓</span>
                       </span>
                     </div>
                   </div>
                 ))}
                 {filteredData.length > 10 && (
-                  <div className="text-center pt-4">
-                    <p className="text-white/60">Và {filteredData.length - 10} check-in khác...</p>
+                  <div className="text-center pt-3 sm:pt-4">
+                    <p className="text-white/60 text-sm">Và {filteredData.length - 10} check-in khác...</p>
                   </div>
                 )}
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
-import MeshBackground from './MeshBackground'
+import BackgroundOverlay from './BackgroundOverlay'
 
 interface SimpleInviteData {
   guest: {
@@ -151,7 +151,8 @@ export default function SimpleInvitePreview({ eventData, onClose }: SimpleInvite
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <MeshBackground>
+      <>
+        <BackgroundOverlay />
         <div 
           className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden backdrop-blur-md"
           style={{ '--primary-color': demoData.branding.primary_color, '--accent-color': demoData.branding.accent_color } as React.CSSProperties}
@@ -319,7 +320,7 @@ export default function SimpleInvitePreview({ eventData, onClose }: SimpleInvite
           </svg>
         </button>
         </div>
-      </MeshBackground>
+      </>
     </div>
   )
 }

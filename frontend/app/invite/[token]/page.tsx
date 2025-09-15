@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
-import MeshBackground from '../../components/MeshBackground'
+import BackgroundOverlay from '../../components/BackgroundOverlay'
 
 interface EventData {
   id: number;
@@ -71,13 +71,9 @@ const InvitePage: React.FC = () => {
   useEffect(() => {
     const generateQRCode = async () => {
       try {
-        const qrData = {
-          eventId: inviteData?.event.id || 'DEMO',
-          eventName: inviteData?.event.name || 'Demo Event',
-          confirmationUrl: `${window.location.origin}/confirm-attendance?event=${inviteData?.event.id || 'demo'}`,
-          timestamp: new Date().toISOString()
-        }
-        const qrString = JSON.stringify(qrData)
+        // Sử dụng token trực tiếp thay vì JSON data
+        const token = inviteData?.token || 'DEMO-TOKEN'
+        const qrString = token
         const qrUrl = await QRCode.toDataURL(qrString, {
           width: 200,
           margin: 2,
@@ -169,20 +165,22 @@ const InvitePage: React.FC = () => {
 
   if (loading) {
     return (
-      <MeshBackground>
+      <>
+        <BackgroundOverlay />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
             <p className="text-white/80">Đang tải thiệp mời...</p>
           </div>
         </div>
-      </MeshBackground>
+      </>
     )
   }
 
   if (error || !inviteData) {
     return (
-      <MeshBackground>
+      <>
+        <BackgroundOverlay />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="text-red-400 text-6xl mb-4">❌</div>
@@ -190,7 +188,7 @@ const InvitePage: React.FC = () => {
             <p className="text-white/80">Thiệp mời không tồn tại hoặc đã hết hạn</p>
           </div>
         </div>
-      </MeshBackground>
+      </>
     )
   }
 
@@ -200,7 +198,8 @@ const InvitePage: React.FC = () => {
   const rsvpDeadline = new Date(inviteData.event.date).toLocaleDateString('vi-VN')
 
   return (
-    <MeshBackground>
+    <>
+      <BackgroundOverlay />
       <div className="min-h-screen" style={{ '--primary-color': '#0B2A4A', '--accent-color': '#1E88E5' } as React.CSSProperties}>
         <style jsx global>{`
           body {
@@ -334,6 +333,19 @@ const InvitePage: React.FC = () => {
                   Đang tạo QR...
                 </div>
               )}
+              
+              {/* Backup Code */}
+              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '8px' }}>
+                <div style={{ color: '#856404', fontSize: '14px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
+                  Mã dự phòng (nếu không quét được QR):
+                </div>
+                <div style={{ backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px', padding: '10px', textAlign: 'center' }}>
+                  <code style={{ color: '#495057', fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all' }}>
+                    {inviteData?.token || 'DEMO-TOKEN'}
+                  </code>
+                </div>
+              </div>
+              
               <div className="qr-warning">
                 ⚠️ QUAN TRỌNG: Mỗi QR code chỉ sử dụng được 1 lần. Không chia sẻ QR code này với người khác.
               </div>
@@ -356,7 +368,7 @@ const InvitePage: React.FC = () => {
           </div>
         </div>
       </div>
-    </MeshBackground>
+    </>
   )
 }
 

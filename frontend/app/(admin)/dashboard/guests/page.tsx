@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
+import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
@@ -36,6 +37,9 @@ export default function GuestsPage(){
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "declined">("all")
   const [eventFilter, setEventFilter] = useState<string>("")
+  const [tagFilter, setTagFilter] = useState<string>("all")
+  const [organizationFilter, setOrganizationFilter] = useState<string>("all")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
   const [copyMessage, setCopyMessage] = useState("")
   const [copyType, setCopyType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
   const [showPopup, setShowPopup] = useState(false)
@@ -104,13 +108,15 @@ export default function GuestsPage(){
     email: "",
     phone: "",
     event_id: "",
-    checkin_status: "not_arrived"
+    checkin_status: "not_arrived",
+    rsvp_status: "pending"
   })
   const [currentPage, setCurrentPage] = useState(1)
   const guestsPerPage = 6
   const [showQRPopup, setShowQRPopup] = useState(false)
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState("")
+  const [backupCode, setBackupCode] = useState("")
   
   // Multiple selection states
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set())
@@ -145,6 +151,11 @@ export default function GuestsPage(){
       if (res.ok) {
         const data = await res.json()
         console.log("Guests data:", data)
+        console.log("Guests with rsvp_status:", data.guests?.map((g: any) => ({
+          name: g.name,
+          rsvp_status: g.rsvp_status,
+          checkin_status: g.checkin_status
+        })))
         setGuests(data.guests || [])
       } else {
         console.error("Failed to load guests:", res.status, res.statusText)
@@ -202,22 +213,37 @@ export default function GuestsPage(){
       setSelectedGuest(guest)
       setShowQRPopup(true)
       
+      console.log('=== OPEN QR POPUP ===')
+      console.log('Guest ID:', guest.id)
+      console.log('Guest name:', guest.name)
+      
       // Lấy token mới và thông tin thời gian hết hạn
       const tokenResponse = await fetch(`http://localhost:5001/api/guests/${guest.id}/qr`, {
         method: 'POST'
       })
       
+      console.log('Token response status:', tokenResponse.status)
+      console.log('Token response ok:', tokenResponse.ok)
+      
       if (tokenResponse.ok) {
         const tokenData = await tokenResponse.json()
         console.log("Token data received:", tokenData)
+        console.log("Token value:", tokenData.token)
+        console.log("Token length:", tokenData.token?.length)
+        
+        // Sử dụng token thật từ API làm backup code
+        setBackupCode(tokenData.token)
         
         // Tạo URL cho QR code với timestamp để tránh cache
         const qrUrl = `http://localhost:5001/api/guests/${guest.id}/qr-image?t=${Date.now()}`
         setQrImageUrl(qrUrl)
       } else {
+        const errorData = await tokenResponse.json()
+        console.error("Token creation failed:", errorData)
         showToast("Lỗi tạo QR", "error")
       }
     } catch (e) {
+      console.error("Error in openQRPopup:", e)
       showToast("Lỗi tải QR", "error")
     }
   }
@@ -251,7 +277,7 @@ export default function GuestsPage(){
   // Bulk Actions
   const bulkCheckIn = async () => {
     if (!eventFilter) {
-      setResult("❌ Vui lòng chọn sự kiện trước khi thực hiện hành động")
+      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
       return
     }
     if (selectedGuests.size === 0) return
@@ -274,21 +300,20 @@ export default function GuestsPage(){
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
         const error = await response.text()
-        setResult(`❌ Lỗi: ${error}`)
+        setResult(`Lỗi: ${error}`)
       }
     } catch (error) {
-      setResult(`❌ Lỗi: ${error}`)
+      setResult(`Lỗi: ${error}`)
     }
   }
 
   const bulkCheckOut = async () => {
     if (!eventFilter) {
-      setResult("❌ Vui lòng chọn sự kiện trước khi thực hiện hành động")
+      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
       return
     }
     if (selectedGuests.size === 0) return
@@ -310,21 +335,20 @@ export default function GuestsPage(){
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
         const error = await response.text()
-        setResult(`❌ Lỗi: ${error}`)
+        setResult(`Lỗi: ${error}`)
       }
     } catch (error) {
-      setResult(`❌ Lỗi: ${error}`)
+      setResult(`Lỗi: ${error}`)
     }
   }
 
   const bulkDelete = async () => {
     if (!eventFilter) {
-      setResult("❌ Vui lòng chọn sự kiện trước khi thực hiện hành động")
+      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
       return
     }
     if (selectedGuests.size === 0) return
@@ -350,18 +374,71 @@ export default function GuestsPage(){
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
         const error = await response.text()
-        setResult(`❌ Lỗi: ${error}`)
+        setResult(`Lỗi: ${error}`)
       }
     } catch (error) {
-      setResult(`❌ Lỗi: ${error}`)
+      setResult(`Lỗi: ${error}`)
     }
   }
 
+  // Bulk RSVP Status Functions
+  const bulkUpdateRSVP = async (rsvpStatus: string) => {
+    if (!eventFilter) {
+      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
+      return
+    }
+    if (selectedGuests.size === 0) return
+    
+    const statusLabels = {
+      'accepted': 'Đã chấp nhận',
+      'declined': 'Đã từ chối', 
+      'pending': 'Chờ phản hồi'
+    }
+    
+    if (!confirm(`Bạn có chắc chắn muốn cập nhật ${selectedGuests.size} khách thành "${statusLabels[rsvpStatus as keyof typeof statusLabels]}"?`)) {
+      return
+    }
+    
+    try {
+      const response = await fetch("http://localhost:5001/api/guests/bulk-rsvp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guest_ids: Array.from(selectedGuests),
+          rsvp_status: rsvpStatus
+        })
+      })
+      
+      if (response.ok) {
+        showToast(`Cập nhật ${selectedGuests.size} khách thành "${statusLabels[rsvpStatus as keyof typeof statusLabels]}"!`, "success")
+        clearSelection()
+        loadGuests()
+        
+        // Thông báo cho trang check-in về thay đổi dữ liệu
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
+        setTimeout(() => {
+          setPopupVisible(false)
+          setTimeout(() => {
+            setShowPopup(false)
+          }, 300)
+        }, 2000)
+      } else {
+        const error = await response.text()
+        setResult(`Lỗi: ${error}`)
+      }
+    } catch (error) {
+      setResult(`Lỗi: ${error}`)
+    }
+  }
 
   // CRUD Functions
   const openGuestModal = useCallback((guest?: Guest) => {
@@ -383,7 +460,8 @@ export default function GuestsPage(){
         email: guest.email || "",
         phone: guest.phone || "",
         event_id: guest.event_id?.toString() || "",
-        checkin_status: guest.checkin_status // Sử dụng trạng thái thực tế của khách
+        checkin_status: guest.checkin_status, // Sử dụng trạng thái thực tế của khách
+        rsvp_status: guest.rsvp_status || "pending"
       })
     } else {
       setEditingGuest(null)
@@ -399,7 +477,8 @@ export default function GuestsPage(){
         email: "",
         phone: "",
         event_id: defaultEventId,
-        checkin_status: "not_arrived" // Mặc định chưa đến khi thêm mới
+        checkin_status: "not_arrived", // Mặc định chưa đến khi thêm mới
+        rsvp_status: "pending" // Mặc định chưa phản hồi khi thêm mới
       })
     }
     setShowGuestModal(true)
@@ -424,7 +503,7 @@ export default function GuestsPage(){
           console.log("Using first available event:", eventId)
         } else {
           console.error("No events available")
-          setResult("❌ Vui lòng tạo sự kiện trước khi thêm khách mời")
+          setResult("Vui lòng tạo sự kiện trước khi thêm khách mời")
           return
         }
       }
@@ -438,10 +517,12 @@ export default function GuestsPage(){
         email: guestForm.email,
         phone: guestForm.phone,
         event_id: eventId,
-        checkin_status: guestForm.checkin_status
+        checkin_status: guestForm.checkin_status,
+        rsvp_status: guestForm.rsvp_status
       }
       
       console.log("Sending guest data:", guestData)
+      console.log("RSVP status being sent:", guestData.rsvp_status)
       
       // Sử dụng API utility thay vì hardcoded URL
       const response = editingGuest 
@@ -457,21 +538,28 @@ export default function GuestsPage(){
         setShowGuestModal(false)
         loadGuests()
         showToast(editingGuest ? "Cập nhật!" : "Thêm!", "success")
+        
+        // Thông báo cho trang check-in về thay đổi dữ liệu
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
         const error = await response.text()
         console.error("API error:", error)
-        setResult(`❌ Lỗi: ${error}`)
+        setResult(`Lỗi: ${error}`)
       }
     } catch (e: any) {
       console.error("Save guest error:", e)
-      setResult(`❌ Lỗi kết nối: ${e.message}`)
+      setResult(`Lỗi kết nối: ${e.message}`)
     }
   }
 
@@ -488,19 +576,26 @@ export default function GuestsPage(){
       if (response.ok) {
         loadGuests()
         showToast("Xóa!", "success")
+        
+        // Thông báo cho trang check-in về thay đổi dữ liệu
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
         const error = await response.text()
-        setResult(`❌ Lỗi: ${error}`)
+        setResult(`Lỗi: ${error}`)
       }
     } catch (e: any) {
-      setResult(`❌ Lỗi kết nối: ${e.message}`)
+      setResult(`Lỗi kết nối: ${e.message}`)
     }
   }
 
@@ -523,7 +618,6 @@ export default function GuestsPage(){
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       } else {
@@ -532,7 +626,6 @@ export default function GuestsPage(){
           setPopupVisible(false)
           setTimeout(() => {
             setShowPopup(false)
-            showToast("", "success")
           }, 300)
         }, 2000)
       }
@@ -542,7 +635,6 @@ export default function GuestsPage(){
         setPopupVisible(false)
         setTimeout(() => {
           setShowPopup(false)
-          showToast("", "success")
         }, 300)
       }, 2000)
     }
@@ -554,7 +646,7 @@ export default function GuestsPage(){
     if (!file) return
 
     if (!file.name.toLowerCase().endsWith('.json')) {
-      setResult("❌ Vui lòng chọn file JSON")
+      setResult("Vui lòng chọn file JSON")
       return
     }
 
@@ -565,9 +657,9 @@ export default function GuestsPage(){
         // Validate JSON
         JSON.parse(content)
         setText(content)
-        setResult("✅ File JSON đã được tải thành công!")
+        setResult("File JSON đã được tải thành công!")
       } catch (error) {
-        setResult("❌ File JSON không hợp lệ. Vui lòng kiểm tra lại cú pháp.")
+        setResult("File JSON không hợp lệ. Vui lòng kiểm tra lại cú pháp.")
       }
     }
     reader.readAsText(file)
@@ -583,12 +675,12 @@ export default function GuestsPage(){
         try {
           jsonData = JSON.parse(text)
         } catch (e) {
-          setResult("❌ JSON không hợp lệ. Vui lòng kiểm tra lại cú pháp.")
+          setResult("JSON không hợp lệ. Vui lòng kiểm tra lại cú pháp.")
           return
         }
         
         if (!eventFilter) {
-          setResult("❌ Vui lòng chọn sự kiện trước khi import")
+          setResult("Vui lòng chọn sự kiện trước khi import")
           return
         }
         // Thêm event_id vào tất cả khách mời được import (luôn gán vào sự kiện hiện tại)
@@ -606,11 +698,11 @@ export default function GuestsPage(){
         // CSV import
         const fileInput = document.getElementById('csvFile') as HTMLInputElement
         if (!fileInput?.files?.[0]) {
-          setResult("❌ Vui lòng chọn file CSV")
+          setResult("Vui lòng chọn file CSV")
           return
         }
         if (!eventFilter) {
-          setResult("❌ Vui lòng chọn sự kiện trước khi import")
+          setResult("Vui lòng chọn sự kiện trước khi import")
           return
         }
         const formData = new FormData()
@@ -624,7 +716,7 @@ export default function GuestsPage(){
       
       if (!res.ok) {
         const errorText = await res.text()
-        setResult(`❌ Lỗi server: ${res.status} - ${errorText}`)
+        setResult(`Lỗi server: ${res.status} - ${errorText}`)
         return
       }
       
@@ -632,14 +724,14 @@ export default function GuestsPage(){
       console.log("Import response:", data)
       
       if (data.imported > 0 && data.failed === 0) {
-        setResult(`✅ Thành công! Đã import ${data.imported} khách mời.`)
+        setResult(`Thành công! Đã import ${data.imported} khách mời.`)
       } else if (data.imported > 0 && data.failed > 0) {
-        setResult(`⚠️ Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`)
+        setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`)
         if (data.errors && data.errors.length > 0) {
           setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
         }
       } else {
-        setResult(`❌ Import thất bại: ${data.failed} khách không thể import.`)
+        setResult(`Import thất bại: ${data.failed} khách không thể import.`)
         if (data.errors && data.errors.length > 0) {
           setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
         }
@@ -655,7 +747,7 @@ export default function GuestsPage(){
       }
     }catch(e:any){
       console.error("Import error:", e)
-      setResult("❌ Lỗi kết nối: " + e?.message)
+      setResult("Lỗi kết nối: " + e?.message)
     }
   }
 
@@ -670,11 +762,14 @@ export default function GuestsPage(){
                            guest.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.phone?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesStatus = statusFilter === "all" || guest.rsvp_status === statusFilter
+      const matchesTag = tagFilter === "all" || guest.tag === tagFilter
+      const matchesOrganization = organizationFilter === "all" || guest.company === organizationFilter
+      const matchesRole = roleFilter === "all" || guest.position === roleFilter
       // Chỉ hiển thị khách của sự kiện được chọn (không có "Tất cả sự kiện")
       const matchesEvent = guest.event_id?.toString() === eventFilter
-      return matchesSearch && matchesStatus && matchesEvent
+      return matchesSearch && matchesStatus && matchesTag && matchesOrganization && matchesRole && matchesEvent
     })
-  }, [guests, searchTerm, statusFilter, eventFilter])
+  }, [guests, searchTerm, statusFilter, tagFilter, organizationFilter, roleFilter, eventFilter])
 
   // Memoized form update functions
   const updateGuestForm = useCallback((field: string, value: string) => {
@@ -704,6 +799,37 @@ export default function GuestsPage(){
     { value: "not_arrived", label: "Chưa đến" },
     { value: "arrived", label: "Đã đến" }
   ], [])
+
+  const rsvpStatusOptions = useMemo(() => [
+    { value: "pending", label: "Chưa phản hồi" },
+    { value: "accepted", label: "Đã chấp nhận" },
+    { value: "declined", label: "Đã từ chối" }
+  ], [])
+
+  // Filter options from guest data
+  const tagFilterOptions = useMemo(() => {
+    const uniqueTags = [...new Set(guests.map(guest => guest.tag).filter(Boolean))]
+    return [
+      { value: "all", label: "Tất cả tag" },
+      ...uniqueTags.map(tag => ({ value: tag, label: tag }))
+    ]
+  }, [guests])
+
+  const organizationFilterOptions = useMemo(() => {
+    const uniqueOrgs = [...new Set(guests.map(guest => guest.company).filter(Boolean))]
+    return [
+      { value: "all", label: "Tất cả tổ chức" },
+      ...uniqueOrgs.map(org => ({ value: org, label: org }))
+    ]
+  }, [guests])
+
+  const roleFilterOptions = useMemo(() => {
+    const uniqueRoles = [...new Set(guests.map(guest => guest.position).filter(Boolean))]
+    return [
+      { value: "all", label: "Tất cả vai trò" },
+      ...uniqueRoles.map(role => ({ value: role, label: role }))
+    ]
+  }, [guests])
 
   // Pagination logic
   const totalPages = Math.ceil(filteredGuests.length / guestsPerPage)
@@ -738,6 +864,20 @@ export default function GuestsPage(){
   const clearSelection = () => {
     setSelectedGuests(new Set())
     setSelectAll(false)
+  }
+
+  // Scroll to top of guest list on mobile when changing pages
+  const scrollToGuestList = () => {
+    // Only scroll on mobile (screen width < 640px)
+    if (window.innerWidth < 640) {
+      const guestListElement = document.querySelector('[data-guest-list]')
+      if (guestListElement) {
+        guestListElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        })
+      }
+    }
   }
 
   // Export Functions
@@ -781,11 +921,10 @@ export default function GuestsPage(){
         setPopupVisible(false)
         setTimeout(() => {
           setShowPopup(false)
-          showToast("", "success")
         }, 300)
       }, 2000)
     } catch (error) {
-      setResult(`❌ Lỗi xuất file: ${error}`)
+      setResult(`Lỗi xuất file: ${error}`)
     }
   }
 
@@ -948,39 +1087,39 @@ export default function GuestsPage(){
         <div className="grid grid-cols-2 sm:flex gap-2">
           <button 
             onClick={() => openGuestModal()}
-            className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+            className="group relative px-3 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm"
           >
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs sm:text-sm font-medium">Thêm khách</span>
+            <span className="text-sm font-medium">Thêm khách</span>
           </button>
           <button 
             onClick={() => setShowImportModal(true)}
-            className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20"
+            className="group relative px-3 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-green-500/20"
           >
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs sm:text-sm font-medium">Import</span>
+            <span className="text-sm font-medium">Import</span>
           </button>
           <button 
             onClick={exportAllGuests}
-            className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-indigo-500/20"
+            className="group relative px-3 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-indigo-500/20"
           >
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs sm:text-sm font-medium">Export</span>
+            <span className="text-sm font-medium">Export</span>
           </button>
           <button 
             onClick={loadGuests}
-            className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20"
+            className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20"
           >
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span className="text-xs sm:text-sm font-medium">Refresh</span>
+            <span className="text-sm font-medium">Refresh</span>
           </button>
         </div>
       </div>
@@ -1089,61 +1228,97 @@ export default function GuestsPage(){
               
             </div>
             
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-2">
+              {/* RSVP Status Buttons */}
               <button
-                onClick={bulkCheckIn}
-                className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20"
-                title="Check-in tất cả khách đã chọn"
+                onClick={() => bulkUpdateRSVP('accepted')}
+                className="group relative px-3 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-green-500/20"
+                title="Đánh dấu tất cả khách đã chọn là Đã chấp nhận"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs sm:text-sm font-medium">Check-in</span>
+                <span className="text-sm font-medium">Chấp nhận</span>
+              </button>
+              
+              <button
+                onClick={() => bulkUpdateRSVP('declined')}
+                className="group relative px-3 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400 rounded-lg hover:from-red-500/30 hover:to-pink-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-red-500/20"
+                title="Đánh dấu tất cả khách đã chọn là Đã từ chối"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Từ chối</span>
+              </button>
+              
+              <button
+                onClick={() => bulkUpdateRSVP('pending')}
+                className="group relative px-3 py-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 text-yellow-400 rounded-lg hover:from-yellow-500/30 hover:to-orange-500/30 hover:border-yellow-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-yellow-500/20"
+                title="Đánh dấu tất cả khách đã chọn là Chờ phản hồi"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Chờ phản hồi</span>
+              </button>
+              
+              {/* Check-in/out Buttons */}
+              <button
+                onClick={bulkCheckIn}
+                className="group relative px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-cyan-500/20"
+                title="Check-in tất cả khách đã chọn"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Check-in</span>
               </button>
               
               <button
                 onClick={bulkCheckOut}
-                className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-400 rounded-lg hover:from-orange-500/30 hover:to-red-500/30 hover:border-orange-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-orange-500/20"
+                className="group relative px-3 py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-400 rounded-lg hover:from-orange-500/30 hover:to-red-500/30 hover:border-orange-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-orange-500/20"
                 title="Check-out tất cả khách đã chọn"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs sm:text-sm font-medium">Check-out</span>
+                <span className="text-sm font-medium">Check-out</span>
               </button>
               
+              {/* Other Actions */}
               <button
                 onClick={bulkDelete}
-                className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400 rounded-lg hover:from-red-500/30 hover:to-red-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
+                className="group relative px-3 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400 rounded-lg hover:from-red-500/30 hover:to-pink-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-red-500/20"
                 title="Xóa tất cả khách đã chọn"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs sm:text-sm font-medium">Xóa</span>
+                <span className="text-sm font-medium">Xóa</span>
               </button>
               
               <button
                 onClick={exportSelectedGuests}
-                className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-indigo-500/20"
+                className="group relative px-3 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-indigo-500/20"
                 title="Xuất danh sách khách đã chọn"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs sm:text-sm font-medium">Export</span>
+                <span className="text-sm font-medium">Export</span>
               </button>
               
               <button
                 onClick={clearSelection}
-                className="group relative px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20"
+                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20"
                 title="Bỏ chọn tất cả"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs sm:text-sm font-medium">Bỏ chọn</span>
+                <span className="text-sm font-medium">Bỏ chọn</span>
               </button>
             </div>
           </div>
@@ -1151,46 +1326,93 @@ export default function GuestsPage(){
       )}
 
       {/* Guests List Section */}
-      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 md:p-6">
+      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 md:p-6" data-guest-list>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-            </svg>
-            <span className="truncate">Danh sách khách mời ({filteredGuests.length})</span>
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+              <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span className="text-sm sm:text-base font-medium bg-gradient-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text">Danh sách khách mời</span>
+            </h2>
+            <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-400/30">
+              <span className="text-blue-400 text-sm font-semibold">{filteredGuests.length}</span>
+            </div>
+          </div>
           
           {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-col gap-2 lg:flex-row lg:gap-3">
+            {/* Search Bar */}
             <input
               type="text"
               placeholder="Tìm kiếm khách mời..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full sm:w-auto"
+              className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full lg:w-auto lg:min-w-[200px]"
             />
-            <CustomDropdown
-              options={[
-                { value: "all", label: "Tất cả trạng thái" },
-                { value: "pending", label: "Chờ phản hồi" },
-                { value: "accepted", label: "Đã xác nhận" },
-                { value: "declined", label: "Đã từ chối" }
-              ]}
-              value={statusFilter}
-              onChange={(value) => setStatusFilter(value as any)}
-              placeholder="Chọn trạng thái"
-              className="w-full sm:min-w-[160px]"
-            />
-            <CustomDropdown
-              options={events.map(event => ({
-                value: event.id.toString(),
-                label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
-              }))}
-              value={eventFilter}
-              onChange={(value) => setEventFilter(value)}
-              placeholder="Chọn sự kiện"
-              className="w-full sm:min-w-[200px]"
-            />
+            
+            {/* All Filters - 2 per row on mobile, inline on PC */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-row gap-2 lg:gap-3">
+              <CustomDropdown
+                options={[
+                  { value: "all", label: "Tất cả trạng thái" },
+                  { value: "pending", label: "Chờ phản hồi" },
+                  { value: "accepted", label: "Đã xác nhận" },
+                  { value: "declined", label: "Đã từ chối" }
+                ]}
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value as any)}
+                placeholder="Chọn trạng thái"
+                className="w-full sm:min-w-[140px] lg:min-w-[140px]"
+              />
+              <CustomDropdown
+                options={events.map(event => ({
+                  value: event.id.toString(),
+                  label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
+                }))}
+                value={eventFilter}
+                onChange={(value) => setEventFilter(value)}
+                placeholder="Chọn sự kiện"
+                className="w-full sm:min-w-[180px] lg:min-w-[180px]"
+              />
+              <CustomDropdown
+                options={tagFilterOptions}
+                value={tagFilter}
+                onChange={(value) => setTagFilter(value)}
+                placeholder="Chọn tag"
+                className="w-full sm:min-w-[120px] lg:min-w-[120px]"
+              />
+              <CustomDropdown
+                options={organizationFilterOptions}
+                value={organizationFilter}
+                onChange={(value) => setOrganizationFilter(value)}
+                placeholder="Chọn tổ chức"
+                className="w-full sm:min-w-[140px] lg:min-w-[140px]"
+              />
+              <CustomDropdown
+                options={roleFilterOptions}
+                value={roleFilter}
+                onChange={(value) => setRoleFilter(value)}
+                placeholder="Chọn vai trò"
+                className="w-full sm:min-w-[120px] lg:min-w-[120px]"
+              />
+              <button
+                onClick={() => {
+                  setSearchTerm("")
+                  setStatusFilter("all")
+                  setTagFilter("all")
+                  setOrganizationFilter("all")
+                  setRoleFilter("all")
+                }}
+                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 whitespace-nowrap"
+                title="Xóa tất cả bộ lọc"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Xóa lọc</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1219,11 +1441,9 @@ export default function GuestsPage(){
                 <thead className="text-xs text-white/60 uppercase bg-black/30">
                   <tr>
                     <th className="px-4 py-3 w-12">
-                      <input
-                        type="checkbox"
+                      <CustomCheckbox
                         checked={selectAll}
                         onChange={toggleSelectAll}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                       />
                     </th>
                     <th className="px-4 py-3 w-16">STT</th>
@@ -1240,11 +1460,9 @@ export default function GuestsPage(){
                 {currentGuests.map((guest, index) => (
                   <tr key={guest.id} className="bg-black/20 border-b border-white/10 hover:bg-black/30 transition-colors">
                     <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
+                      <CustomCheckbox
                         checked={selectedGuests.has(guest.id)}
                         onChange={() => toggleGuestSelection(guest.id)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                       />
                     </td>
                     <td className="px-4 py-4 text-white/80">{startIndex + index + 1}</td>
@@ -1350,13 +1568,11 @@ export default function GuestsPage(){
             <div className="md:hidden space-y-3">
               {currentGuests.map((guest, index) => (
                 <div key={guest.id} className="bg-black/20 border border-white/10 rounded-xl p-4 hover:bg-black/30 transition-colors">
-                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
+                      <CustomCheckbox
                         checked={selectedGuests.has(guest.id)}
                         onChange={() => toggleGuestSelection(guest.id)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                       />
                       <div>
                         <div className="text-white font-medium text-sm">{guest.name}</div>
@@ -1471,11 +1687,14 @@ export default function GuestsPage(){
             <div className="flex items-center justify-center gap-1 sm:gap-2">
               {/* Previous Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(prev - 1, 1))
+                  scrollToGuestList()
+                }}
                 disabled={currentPage === 1}
                 className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-xs sm:text-sm"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 <span className="hidden sm:inline">Trước</span>
@@ -1503,7 +1722,10 @@ export default function GuestsPage(){
                   return (
                     <button
                       key={page}
-                      onClick={() => setCurrentPage(page)}
+                      onClick={() => {
+                        setCurrentPage(page)
+                        scrollToGuestList()
+                      }}
                       className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${
                         currentPage === page
                           ? 'bg-blue-500 text-white'
@@ -1518,12 +1740,15 @@ export default function GuestsPage(){
 
               {/* Next Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(prev + 1, totalPages))
+                  scrollToGuestList()
+                }}
                 disabled={currentPage === totalPages}
                 className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-xs sm:text-sm"
               >
                 <span className="hidden sm:inline">Sau</span>
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -1600,9 +1825,9 @@ export default function GuestsPage(){
                         setText('')
                         setResult('')
                       }}
-                      className="group relative px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg sm:rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20 text-xs sm:text-sm"
+                      className="group relative px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg sm:rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 text-xs sm:text-sm"
                     >
-                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                       <span className="hidden sm:inline">Clear</span>
@@ -1612,7 +1837,7 @@ export default function GuestsPage(){
                 
                 {/* JSON Textarea */}
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-white/80">Nội dung JSON:</label>
+                  <label className="text-sm font-medium text-white/80">Nội dung JSON:</label>
                   <textarea 
                     className="w-full h-32 sm:h-40 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 text-white placeholder-white/50 font-mono text-xs sm:text-sm" 
                     value={text} 
@@ -1644,10 +1869,10 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button 
-                className="group relative flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg sm:rounded-xl hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-1 sm:gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm sm:text-base" 
+                className="group relative flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm" 
                 onClick={onImport}
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
                 <span className="truncate">Import {importType.toUpperCase()}</span>
@@ -1664,28 +1889,28 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
               <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl max-h-40 sm:max-h-60 overflow-y-auto">
                 <div className="flex items-start gap-2">
                   <div className="flex-shrink-0 mt-0.5">
-                    {result.includes('✅') && (
+                    {result.includes('Thành công') && (
                       <div className="w-4 h-4 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-400/30">
                         <svg className="w-2.5 h-2.5 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
                     )}
-                    {result.includes('❌') && (
+                    {(result.includes('Lỗi') || result.includes('thất bại') || result.includes('không hợp lệ')) && (
                       <div className="w-4 h-4 bg-rose-500/20 rounded-full flex items-center justify-center border border-rose-400/30">
                         <svg className="w-2.5 h-2.5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </div>
                     )}
-                    {result.includes('⚠️') && (
+                    {result.includes('Import một phần') && (
                       <div className="w-4 h-4 bg-amber-500/20 rounded-full flex items-center justify-center border border-amber-400/30">
                         <svg className="w-2.5 h-2.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M4.293 19.293a1 1 0 001.414 0L12 13l6.293 6.293a1 1 0 001.414-1.414l-7-7a1 1 0 00-1.414 0l-7 7a1 1 0 000 1.414z" />
                         </svg>
                       </div>
                     )}
-                    {!result.includes('✅') && !result.includes('❌') && !result.includes('⚠️') && (
+                    {!result.includes('Thành công') && !result.includes('Lỗi') && !result.includes('thất bại') && !result.includes('không hợp lệ') && !result.includes('Import một phần') && (
                       <div className="w-4 h-4 bg-cyan-500/20 rounded-full flex items-center justify-center border border-cyan-400/30">
                         <svg className="w-2.5 h-2.5 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
@@ -1791,7 +2016,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   placeholder="email@example.com"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Số điện thoại</label>
                 <input
                   type="tel"
@@ -1803,24 +2028,36 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
               </div>
             </div>
 
-            {/* Check-in Status */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-white/80 mb-2">Trạng thái check-in</label>
-              <CustomDropdown
-                options={checkinStatusOptions}
-                value={guestForm.checkin_status}
-                onChange={(value) => updateGuestForm('checkin_status', value)}
-                placeholder="Chọn trạng thái check-in"
-                className="w-full"
-              />
+            {/* RSVP Status and Check-in Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">Trạng thái RSVP</label>
+                <CustomDropdown
+                  options={rsvpStatusOptions}
+                  value={guestForm.rsvp_status}
+                  onChange={(value) => updateGuestForm('rsvp_status', value)}
+                  placeholder="Chọn trạng thái RSVP"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">Trạng thái check-in</label>
+                <CustomDropdown
+                  options={checkinStatusOptions}
+                  value={guestForm.checkin_status}
+                  onChange={(value) => updateGuestForm('checkin_status', value)}
+                  placeholder="Chọn trạng thái check-in"
+                  className="w-full"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3">
               <button 
                 onClick={saveGuest}
-                className="group relative flex-1 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-xl hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20" 
+                className="group relative flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm" 
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 {editingGuest ? 'Cập nhật' : 'Thêm mới'}
@@ -1839,13 +2076,11 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
 
       {/* Toast Notification - Optimized for 370px width */}
       {showPopup && (
-        <div className={`fixed top-0 left-0 right-0 sm:top-4 sm:right-4 sm:left-auto z-[9999] transform transition-all duration-300 ease-out ${
-          popupVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
-        } sm:translate-x-0 sm:translate-y-0 ${
-          popupVisible ? 'sm:translate-x-0 sm:opacity-100' : 'sm:translate-x-full sm:opacity-0'
+        <div className={`fixed top-16 right-0 z-[9999] transform transition-all duration-300 ease-out ${
+          popupVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
         }`}>
           <div 
-            className={`mx-0.5 mt-0.5 sm:mx-0 sm:mt-0 px-1.5 py-1 sm:px-4 sm:py-3 rounded sm:rounded-2xl shadow-2xl w-full sm:max-w-xs backdrop-blur-md border ${
+            className={`px-3 py-2 sm:px-4 sm:py-3 rounded-l-lg sm:rounded-l-2xl shadow-2xl w-[200px] sm:max-w-xs h-auto backdrop-blur-md border ${
               copyType === 'success' ? 'border-emerald-400/30 bg-gradient-to-br from-emerald-600/30 via-emerald-500/20 to-emerald-400/10' :
               copyType === 'error' ? 'border-rose-400/30 bg-gradient-to-br from-rose-600/30 via-rose-500/20 to-rose-400/10' :
               copyType === 'warning' ? 'border-amber-400/30 bg-gradient-to-br from-amber-600/30 via-amber-500/20 to-amber-400/10' :
@@ -1855,31 +2090,31 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex-shrink-0">
                 {copyType === 'success' && (
-                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-emerald-500/20 rounded sm:rounded-xl flex items-center justify-center border border-emerald-400/30">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500/20 rounded sm:rounded-xl flex items-center justify-center border border-emerald-400/30">
                     <svg className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'error' && (
-                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-rose-500/20 rounded sm:rounded-xl flex items-center justify-center border border-rose-400/30">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-rose-500/20 rounded sm:rounded-xl flex items-center justify-center border border-rose-400/30">
                     <svg className="w-3 h-3 sm:w-4 sm:h-4 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'warning' && (
-                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-amber-500/20 rounded sm:rounded-xl flex items-center justify-center border border-amber-400/30">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-amber-500/20 rounded sm:rounded-xl flex items-center justify-center border border-amber-400/30">
                     <svg className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M4.293 19.293a1 1 0 001.414 0L12 13l6.293 6.293a1 1 0 001.414-1.414l-7-7a1 1 0 00-1.414 0l-7 7a1 1 0 000 1.414z" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'info' && (
-                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-cyan-500/20 rounded sm:rounded-xl flex items-center justify-center border border-cyan-400/30">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-cyan-500/20 rounded sm:rounded-xl flex items-center justify-center border border-cyan-400/30">
                     <svg className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
                     </svg>
@@ -1887,7 +2122,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium break-words leading-tight sm:leading-relaxed truncate max-w-[200px] sm:max-w-none">{copyMessage}</p>
+                <p className="text-sm font-medium break-words leading-relaxed">{copyMessage}</p>
               </div>
               {/* Close button for mobile */}
               <button
@@ -1915,65 +2150,87 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
       {/* QR Code Popup */}
       {showQRPopup && selectedGuest && (
         <Portal>
-          <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Mã QR - {selectedGuest.name}
-              </h3>
-              <button
-                onClick={() => setShowQRPopup(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="text-center mb-6">
-              <div className="w-48 h-48 mx-auto bg-white rounded-lg flex items-center justify-center p-4 shadow-lg border-2 border-gray-100">
-                {qrImageUrl ? (
-                  <img
-                    src={qrImageUrl}
-                    alt="QR Code"
-                    className="w-full h-full object-contain"
-                    onError={() => setQrImageUrl("")}
-                  />
-                ) : (
-                  <div className="text-gray-400">
-                    <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm">Đang tải QR code...</p>
+          <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center bg-black/50 backdrop-blur-sm p-5">
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text pr-2">
+                  Mã QR - {selectedGuest.name}
+                </h3>
+                <button
+                  onClick={() => setShowQRPopup(false)}
+                  className="text-white/60 hover:text-white transition-colors p-1.5 sm:p-2 hover:bg-white/10 rounded-lg flex-shrink-0"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="text-center mb-4 sm:mb-6">
+                <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white rounded-2xl flex items-center justify-center p-3 sm:p-4 shadow-2xl border border-white/20">
+                  {qrImageUrl ? (
+                    <img
+                      src={qrImageUrl}
+                      alt="QR Code"
+                      className="w-full h-full object-contain"
+                      onError={() => setQrImageUrl("")}
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-cyan-400 mx-auto mb-2 sm:mb-3"></div>
+                      <p className="text-gray-600 text-xs sm:text-sm">Đang tải QR code...</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-white/80 text-xs sm:text-sm mt-2 sm:mt-3">
+                  Mã QR cho {selectedGuest.name}
+                </p>
+              </div>
+
+              {/* Backup Text Code */}
+              {qrImageUrl && (
+                <div className="bg-black/30 border border-yellow-500/30 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+                  <div className="text-yellow-400 text-xs sm:text-sm font-medium mb-2 text-center">
+                    Mã dự phòng (nếu không quét được QR):
                   </div>
-                )}
+                  <div className="bg-black/50 border border-yellow-500/20 rounded-lg p-2 sm:p-3 flex items-center gap-2">
+                    <code className="text-white font-mono text-xs break-all flex-1 text-center">
+                      {backupCode}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(backupCode)
+                        showToast("Đã copy mã dự phòng", "success")
+                      }}
+                      className="text-yellow-400 hover:text-yellow-300 transition-colors p-1 hover:bg-yellow-500/10 rounded flex-shrink-0"
+                      title="Copy mã dự phòng"
+                    >
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                  onClick={() => downloadQR(selectedGuest.id, selectedGuest.name)}
+                  className="flex-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-500/50 text-blue-300 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/70 hover:text-blue-200 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 text-sm sm:text-base"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Tải xuống
+                </button>
+                <button
+                  onClick={() => setShowQRPopup(false)}
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
+                >
+                  Đóng
+                </button>
               </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Mã QR cho {selectedGuest.name}
-              </p>
-              <div className="mt-2 p-2 bg-green-50 rounded-lg">
-  
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={() => downloadQR(selectedGuest.id, selectedGuest.name)}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Tải xuống
-              </button>
-              <button
-                onClick={() => setShowQRPopup(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
+
             </div>
           </div>
         </Portal>
@@ -2038,7 +2295,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   onClick={handleExportConfirm}
                   className="group relative flex-1 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 flex items-center justify-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 11-2 0V4H5v12h4a1 1 0 110 2H4a1 1 0 01-1-1V3zm10.293 6.293a1 1 0 011.414 0L18 12.586V11a1 1 0 112 0v4a1 1 0 01-1 1h-4a1 1 0 110-2h1.586l-3.293-3.293a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                   Xuất file
