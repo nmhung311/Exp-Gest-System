@@ -11,7 +11,9 @@
     "install:frontend": "npm --prefix frontend ci || npm --prefix frontend install",
     "dev:frontend": "npm --prefix frontend run dev",
     "start:frontend": "npm --prefix frontend run start",
-    "dev:backend": "python backend/app.py"
+    "dev:backend": "python backend/app.py",
+    "dev": "./start-dev.sh",
+    "dev:full": "./start-dev.sh"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16"

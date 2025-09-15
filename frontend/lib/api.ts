@@ -1,66 +1,110 @@
-// API Configuration
-export const API_BASE_URL = 'http://localhost:3000/api'
+// API utility functions
+// Thay thế cho việc hardcode URLs trong components
 
-// API Endpoints
-export const API_ENDPOINTS = {
-  // Authentication
-  AUTH: {
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    REGISTER: `${API_BASE_URL}/auth/register`,
-  },
-  
-  // Guests
-  GUESTS: {
-    LIST: `${API_BASE_URL}/guests`,
-    CREATE: `${API_BASE_URL}/guests`,
-    UPDATE: (id: string) => `${API_BASE_URL}/guests/${id}`,
-    DELETE: (id: string) => `${API_BASE_URL}/guests/${id}`,
-    QR: (id: string) => `${API_BASE_URL}/guests/${id}/qr`,
-    QR_IMAGE: (id: string) => `${API_BASE_URL}/guests/${id}/qr-image`,
-    CHECKED_IN: `${API_BASE_URL}/guests/checked-in`,
-    BULK_CHECKIN: `${API_BASE_URL}/guests/bulk-checkin`,
-    BULK_CHECKOUT: `${API_BASE_URL}/guests/bulk-checkout`,
-    BULK_DELETE: `${API_BASE_URL}/guests/bulk-delete`,
-    IMPORT: `${API_BASE_URL}/guests/import`,
-    IMPORT_CSV: `${API_BASE_URL}/guests/import-csv`,
-  },
-  
-  // Events
-  EVENTS: {
-    LIST: `${API_BASE_URL}/events`,
-    CREATE: `${API_BASE_URL}/events`,
-    UPDATE: (id: string) => `${API_BASE_URL}/events/${id}`,
-    DELETE: (id: string) => `${API_BASE_URL}/events/${id}`,
-    UPCOMING: (period: string) => `${API_BASE_URL}/events/upcoming?period=${period}`,
-    GUESTS: (eventId: string) => `${API_BASE_URL}/guests?event_id=${eventId}`,
-  },
-  
-  // Check-in
-  CHECKIN: {
-    CHECKIN: `${API_BASE_URL}/checkin`,
-    CHECKOUT: (id: string) => `${API_BASE_URL}/checkin/${id}`,
-  },
-  
-  // Stats
-  STATS: {
-    GUESTS: `${API_BASE_URL}/guests`,
-    CHECKED_IN: `${API_BASE_URL}/guests/checked-in`,
-  }
-}
+import { API_ENDPOINTS, getApiUrl } from './config'
 
-// Helper function to make API calls
-export const apiCall = async (url: string, options: RequestInit = {}) => {
-  const response = await fetch(url, {
+// Generic API call function
+export const apiCall = async (
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> => {
+  const url = endpoint.startsWith('http') ? endpoint : getApiUrl(endpoint)
+  
+  const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    ...options,
-  })
-  
-  if (!response.ok) {
-    throw new Error(`API call failed: ${response.status} ${response.statusText}`)
   }
+
+  const response = await fetch(url, { ...defaultOptions, ...options })
   
-  return response.json()
+  return response
 }
+
+// Specific API functions for different endpoints
+export const api = {
+  // Events
+  getEvents: () => apiCall(API_ENDPOINTS.EVENTS),
+  createEvent: (data: any) => apiCall(API_ENDPOINTS.EVENTS, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  updateEvent: (id: string, data: any) => apiCall(API_ENDPOINTS.EVENTS + `/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deleteEvent: (id: string) => apiCall(API_ENDPOINTS.EVENTS + `/${id}`, {
+    method: 'DELETE',
+  }),
+
+  // Guests
+  getGuests: (eventId?: string) => {
+    const url = eventId ? `${API_ENDPOINTS.GUESTS}?event_id=${eventId}` : API_ENDPOINTS.GUESTS
+    return apiCall(url)
+  },
+  getGuestsCheckedIn: () => apiCall(API_ENDPOINTS.GUESTS_CHECKED_IN),
+  createGuest: (data: any) => apiCall(API_ENDPOINTS.GUESTS, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  updateGuest: (id: string, data: any) => apiCall(API_ENDPOINTS.GUEST_BY_ID(id), {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deleteGuest: (id: string) => apiCall(API_ENDPOINTS.GUEST_BY_ID(id), {
+    method: 'DELETE',
+  }),
+  getGuestQR: (id: string) => apiCall(API_ENDPOINTS.GUEST_QR(id)),
+  getGuestQRImage: (id: string) => apiCall(API_ENDPOINTS.GUEST_QR_IMAGE(id)),
+  bulkCheckinGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_CHECKIN, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  bulkCheckoutGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_CHECKOUT, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  bulkDeleteGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_DELETE, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  importGuests: (formData: FormData) => apiCall(API_ENDPOINTS.GUEST_IMPORT, {
+    method: 'POST',
+    body: formData,
+  }),
+  importGuestsCSV: (formData: FormData) => apiCall(API_ENDPOINTS.GUEST_IMPORT_CSV, {
+    method: 'POST',
+    body: formData,
+  }),
+
+  // Check-in
+  checkinGuest: (data: any) => apiCall(API_ENDPOINTS.CHECKIN, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  checkoutGuest: (data: any) => apiCall(API_ENDPOINTS.CHECKIN, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deleteCheckin: (id: string) => apiCall(API_ENDPOINTS.CHECKIN_BY_ID(id), {
+    method: 'DELETE',
+  }),
+
+  // Auth
+  login: (data: any) => apiCall(API_ENDPOINTS.AUTH.LOGIN, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  register: (data: any) => apiCall(API_ENDPOINTS.AUTH.REGISTER, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getUsers: () => apiCall(API_ENDPOINTS.AUTH.USERS),
+}
+
+// Export API_ENDPOINTS for components that need it
+export { API_ENDPOINTS } from './config'
+
+// Legacy export for backward compatibility
+export const API_BASE_URL = API_ENDPOINTS.EVENTS.replace('/api/events', '')

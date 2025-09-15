@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
 import Portal from "../../../components/Portal"
-import { API_ENDPOINTS } from '@/lib/api'
-
+import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
   id: number
   name: string
@@ -141,7 +140,7 @@ export default function GuestsPage(){
   async function loadGuests() {
     setLoading(true)
     try {
-      const res = await fetch(API_ENDPOINTS.GUESTS.LIST)
+      const res = await fetch(API_ENDPOINTS.GUESTS)
       console.log("Load guests response:", res.status)
       if (res.ok) {
         const data = await res.json()
@@ -160,7 +159,7 @@ export default function GuestsPage(){
   const loadEvents = async () => {
     try {
       console.log("Loading events...")
-      const res = await fetch("http://localhost:5001/api/events")
+      const res = await api.getEvents()
       console.log("Events response:", res.status, res.statusText)
       if (res.ok) {
         const data = await res.json()
@@ -216,17 +215,17 @@ export default function GuestsPage(){
         const qrUrl = `http://localhost:5001/api/guests/${guest.id}/qr-image?t=${Date.now()}`
         setQrImageUrl(qrUrl)
       } else {
-        showToast("Lỗi khi tạo token QR code", "error")
+        showToast("Lỗi tạo QR", "error")
       }
     } catch (e) {
-      showToast("Lỗi khi tải QR code", "error")
+      showToast("Lỗi tải QR", "error")
     }
   }
 
 
   async function downloadQR(guestId: number, guestName: string) {
     try {
-      const response = await fetch(`http://localhost:5001/api/guests/${guestId}/qr-image`)
+      const response = await api.getGuestQRImage(guestId.toString())
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -238,13 +237,13 @@ export default function GuestsPage(){
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       } else {
-        showToast("Lỗi khi tải QR code", "success")
+        showToast("Lỗi tải QR", "error")
         setTimeout(() => {
           setPopupVisible(false)
         }, 3000)
       }
     } catch (e) {
-      showToast("Lỗi khi tải QR code", "error")
+      showToast("Lỗi tải QR", "error")
     }
   }
 
@@ -268,7 +267,7 @@ export default function GuestsPage(){
       })
       
       if (response.ok) {
-        showToast(`Đã check-in thành công ${selectedGuests.size} khách!`, "success")
+        showToast(`Check-in ${selectedGuests.size}!`, "success")
         clearSelection()
         loadGuests()
         setTimeout(() => {
@@ -304,7 +303,7 @@ export default function GuestsPage(){
       })
       
       if (response.ok) {
-        showToast(`Đã check-out thành công ${selectedGuests.size} khách!`, "success")
+        showToast(`Check-out ${selectedGuests.size}!`, "success")
         clearSelection()
         loadGuests()
         setTimeout(() => {
@@ -344,7 +343,7 @@ export default function GuestsPage(){
       })
       
       if (response.ok) {
-        showToast(`Đã xóa thành công ${selectedGuests.size} khách!`, "success")
+        showToast(`Xóa ${selectedGuests.size}!`, "success")
         clearSelection()
         loadGuests()
         setTimeout(() => {
@@ -413,12 +412,6 @@ export default function GuestsPage(){
     console.log("Available events:", events)
     
     try {
-      const url = editingGuest 
-        ? `http://localhost:5001/api/guests/${editingGuest.id}`
-        : "http://localhost:5001/api/guests"
-      
-      const method = editingGuest ? "PUT" : "POST"
-      
       // Đảm bảo luôn gán vào sự kiện được chọn
       let eventId = guestForm.event_id ? parseInt(guestForm.event_id) : (eventFilter ? parseInt(eventFilter) : null)
       console.log("Event ID for guest:", eventId)
@@ -449,14 +442,11 @@ export default function GuestsPage(){
       }
       
       console.log("Sending guest data:", guestData)
-      console.log("API URL:", url)
-      console.log("Method:", method)
       
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(guestData)
-      })
+      // Sử dụng API utility thay vì hardcoded URL
+      const response = editingGuest 
+        ? await api.updateGuest(editingGuest.id.toString(), guestData)
+        : await api.createGuest(guestData)
       
       console.log("API response status:", response.status)
       console.log("API response ok:", response.ok)
@@ -466,7 +456,7 @@ export default function GuestsPage(){
         console.log("API response data:", responseData)
         setShowGuestModal(false)
         loadGuests()
-        showToast(editingGuest ? "Cập nhật khách mời thành công!" : "Thêm khách mời thành công!", "success")
+        showToast(editingGuest ? "Cập nhật!" : "Thêm!", "success")
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -497,7 +487,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         loadGuests()
-        showToast("Xóa khách mời thành công!", "success")
+        showToast("Xóa!", "success")
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -528,7 +518,7 @@ export default function GuestsPage(){
         // Copy vào clipboard
         await navigator.clipboard.writeText(inviteLink)
         triggerHaptic('light')
-        showToast(`Đã copy link thiệp mời cho ${guestName}!`, "success")
+        showToast(`Copy ${guestName}!`, "success")
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -537,7 +527,7 @@ export default function GuestsPage(){
           }, 300)
         }, 2000)
       } else {
-        showToast("Lỗi khi tạo link thiệp mời", "success")
+        showToast("Lỗi link", "error")
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -547,7 +537,7 @@ export default function GuestsPage(){
         }, 2000)
       }
     } catch (e) {
-      showToast("Lỗi khi copy link thiệp mời", "success")
+      showToast("Lỗi copy", "error")
       setTimeout(() => {
         setPopupVisible(false)
         setTimeout(() => {
@@ -786,7 +776,7 @@ export default function GuestsPage(){
         await exportToCSV(guestsToExport, filename)
       }
       
-      showToast(`Đã xuất thành công ${guestsToExport.length} khách!`, "success")
+      showToast(`Xuất ${guestsToExport.length}!`, "success")
       setTimeout(() => {
         setPopupVisible(false)
         setTimeout(() => {
@@ -951,7 +941,7 @@ export default function GuestsPage(){
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
@@ -1749,14 +1739,27 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">Danh xưng</label>
-                <CustomDropdown
-                  options={titleOptions}
-                  value={guestForm.title}
-                  onChange={(value) => updateGuestForm('title', value)}
-                  placeholder="Chọn danh xưng"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Danh xưng</label>
+                  <input
+                    type="text"
+                    value={guestForm.title}
+                    onChange={(e) => updateGuestForm('title', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-xs"
+                    placeholder="Nhập danh xưng (VD: Ông, Bà, Anh, Chị...)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Tag</label>
+                  <input
+                    type="text"
+                    value={guestForm.tag}
+                    onChange={(e) => updateGuestForm('tag', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-xs"
+                    placeholder="Nhập tag (VD: VIP, Speaker, Sponsor...)"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
@@ -1776,15 +1779,6 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   onChange={(e) => updateGuestForm('organization', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="Tên công ty hoặc trường học"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">Tag</label>
-                <CustomDropdown
-                  options={tagOptions}
-                  value={guestForm.tag}
-                  onChange={(value) => updateGuestForm('tag', value)}
-                  placeholder="Chọn tag"
                 />
               </div>
               <div>
@@ -1843,7 +1837,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
         </Portal>
       )}
 
-      {/* Toast Notification - Mobile Optimized */}
+      {/* Toast Notification - Optimized for 370px width */}
       {showPopup && (
         <div className={`fixed top-0 left-0 right-0 sm:top-4 sm:right-4 sm:left-auto z-[9999] transform transition-all duration-300 ease-out ${
           popupVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
@@ -1851,7 +1845,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
           popupVisible ? 'sm:translate-x-0 sm:opacity-100' : 'sm:translate-x-full sm:opacity-0'
         }`}>
           <div 
-            className={`mx-2 mt-2 sm:mx-0 sm:mt-0 px-4 py-3 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xs backdrop-blur-md border ${
+            className={`mx-0.5 mt-0.5 sm:mx-0 sm:mt-0 px-1.5 py-1 sm:px-4 sm:py-3 rounded sm:rounded-2xl shadow-2xl w-full sm:max-w-xs backdrop-blur-md border ${
               copyType === 'success' ? 'border-emerald-400/30 bg-gradient-to-br from-emerald-600/30 via-emerald-500/20 to-emerald-400/10' :
               copyType === 'error' ? 'border-rose-400/30 bg-gradient-to-br from-rose-600/30 via-rose-500/20 to-rose-400/10' :
               copyType === 'warning' ? 'border-amber-400/30 bg-gradient-to-br from-amber-600/30 via-amber-500/20 to-amber-400/10' :
@@ -1861,39 +1855,39 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-0.5">
               <div className="flex-shrink-0">
                 {copyType === 'success' && (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-emerald-400/30">
-                    <svg className="w-4 h-4 sm:w-4 sm:h-4 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-emerald-500/20 rounded sm:rounded-xl flex items-center justify-center border border-emerald-400/30">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'error' && (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-rose-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-rose-400/30">
-                    <svg className="w-4 h-4 sm:w-4 sm:h-4 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-rose-500/20 rounded sm:rounded-xl flex items-center justify-center border border-rose-400/30">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'warning' && (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-amber-400/30">
-                    <svg className="w-4 h-4 sm:w-4 sm:h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-amber-500/20 rounded sm:rounded-xl flex items-center justify-center border border-amber-400/30">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M4.293 19.293a1 1 0 001.414 0L12 13l6.293 6.293a1 1 0 001.414-1.414l-7-7a1 1 0 00-1.414 0l-7 7a1 1 0 000 1.414z" />
                     </svg>
                   </div>
                 )}
                 {copyType === 'info' && (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-cyan-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-cyan-400/30">
-                    <svg className="w-4 h-4 sm:w-4 sm:h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-5 h-5 sm:w-8 sm:h-8 bg-cyan-500/20 rounded sm:rounded-xl flex items-center justify-center border border-cyan-400/30">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
                     </svg>
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm sm:text-sm font-medium break-words leading-relaxed">{copyMessage}</p>
+                <p className="text-xs sm:text-sm font-medium break-words leading-tight sm:leading-relaxed truncate max-w-[200px] sm:max-w-none">{copyMessage}</p>
               </div>
               {/* Close button for mobile */}
               <button
@@ -1901,14 +1895,14 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   setPopupVisible(false)
                   setTimeout(() => setShowPopup(false), 300)
                 }}
-                className="flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors duration-200 sm:hidden"
+                className="flex-shrink-0 p-0.5 rounded hover:bg-white/10 transition-colors duration-200 sm:hidden"
               >
-                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className={`mt-3 h-1 rounded-full ${
+            <div className={`mt-1 h-0.5 rounded-full ${
               copyType === 'success' ? 'bg-gradient-to-r from-emerald-400/60 to-emerald-300/40' :
               copyType === 'error' ? 'bg-gradient-to-r from-rose-400/60 to-rose-300/40' :
               copyType === 'warning' ? 'bg-gradient-to-r from-amber-400/60 to-amber-300/40' :

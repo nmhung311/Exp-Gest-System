@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import CustomDropdown from '../../../components/CustomDropdown'
 import MeshBackground from '../../../components/MeshBackground'
+import SimpleInvitePreview from '../../../components/SimpleInvitePreview'
 
+import { api } from "@/lib/api"
 interface Event {
   id: number
   name: string
@@ -75,6 +77,7 @@ export default function EventsPage() {
     })
   }
 
+
   // Load events
   useEffect(() => {
     loadEvents()
@@ -109,7 +112,7 @@ export default function EventsPage() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const res = await fetch("http://localhost:5001/api/events")
+      const res = await api.getEvents()
       if (res.ok) {
         const data = await res.json()
         // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
@@ -293,10 +296,7 @@ export default function EventsPage() {
 
       if (editingEvent) {
         // Update event to backend
-        const res = await fetch(`http://localhost:5001/api/events/${editingEvent.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const res = await api.updateEvent(editingEvent.id, {
             name: formData.name.trim(),
             description: formData.description?.trim() || '',
             date: formData.date,
@@ -308,7 +308,6 @@ export default function EventsPage() {
             dress_code: useDressCode ? formData.dress_code?.trim() || '' : '',
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())
-          })
         })
         
         if (!res.ok) {
@@ -328,10 +327,7 @@ export default function EventsPage() {
         setToastVisible(true)
       } else {
         // Create new event in backend
-        const res = await fetch('http://localhost:5001/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const res = await api.createEvent({
             name: formData.name.trim(),
             description: formData.description?.trim() || '',
             date: formData.date,
@@ -343,7 +339,6 @@ export default function EventsPage() {
             dress_code: useDressCode ? formData.dress_code?.trim() || '' : '',
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())
-          })
         })
         
         if (!res.ok) {
@@ -378,7 +373,7 @@ export default function EventsPage() {
   const deleteEvent = async (eventId: number, eventName: string) => {
     // Lấy thông tin về số lượng khách mời trước khi xóa
     try {
-      const guestsRes = await fetch(`http://localhost:5001/api/guests?event_id=${eventId}`)
+      const guestsRes = await api.getGuests({ event_id: eventId })
       const guestsData = await guestsRes.json()
       const guestCount = guestsData.guests ? guestsData.guests.length : 0
       
@@ -388,7 +383,7 @@ export default function EventsPage() {
       }
       
       if (confirm(confirmMessage)) {
-        const res = await fetch(`http://localhost:5001/api/events/${eventId}`, { method: 'DELETE' })
+        const res = await api.deleteEvent(eventId)
         if (!res.ok) {
           const errorData = await res.json()
           throw new Error(errorData.error || await res.text())
@@ -462,11 +457,7 @@ export default function EventsPage() {
   // Quick update status inline
   const updateEventStatus = async (eventId: number, newStatus: 'upcoming'|'ongoing'|'completed'|'cancelled') => {
     try {
-      const res = await fetch(`http://localhost:5001/api/events/${eventId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      })
+      const res = await api.updateEvent(eventId, { status: newStatus })
       if (!res.ok) throw new Error(await res.text())
       await loadEvents()
       setToastMsg('Cập nhật trạng thái sự kiện thành công')
@@ -539,100 +530,100 @@ export default function EventsPage() {
         </div>, document.body
       )}
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-2">
+      <div className="text-center px-4">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-2">
           Quản Lý Sự Kiện
         </h1>
-        <p className="text-white/70 text-lg">Tạo và quản lý các sự kiện của công ty</p>
+        <p className="text-white/70 text-sm sm:text-base md:text-lg">Tạo và quản lý các sự kiện của công ty</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-4">
         {/* Total Events */}
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-6 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{stats.total}</div>
-                <div className="text-sm text-blue-300/80 font-medium">Tổng sự kiện</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.total}</div>
+                <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tổng sự kiện</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Upcoming */}
-        <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-2xl p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-yellow-500/20 rounded-xl">
-                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{stats.upcoming}</div>
-                <div className="text-sm text-yellow-300/80 font-medium">Sắp diễn ra</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.upcoming}</div>
+                <div className="text-xs sm:text-sm text-yellow-300/80 font-medium">Sắp diễn ra</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Ongoing */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-2xl p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-green-500/20 rounded-xl">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{stats.ongoing}</div>
-                <div className="text-sm text-green-300/80 font-medium">Đang diễn ra</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.ongoing}</div>
+                <div className="text-xs sm:text-sm text-green-300/80 font-medium">Đang diễn ra</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Completed */}
-        <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 backdrop-blur-sm border border-gray-500/20 rounded-2xl p-6 hover:from-gray-500/20 hover:to-slate-500/20 hover:border-gray-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-gray-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-slate-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 backdrop-blur-sm border border-gray-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-gray-500/20 hover:to-slate-500/20 hover:border-gray-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-gray-500/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-slate-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-gray-500/20 rounded-xl">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-2 sm:p-3 bg-gray-500/20 rounded-lg sm:rounded-xl">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{stats.completed}</div>
-                <div className="text-sm text-gray-300/80 font-medium">Đã hoàn thành</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.completed}</div>
+                <div className="text-xs sm:text-sm text-gray-300/80 font-medium">Đã hoàn thành</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Cancelled */}
-        <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-2xl p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-red-500/20 rounded-xl">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-2 sm:p-3 bg-red-500/20 rounded-lg sm:rounded-xl">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{stats.cancelled}</div>
-                <div className="text-sm text-red-300/80 font-medium">Đã hủy</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.cancelled}</div>
+                <div className="text-xs sm:text-sm text-red-300/80 font-medium">Đã hủy</div>
               </div>
             </div>
           </div>
@@ -640,26 +631,27 @@ export default function EventsPage() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex gap-2">
+      <div className="px-4">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          {/* Create Button */}
           <button 
             onClick={() => openEventModal()}
-            className="group relative px-4 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+            className="group relative w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 flex-shrink-0"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
             Tạo sự kiện
           </button>
-        </div>
 
-        <div className="flex gap-4">
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
           <input
             type="text"
             placeholder="Tìm kiếm sự kiện..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
+              className="flex-1 px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm"
           />
           <CustomDropdown
             options={[
@@ -672,14 +664,17 @@ export default function EventsPage() {
             value={statusFilter}
             onChange={(value) => setStatusFilter(value)}
             placeholder="Chọn trạng thái"
-            className="min-w-[160px]"
+              className="w-full sm:min-w-[160px]"
           />
+          </div>
         </div>
       </div>
 
       {/* Events List */}
-      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-6">
-        <div className="overflow-x-auto">
+      <div className="px-4">
+        <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-4 sm:p-6">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10">
@@ -741,17 +736,83 @@ export default function EventsPage() {
               ))}
             </tbody>
           </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {paginatedEvents.map((event) => (
+              <div key={event.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors">
+                {/* Event Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium text-lg truncate">{event.name}</h3>
+                    <p className="text-white/60 text-sm mt-1 line-clamp-2">{event.description}</p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded-full ml-2 flex-shrink-0 ${getStatusColor(event.status)}`}>
+                    {getStatusText(event.status)}
+                  </span>
+                </div>
+
+                {/* Event Details */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <svg className="w-4 h-4 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-white/80">
+                      {new Date(event.date).toLocaleDateString('vi-VN')} • {event.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <svg className="w-4 h-4 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-white/80 truncate">{event.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <svg className="w-4 h-4 text-white/60 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span className="text-white/80">{event.max_guests} khách</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEventModal(event)}
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-sm hover:from-amber-500/30 hover:to-orange-500/30 hover:border-amber-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Sửa
+                  </button>
+                  <button
+                    onClick={() => deleteEvent(event.id, event.name)}
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-400 rounded-lg text-sm hover:from-red-500/30 hover:to-rose-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-6">
-            <div className="flex gap-2">
+          <div className="flex justify-center mt-6 px-4">
+            <div className="flex gap-1 sm:gap-2 overflow-x-auto">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex-shrink-0 ${
                     currentPage === page
                       ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                       : 'text-white/60 hover:text-white hover:bg-white/10'
@@ -768,30 +829,30 @@ export default function EventsPage() {
       {/* Event Modal */}
       {showEventModal && !showPreviewModal && mounted && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]">
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">
+          <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-gray-900 border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[95dvh] sm:max-h-[90dvh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
                 {editingEvent ? 'Chỉnh sửa sự kiện' : 'Tạo sự kiện mới'}
               </h2>
               <button
                 onClick={closeEventModal}
-                className="text-white/60 hover:text-white transition-colors"
+                className="text-white/60 hover:text-white transition-colors p-1"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Tên sự kiện</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                   placeholder="Nhập tên sự kiện"
                 />
               </div>
@@ -801,29 +862,32 @@ export default function EventsPage() {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 h-24 resize-none"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 h-20 sm:h-24 resize-none text-sm sm:text-base"
                   placeholder="Nhập mô tả sự kiện"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Ngày</label>
+                <label className="block text-white/80 text-sm font-medium mb-3">Thời gian sự kiện</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Ngày</label>
                   <input
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                   />
                 </div>
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Giờ</label>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Giờ</label>
                   <input
                     type="time"
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                   />
+                  </div>
                 </div>
               </div>
 
@@ -833,47 +897,52 @@ export default function EventsPage() {
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                   placeholder="Nhập địa điểm tổ chức"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Địa chỉ chi tiết</label>
+                <label className="block text-white/80 text-sm font-medium mb-3">Thông tin địa điểm</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Địa chỉ chi tiết</label>
                   <input
                     type="text"
                     value={formData.venue_address}
                     onChange={(e) => setFormData({ ...formData, venue_address: e.target.value })}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                     placeholder="Ví dụ: 123 Lê Lợi, Quận 1, TP.HCM"
                   />
                 </div>
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Link Google Maps</label>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Link Google Maps</label>
                   <input
                     type="url"
                     value={formData.venue_map_url}
                     onChange={(e) => setFormData({ ...formData, venue_map_url: e.target.value })}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                     placeholder="https://maps.google.com/..."
                   />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Số khách tối đa</label>
+                <label className="block text-white/80 text-sm font-medium mb-3">Cấu hình sự kiện</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Số khách tối đa</label>
                   <input
                     type="number"
                     value={formData.max_guests}
                     onChange={(e) => setFormData({ ...formData, max_guests: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm sm:text-base"
                     min="1"
                   />
                 </div>
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">Trạng thái</label>
+                    <label className="block text-white/60 text-xs font-medium mb-2">Trạng thái</label>
                   <CustomDropdown
                     options={[
                       { value: "upcoming", label: "Sắp diễn ra" },
@@ -884,21 +953,12 @@ export default function EventsPage() {
                     value={formData.status}
                     onChange={(value) => setFormData({ ...formData, status: value as any })}
                     placeholder="Chọn trạng thái"
+                      className="w-full"
                   />
                 </div>
               </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">Địa chỉ chi tiết</label>
-                <input
-                  type="text"
-                  value={formData.venue_address}
-                  onChange={(e) => setFormData({ ...formData, venue_address: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50"
-                  placeholder="Ví dụ: 123 Lê Lợi, Quận 1, TP.HCM"
-                />
               </div>
+
 
               {/* Dress Code */}
               <div>
@@ -929,19 +989,19 @@ export default function EventsPage() {
 
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Timeline chương trình</label>
-                <div className="bg-black/20 border border-white/20 rounded-xl overflow-hidden">
+                <div className="bg-black/20 border border-white/20 rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-white/5">
                       <tr>
-                        <th className="text-left text-white/70 text-xs font-medium px-4 py-2 w-32">Giờ</th>
-                        <th className="text-left text-white/70 text-xs font-medium px-4 py-2">Nội dung</th>
-                        <th className="px-2 py-2 w-16"></th>
+                        <th className="text-left text-white/70 text-xs font-medium px-2 py-2 w-20">Giờ</th>
+                        <th className="text-left text-white/70 text-xs font-medium px-2 py-2">Nội dung</th>
+                        <th className="px-1 py-2 w-8"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {programRows.map((row, idx) => (
                         <tr key={idx} className="border-t border-white/10">
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-1.5">
                             <input
                               type="time"
                               value={row.time}
@@ -949,10 +1009,10 @@ export default function EventsPage() {
                                 const v = e.target.value
                                 setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,time:v}:r))
                               }}
-                              className="w-full px-2 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50"
+                              className="w-full px-1.5 py-1.5 bg-black/30 border border-white/20 rounded text-white focus:outline-none focus:border-blue-400/50 text-xs"
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-1.5">
                             <input
                               type="text"
                               value={row.item}
@@ -960,32 +1020,32 @@ export default function EventsPage() {
                                 const v = e.target.value
                                 setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,item:v}:r))
                               }}
-                              className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50"
+                              className="w-full px-2 py-1.5 bg-black/30 border border-white/20 rounded text-white focus:outline-none focus:border-blue-400/50 text-xs"
                               placeholder="Nội dung chương trình"
                             />
                           </td>
-                          <td className="px-2 py-2 text-right">
+                          <td className="px-1 py-1.5 text-right">
                             <button
                               onClick={() => setProgramRows(prev => prev.filter((_,i)=>i!==idx))}
-                              className="px-2 py-2 text-red-300 hover:text-red-200"
+                              className="p-1 text-red-300 hover:text-red-200"
                               title="Xóa dòng"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <div className="p-3 border-t border-white/10 flex justify-between">
+                  <div className="p-2 border-t border-white/10 flex justify-between items-center">
                     <button
                       onClick={() => setProgramRows(prev => [...prev, { time: '', item: '' }])}
-                      className="px-3 py-2 text-sm rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/15"
+                      className="px-2 py-1.5 text-xs rounded bg-white/10 border border-white/20 text-white hover:bg-white/15"
                     >
                       Thêm dòng
                     </button>
                     {programRows.length>0 && (
-                      <span className="text-white/40 text-xs self-center">{programRows.length} mục</span>
+                      <span className="text-white/40 text-xs">{programRows.length} mục</span>
                     )}
                   </div>
                 </div>
@@ -993,32 +1053,37 @@ export default function EventsPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={openPreviewModal}
-                className="group relative px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
-                Xem trước
-              </button>
+            <div className="space-y-3 mt-4 sm:mt-6">
+              {/* Primary Action Button */}
               <button
                 onClick={saveEvent}
-                className="group relative flex-1 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-xl hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                className="group relative w-full px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg sm:rounded-xl hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm sm:text-base"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 {editingEvent ? 'Cập nhật' : 'Tạo mới'}
               </button>
+              
+              {/* Secondary Actions */}
+              <div className="flex gap-3">
+              <button
+                  onClick={openPreviewModal}
+                  className="group relative flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg sm:rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/20 text-sm sm:text-base"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                </svg>
+                  Xem trước
+              </button>
               <button
                 onClick={closeEventModal}
-                className="group relative px-6 py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20"
+                  className="group relative flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg sm:rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20 text-sm sm:text-base"
               >
                 Hủy
               </button>
+              </div>
             </div>
             </div>
           </div>
@@ -1026,172 +1091,12 @@ export default function EventsPage() {
       )}
 
       {/* Preview Modal */}
-      {showPreviewModal && createPortal(
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
-                Xem trước thiệp mời
-              </h2>
-              <button
-                onClick={closePreviewModal}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5 text-white/60" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="p-0 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <MeshBackground>
-                <div className="min-h-screen">
-                  <div className="max-w-2xl mx-auto p-6 space-y-6 py-12">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-3 mb-6">
-                      {/* Logo công ty */}
-                      <img
-                        src="/assets/logo-DytfE-Xm.png"
-                        alt="Company Logo"
-                        className="h-16 w-16 object-contain"
-                      />
-
-                      {/* Text bên cạnh */}
-                      <div>
-                        <h1 className="text-2xl font-bold text-white">EXP Technology</h1>
-                        <p className="text-lg text-white/80">15 Years of Excellence</p>
-                        <p className="text-sm text-white/60">EXP Technology Company Limited</p>
-                      </div>
-                    </div>
-                    <div className="mb-6">
-                      <h2 className="text-3xl font-bold text-white mb-2">{formData.name || 'Sự kiện'}</h2>
-                      <div className="w-24 h-1 bg-gradient-to-r from-cyan-400 to-purple-500 mx-auto rounded-full"></div>
-                    </div>
-                  </div>
-
-                  <div className="border border-white/20 rounded-xl p-6 space-y-6 bg-black/20 backdrop-blur-sm relative z-0">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-semibold text-white mb-2">Kính gửi [Tên khách mời]</h2>
-                      <p className="text-white/80 text-lg">Trân trọng mời quý khách tham dự chương trình</p>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h3 className="text-lg font-semibold text-white">
-                          Thời gian & Địa điểm
-                        </h3>
-                        <div className="space-y-2 text-white/80">
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                            </svg>
-                            <span>{formData.date || 'Ngày'} {formData.time || 'Giờ'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                            </svg>
-                            <a
-                              href={formData.venue_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.location || 'Địa điểm sự kiện')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-cyan-300 hover:text-cyan-200 underline decoration-dotted underline-offset-4"
-                            >
-                              {formData.location || 'Địa điểm sự kiện'}
-                            </a>
-                          </div>
-                          {formData.venue_address && (
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-white/60" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                              </svg>
-                              <span className="text-white/70">{formData.venue_address}</span>
-                            </div>
-                          )}
-                          {useDressCode && formData.dress_code && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-white/60"></div>
-                              <span className="text-white/70">Trang phục: {formData.dress_code}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <h3 className="text-lg font-semibold text-white">
-                          Chương trình
-                        </h3>
-                        <div className="relative pl-6 text-sm">
-                          <div className="absolute left-2 top-0 bottom-0 w-px bg-white/10" />
-                          {programRows.length > 0 ? (
-                            programRows.map((item, index) => (
-                              <div key={index} className="relative flex items-start gap-3 py-2">
-                                <div className="text-cyan-400 w-16 font-medium">{item.time || ''}</div>
-                                <div className="text-white/85 flex-1">{item.item || ''}</div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-white/60 italic">Chương trình sẽ được cập nhật</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center pt-4 border-t border-white/10">
-                      
-                      <p className="text-white/60 text-sm mt-1">
-                        Vui lòng xác nhận tham dự trước hạn chót
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="border border-white/20 rounded-xl p-8 bg-black/20 backdrop-blur-sm text-center">
-                    <h3 className="text-xl font-semibold text-white mb-2">Xác nhận tham dự</h3>
-                    <p className="text-white/60 mb-6">Vui lòng cho chúng tôi biết bạn có thể tham dự sự kiện không?</p>
-                    <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                      <button className="flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 hover:from-emerald-500/30 hover:to-cyan-500/30 hover:border-emerald-300/60 transition-all duration-300 flex items-center justify-center gap-3 font-medium backdrop-blur-sm hover:shadow-lg hover:shadow-emerald-500/20">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span>Tôi sẽ tham dự</span>
-                      </button>
-                      <button className="flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-rose-500/10 to-red-500/10 border border-rose-400/40 text-rose-300 hover:from-rose-500/20 hover:to-red-500/20 hover:border-rose-300/60 transition-all duration-300 flex items-center justify-center gap-3 font-medium backdrop-blur-sm hover:shadow-lg hover:shadow-rose-500/20">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                        <span>Không thể tham dự</span>
-                      </button>
-                    </div>
-                    <p className="text-white/50 text-sm mt-4">
-                      Hạn chót xác nhận: Hạn chót
-                    </p>
-                  </div>
-                  
-                  {/* Footer */}
-                  <div className="text-center pt-8 border-t border-white/10">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                      <img
-                        src="/assets/logo-DytfE-Xm.png"
-                        alt="Company Logo"
-                        className="h-8 w-8 object-contain"
-                      />
-                      <span className="text-white/80 font-medium">EXP Technology Company Limited</span>
-                    </div>
-                    <p className="text-white/60 text-sm mb-2">15 Years of Excellence</p>
-                    <p className="text-white/50 text-xs">
-                      Thiệp mời điện tử • Mã ID: DEMO • Tạo lúc: {new Date().toLocaleString('vi-VN')}
-                    </p>
-                  </div>
-                  </div>
-                </div>
-              </MeshBackground>
-            </div>
-          </div>
-        </div>, document.body
+      {showPreviewModal && mounted && createPortal(
+        <SimpleInvitePreview 
+          eventData={formData} 
+          onClose={closePreviewModal} 
+        />, 
+        document.body
       )}
 
       {/* Event Detail Modal */}

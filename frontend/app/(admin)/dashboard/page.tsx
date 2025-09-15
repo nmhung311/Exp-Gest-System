@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import { API_ENDPOINTS } from '@/lib/api'
+import CustomDropdown from '../../components/CustomDropdown'
 
 interface DashboardStats {
   totalGuests: number
@@ -53,18 +54,46 @@ export default function DashboardPage(){
   const loadDashboardStats = async () => {
     try {
       setLoading(true)
+      console.log('Loading dashboard stats...')
       
       // Load guests data
-      const guestsRes = await fetch(API_ENDPOINTS.GUESTS.LIST)
-      const guests = guestsRes.ok ? await guestsRes.json() : []
+      console.log('Fetching guests from:', API_ENDPOINTS.GUESTS)
+      const guestsRes = await fetch(API_ENDPOINTS.GUESTS)
+      console.log('Guests response status:', guestsRes.status)
+      let guests = []
+      if (guestsRes.ok) {
+        const guestsData = await guestsRes.json()
+        guests = guestsData.guests || guestsData || []
+        console.log('Guests data:', guests)
+      } else {
+        console.error('Failed to fetch guests:', guestsRes.status, await guestsRes.text())
+      }
       
       // Load checked-in guests
-      const checkinRes = await fetch(API_ENDPOINTS.GUESTS.CHECKED_IN)
-      const checkedInGuests = checkinRes.ok ? await checkinRes.json() : []
+      console.log('Fetching checked-in guests from:', API_ENDPOINTS.GUESTS_CHECKED_IN)
+      const checkinRes = await fetch(API_ENDPOINTS.GUESTS_CHECKED_IN)
+      console.log('Checked-in guests response status:', checkinRes.status)
+      let checkedInGuests = []
+      if (checkinRes.ok) {
+        const checkinData = await checkinRes.json()
+        checkedInGuests = checkinData.guests || checkinData || []
+        console.log('Checked-in guests data:', checkedInGuests)
+      } else {
+        console.error('Failed to fetch checked-in guests:', checkinRes.status, await checkinRes.text())
+      }
       
       // Load events data
-      const eventsRes = await fetch(API_ENDPOINTS.EVENTS.LIST)
-      const events = eventsRes.ok ? await eventsRes.json() : []
+      console.log('Fetching events from:', API_ENDPOINTS.EVENTS)
+      const eventsRes = await fetch(API_ENDPOINTS.EVENTS)
+      console.log('Events response status:', eventsRes.status)
+      let events = []
+      if (eventsRes.ok) {
+        const eventsData = await eventsRes.json()
+        events = eventsData.events || eventsData || []
+        console.log('Events data:', events)
+      } else {
+        console.error('Failed to fetch events:', eventsRes.status, await eventsRes.text())
+      }
       
       // Calculate today's check-ins
       const today = new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
@@ -100,10 +129,42 @@ export default function DashboardPage(){
 
   const loadUpcomingEvents = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.EVENTS.UPCOMING(selectedPeriod))
+      const response = await fetch(API_ENDPOINTS.EVENTS)
       if (response.ok) {
-        const events = await response.json()
-        setUpcomingEvents(events)
+        const eventsData = await response.json()
+        const allEvents = eventsData.events || eventsData || []
+        
+        // Filter events based on selected period
+        const now = new Date()
+        let filteredEvents = allEvents
+        
+        if (selectedPeriod === '3days') {
+          const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+          filteredEvents = allEvents.filter((event: any) => {
+            const eventDate = new Date(event.date)
+            return eventDate >= now && eventDate <= threeDaysFromNow
+          })
+        } else if (selectedPeriod === '7days') {
+          const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          filteredEvents = allEvents.filter((event: any) => {
+            const eventDate = new Date(event.date)
+            return eventDate >= now && eventDate <= sevenDaysFromNow
+          })
+        } else if (selectedPeriod === 'month') {
+          const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate())
+          filteredEvents = allEvents.filter((event: any) => {
+            const eventDate = new Date(event.date)
+            return eventDate >= now && eventDate <= nextMonth
+          })
+        } else {
+          // 'all' - show all upcoming events
+          filteredEvents = allEvents.filter((event: any) => {
+            const eventDate = new Date(event.date)
+            return eventDate >= now
+          })
+        }
+        
+        setUpcomingEvents(filteredEvents)
       }
     } catch (error) {
       console.error("Error loading upcoming events:", error)
@@ -195,16 +256,67 @@ export default function DashboardPage(){
             </svg>
             <span className="truncate">Sự kiện sắp tới ({upcomingEvents.length})</span>
           </h2>
-          <a 
-            href="/dashboard/events"
-            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 text-xs sm:text-sm font-medium w-full sm:w-auto text-center"
-          >
-            Quản lý sự kiện
-          </a>
+          
+          {/* Controls - Inline on mobile, separate on desktop */}
+          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            {/* Period Filter Dropdown - Only show on mobile (w 370px) */}
+            <div className="sm:hidden flex-1">
+              <CustomDropdown
+                options={[
+                  { 
+                    value: 'all', 
+                    label: 'Tất cả',
+                    icon: (
+                      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    value: '3days', 
+                    label: '3 ngày tới',
+                    icon: (
+                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    value: '7days', 
+                    label: '7 ngày tới',
+                    icon: (
+                      <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    value: 'month', 
+                    label: 'Tháng này',
+                    icon: (
+                      <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )
+                  }
+                ]}
+                value={selectedPeriod}
+                onChange={(value) => setSelectedPeriod(value as any)}
+                className="w-full min-w-[140px]"
+              />
+            </div>
+            
+            <a 
+              href="/dashboard/events"
+              className="px-3 sm:px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 text-xs sm:text-sm font-medium w-full sm:w-auto text-center min-w-[140px]"
+            >
+              Quản lý sự kiện
+            </a>
+          </div>
         </div>
 
-        {/* Period Filter Tabs - Mobile Optimized */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 mb-4 md:mb-6">
+        {/* Period Filter Tabs - Only show on desktop (hidden on mobile w 370px) */}
+        <div className="hidden sm:flex sm:flex-wrap gap-1.5 sm:gap-2 mb-4 md:mb-6">
           {[
             { key: 'all', label: 'Tất cả' },
             { key: '3days', label: '3 ngày tới' },
@@ -285,9 +397,10 @@ export default function DashboardPage(){
                     className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
-                    Chỉnh sửa
+                    Xem thêm
                   </a>
                 </div>
               </div>

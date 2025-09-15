@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import MeshBackground from "../components/MeshBackground"
 
 export default function AdminLayout({
@@ -9,6 +10,18 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const router = useRouter()
+
+  const handleLogout = () => {
+    // Xóa token khỏi localStorage
+    localStorage.removeItem('auth_token')
+    
+    // Chuyển hướng về trang đăng nhập
+    router.push('/login')
+    
+    // Đóng mobile menu nếu đang mở
+    setIsMobileMenuOpen(false)
+  }
 
   return (
     <MeshBackground>
@@ -32,6 +45,18 @@ export default function AdminLayout({
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/checkin">Check-in</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/events">Sự kiện</a>
             <a className="hover:text-white px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" href="/dashboard/stats">Thống kê</a>
+            
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/20 hover:text-red-400 transition-colors border border-red-500/30"
+              title="Đăng xuất"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span className="hidden lg:inline">Đăng xuất</span>
+            </button>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -89,6 +114,19 @@ export default function AdminLayout({
               >
                 Thống kê
               </a>
+              
+              {/* Mobile Logout Button */}
+              <div className="pt-2 border-t border-white/10">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-red-500/20 hover:text-red-400 transition-colors text-sm text-red-400 border border-red-500/30"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Đăng xuất
+                </button>
+              </div>
             </nav>
           </div>
         )}

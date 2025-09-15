@@ -983,6 +983,51 @@ def create_app() -> Flask:
             print(f"Error in bulk delete: {e}")
             return {"message": f"Error in bulk delete: {str(e)}"}, 500
 
+    @app.get("/api/invite/<token>")
+    def get_invite_data(token):
+        try:
+            # Find token
+            tok = Token.query.filter_by(token=token).first()
+            if not tok:
+                return {"error": "Invalid token"}, 404
+            
+            # Get guest
+            guest = Guest.query.get(tok.guest_id)
+            if not guest:
+                return {"error": "Guest not found"}, 404
+            
+            # Get event
+            event = None
+            if guest.event_id:
+                event = Event.query.get(guest.event_id)
+            
+            if not event:
+                return {"error": "Event not found"}, 404
+            
+            # Prepare response
+            response = {
+                "token": token,
+                "event": event.to_dict(),
+                "guest": {
+                    "id": guest.id,
+                    "name": guest.name,
+                    "email": guest.email,
+                    "title": guest.title or "Ông/Bà",
+                    "role": guest.role or "Khách mời",
+                    "organization": guest.organization or "",
+                    "group_tag": guest.group_tag or "",
+                    "is_vip": guest.is_vip or False,
+                    "rsvp_status": guest.rsvp_status or "pending",
+                    "checkin_status": guest.checkin_status or "not_arrived"
+                }
+            }
+            
+            return response, 200
+            
+        except Exception as e:
+            print(f"Error getting invite data: {e}")
+            return {"error": f"Error getting invite data: {str(e)}"}, 500
+
     return app
 
 
@@ -991,6 +1036,6 @@ app = create_app()
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=3000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
 
 

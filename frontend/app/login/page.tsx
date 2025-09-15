@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { API_ENDPOINTS } from '@/lib/api'
+import { api } from '@/lib/api'
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -16,26 +16,23 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const res = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password })
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ message: 'Đăng nhập thất bại' }))
-        setError(data.message || 'Đăng nhập thất bại')
-        return
-      }
-
-      const data = await res.json()
-      if (data && data.token) {
-        localStorage.setItem('auth_token', data.token)
-      }
+      const response = await api.login({ username: email, password })
       
-      window.location.href = '/dashboard'
-    } catch (err) {
-      setError('Không thể kết nối máy chủ đăng nhập')
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data && data.token) {
+          localStorage.setItem('auth_token', data.token)
+          window.location.href = '/dashboard'
+        } else {
+          setError(data.message || 'Đăng nhập thất bại')
+        }
+      } else {
+        const errorData = await response.json()
+        setError(errorData.message || 'Đăng nhập thất bại')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Không thể kết nối máy chủ đăng nhập')
     } finally {
       setLoading(false)
     }
