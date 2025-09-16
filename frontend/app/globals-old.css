@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for shadcn/ui + expsolution.io theme */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+  /* EXP Solution brand colors */
+  --brand: 224.3 76.3% 48%;
+  --brand-2: 268 83% 65%;
+  --brand-3: 190 95% 39%;
+  --shadow-glow: 0 20px 60px -10px hsl(var(--brand)/.35);
+  --transition-smooth: all .35s cubic-bezier(.4, 0, .2, 1);
+  --ring-strong: 0 0 0 2px hsl(var(--brand)/.5);
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+}
+
+/* Base styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+html, body {
+  /* màu nền cơ bản */
+  background-color: #0B0F14;
+  overflow-x: hidden;
+}
+
+body {
+  color: hsl(var(--foreground));
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  -o-tab-size: 4;
+  tab-size: 4;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Tailwind Components */
+@layer components {
+  .gradient-bg {
+    @apply bg-gradient-exp;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  .exp-card {
+    @apply bg-exp-surface border border-exp-border rounded-xl p-6 shadow-elevate;
+  }
+  
+  .exp-button-primary {
+    @apply bg-exp-accent hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300;
+  }
+  
+  .exp-button-secondary {
+    @apply bg-exp-surface hover:bg-exp-border text-exp-muted hover:text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 border border-exp-border;
+  }
+  
+  .exp-input {
+    @apply bg-exp-surface border border-exp-border text-white placeholder-exp-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-exp-accent focus:border-transparent;
+  }
+  
+  .exp-text-primary {
+    @apply text-white;
+  }
+  
+  .exp-text-secondary {
+    @apply text-exp-muted;
+  }
+  
+  .exp-text-accent {
+    @apply text-exp-accent;
+  }
+  
+  .exp-heading-1 {
+    @apply text-4xl font-bold text-white;
+  }
+  
+  .exp-heading-2 {
+    @apply text-3xl font-semibold text-white;
+  }
+  
+  .exp-heading-3 {
+    @apply text-2xl font-semibold text-white;
+  }
+  
+  .exp-heading-4 {
+    @apply text-xl font-semibold text-white;
+  }
+  
+  .exp-body-large {
+    @apply text-lg text-exp-muted;
+  }
+  
+  .exp-body-medium {
+    @apply text-base text-exp-muted;
+  }
+  
+  .exp-body-small {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .exp-body-regular {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .login-left-column {
+    @apply bg-gradient-to-b from-slate-900/95 via-purple-900/90 to-cyan-900/85 bg-[length:200%_200%] animate-pulse;
+  }
+  
+  .login-right-column {
+    @apply bg-gradient-to-br from-slate-900 to-slate-800;
+  }
+  
+  .exp-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .exp-section {
+    @apply py-16;
+  }
+  
+  .exp-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-8;
+  }
+  
+  .exp-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .exp-grid-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+}
+
+/* Animation keyframes */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Custom Scrollbar Design */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, 
+    rgba(80, 130, 255, 0.6) 0%, 
+    rgba(160, 80, 255, 0.6) 50%, 
+    rgba(80, 200, 255, 0.6) 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, 
+    rgba(80, 130, 255, 0.8) 0%, 
+    rgba(160, 80, 255, 0.8) 50%, 
+    rgba(80, 200, 255, 0.8) 100%);
+  box-shadow: 0 0 10px rgba(80, 130, 255, 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(135deg, 
+    rgba(80, 130, 255, 1) 0%, 
+    rgba(160, 80, 255, 1) 50%, 
+    rgba(80, 200, 255, 1) 100%);
+}
+
+::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(80, 130, 255, 0.6) rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar classes for specific use cases */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thick {
+  scrollbar-width: auto;
+}
+
+.scrollbar-thick::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for dark theme */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, 
+    rgba(80, 130, 255, 0.7) 0%, 
+    rgba(160, 80, 255, 0.7) 50%, 
+    rgba(80, 200, 255, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, 
+    rgba(80, 130, 255, 0.9) 0%, 
+    rgba(160, 80, 255, 0.9) 50%, 
+    rgba(80, 200, 255, 0.9) 100%);
+  box-shadow: 0 0 15px rgba(80, 130, 255, 0.4);
+}
+
+/* Custom scrollbar for specific containers */
+.scrollbar-glass {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+.scrollbar-glass::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-glass::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.scrollbar-glass::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scrollbar-glass::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive utilities */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}

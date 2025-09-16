@@ -82,7 +82,7 @@ export default function CustomDropdown({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute z-[9999] w-full mt-1 bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl overflow-hidden">
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto scrollbar-glass">
             {options.map((option, index) => (
               <button
                 key={option.value}

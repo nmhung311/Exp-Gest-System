@@ -161,17 +161,17 @@ export default function StatsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-        {/* Header - Mobile Optimized */}
-        <div className="text-center">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-2">
+        {/* Header - Desktop Optimized */}
+        <div className="text-center mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white mb-3">
             Thống Kê Hệ Thống
           </h1>
-          <p className="text-white/70 text-sm sm:text-base lg:text-lg">Báo cáo chi tiết về khách mời và check-in</p>
+          <p className="text-white/60 text-sm sm:text-base">Báo cáo chi tiết về khách mời và check-in</p>
         </div>
 
         {/* Time Range Dropdown - Mobile Optimized */}
-        <div className="flex justify-center">
-          <div className="relative w-full max-w-xs dropdown-container">
+        <div className="flex justify-center mb-6">
+          <div className="relative w-full max-w-xs sm:max-w-sm dropdown-container">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-full bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between hover:bg-black/30 hover:border-white/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
@@ -194,7 +194,7 @@ export default function StatsPage() {
             
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden scrollbar-glass">
                 {[
                   { 
                     key: 'all', 
@@ -259,253 +259,309 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* Guest Statistics - Mobile Optimized */}
-        <div className="space-y-4 sm:space-y-6">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Guest Statistics - Desktop Optimized */}
+        <div className="space-y-6">
+          <h2 className="text-lg sm:text-xl font-medium text-white flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="text-sm sm:text-base lg:text-lg">Thống Kê Khách Mời</span>
+            <span>Thống Kê Khách Mời</span>
           </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
-            {/* Total Guests - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Desktop: 4 cards per row on ≥1280px, 2 cards per row on 1024px */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
+            {/* Total Guests - Primary Card */}
+            <div className="group relative bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border-2 border-blue-400/50 rounded-2xl p-4 sm:p-6 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/70 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-blue-500/30 rounded-xl">
+                    <svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.total}</div>
-                    <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tổng</div>
+                    <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">{guestStats.total}</div>
+                    <div className="text-sm sm:text-base text-blue-200 font-medium">Tổng khách mời</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full w-full"></div>
+                <div className="mt-auto">
+                  <div className="h-2 bg-gradient-to-r from-blue-500/40 to-cyan-500/40 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full w-full"></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Pending - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Pending - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-2xl p-4 sm:p-6 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-yellow-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.pending}</div>
-                    <div className="text-xs sm:text-sm text-yellow-300/80 font-medium">Chờ</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{guestStats.pending}</div>
+                    <div className="text-sm text-yellow-300/80 font-medium">Chờ phản hồi</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.pending / guestStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.pending / guestStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Accepted - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Accepted - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-2xl p-4 sm:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-green-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.accepted}</div>
-                    <div className="text-xs sm:text-sm text-green-300/80 font-medium">Xác nhận</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{guestStats.accepted}</div>
+                    <div className="text-sm text-green-300/80 font-medium">Đã xác nhận</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.accepted / guestStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.accepted / guestStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Declined - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-red-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Declined - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm border border-red-500/20 rounded-2xl p-4 sm:p-6 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-red-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.declined}</div>
-                    <div className="text-xs sm:text-sm text-red-300/80 font-medium">Từ chối</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{guestStats.declined}</div>
+                    <div className="text-sm text-red-300/80 font-medium">Đã từ chối</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-red-400 to-rose-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.declined / guestStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-red-400 to-rose-400 rounded-full" style={{width: `${guestStats.total > 0 ? (guestStats.declined / guestStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Response Rate - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-indigo-500/20 hover:to-purple-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-indigo-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Response Rate - Desktop Optimized with Progress Circle */}
+            <div className="group relative bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-500/20 rounded-2xl p-4 sm:p-6 hover:from-indigo-500/20 hover:to-purple-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-indigo-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.responseRate}%</div>
-                    <div className="text-xs sm:text-sm text-indigo-300/80 font-medium">Phản hồi</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{guestStats.responseRate}%</div>
+                    <div className="text-sm text-indigo-300/80 font-medium">Tỷ lệ phản hồi</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full" style={{width: `${guestStats.responseRate}%`}}></div>
+                <div className="mt-auto">
+                  {/* Circular Progress */}
+                  <div className="relative w-16 h-16 mx-auto">
+                    <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-indigo-500/20"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-indigo-400"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray={`${guestStats.responseRate}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Acceptance Rate - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-teal-500/10 to-cyan-500/10 backdrop-blur-sm border border-teal-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-teal-500/20 hover:to-cyan-500/20 hover:border-teal-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-teal-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Acceptance Rate - Desktop Optimized with Progress Circle */}
+            <div className="group relative bg-gradient-to-br from-teal-500/10 to-cyan-500/10 backdrop-blur-sm border border-teal-500/20 rounded-2xl p-4 sm:p-6 hover:from-teal-500/20 hover:to-cyan-500/20 hover:border-teal-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-teal-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{guestStats.acceptanceRate}%</div>
-                    <div className="text-xs sm:text-sm text-teal-300/80 font-medium">Chấp nhận</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{guestStats.acceptanceRate}%</div>
+                    <div className="text-sm text-teal-300/80 font-medium">Tỷ lệ chấp nhận</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-teal-500/30 to-cyan-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full" style={{width: `${guestStats.acceptanceRate}%`}}></div>
+                <div className="mt-auto">
+                  {/* Circular Progress */}
+                  <div className="relative w-16 h-16 mx-auto">
+                    <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-teal-500/20"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-teal-400"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray={`${guestStats.acceptanceRate}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Check-in Statistics - Mobile Optimized */}
-        <div className="space-y-4 sm:space-y-6">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-green-500/20 rounded-lg">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Check-in Statistics - Desktop Optimized */}
+        <div className="space-y-6">
+          <h2 className="text-lg sm:text-xl font-medium text-white flex items-center gap-3">
+            <div className="p-2 bg-green-500/20 rounded-lg">
+              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="text-sm sm:text-base lg:text-lg">Thống Kê Check-in</span>
+            <span>Thống Kê Check-in</span>
           </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            {/* Total Check-ins - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Desktop: 4 cards per row on ≥1280px, 2 cards per row on 1024px */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {/* Total Check-ins - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-4 sm:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-cyan-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.total}</div>
-                    <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{checkinStats.total}</div>
+                    <div className="text-sm text-cyan-300/80 font-medium">Tổng check-in</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full w-full"></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full w-full"></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Today - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Today - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-2xl p-4 sm:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-green-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.today}</div>
-                    <div className="text-xs sm:text-sm text-green-300/80 font-medium">Hôm nay</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{checkinStats.today}</div>
+                    <div className="text-sm text-green-300/80 font-medium">Hôm nay</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.today / checkinStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.today / checkinStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* This Week - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-blue-500/20 hover:to-indigo-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* This Week - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-4 sm:p-6 hover:from-blue-500/20 hover:to-indigo-500/20 hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-blue-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.thisWeek}</div>
-                    <div className="text-xs sm:text-sm text-blue-300/80 font-medium">Tuần</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{checkinStats.thisWeek}</div>
+                    <div className="text-sm text-blue-300/80 font-medium">Tuần này</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.thisWeek / checkinStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.thisWeek / checkinStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* This Month - Mobile Optimized */}
-            <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* This Month - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-4 sm:p-6 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-purple-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">{checkinStats.thisMonth}</div>
-                    <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Tháng</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{checkinStats.thisMonth}</div>
+                    <div className="text-sm text-purple-300/80 font-medium">Tháng này</div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.thisMonth / checkinStats.total) * 100 : 0}%`}}></div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.thisMonth / checkinStats.total) * 100 : 0}%`}}></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Check-ins - Mobile Optimized */}
-        <div className="space-y-4 sm:space-y-6">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-orange-500/20 rounded-lg">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Recent Check-ins - Desktop Optimized */}
+        <div className="space-y-6">
+          <h2 className="text-lg sm:text-xl font-medium text-white flex items-center gap-3">
+            <div className="p-2 bg-orange-500/20 rounded-lg">
+              <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="text-sm sm:text-base lg:text-lg">
+            <span>
               Check-in Gần Đây 
               <span className="hidden sm:inline">({timeRange === 'all' ? 'Tất cả' : timeRange === 'month' ? 'Tháng này' : timeRange === 'week' ? 'Tuần này' : 'Hôm nay'})</span>
               <span className="sm:hidden">({timeRange === 'all' ? 'Tất cả' : timeRange === 'month' ? 'Tháng' : timeRange === 'week' ? 'Tuần' : 'Hôm nay'})</span>
@@ -514,13 +570,24 @@ export default function StatsPage() {
 
           <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 lg:p-6">
             {filteredData.length === 0 ? (
-              <div className="text-center py-8 sm:py-12">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              <div className="text-center py-12 sm:py-16">
+                {/* QR Code + Person Illustration */}
+                <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center">
+                    <svg className="w-12 h-12 sm:w-16 sm:h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
                 </div>
-                <p className="text-white/60 text-sm sm:text-base lg:text-lg">Chưa có check-in nào trong khoảng thời gian này</p>
+                <h3 className="text-white font-semibold text-lg sm:text-xl mb-3">Hiện chưa có check-in nào</h3>
+                <p className="text-white/60 text-sm sm:text-base max-w-md mx-auto">
+                  Chưa có khách mời nào check-in trong khoảng thời gian này
+                </p>
               </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">

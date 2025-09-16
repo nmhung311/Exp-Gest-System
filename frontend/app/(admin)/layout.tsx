@@ -2,7 +2,6 @@
 import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import BackgroundOverlay from "../components/BackgroundOverlay"
 import UserProfileDropdown from "../components/UserProfileDropdown"
 
 export default function AdminLayout({
@@ -91,7 +90,6 @@ export default function AdminLayout({
 
   return (
     <>
-      <BackgroundOverlay />
       <header className="sticky top-0 z-50 border-b border-white/20 bg-black backdrop-blur-md">
         <div className="w-full py-3 flex items-center">
           {/* Logo - Sát trái */}

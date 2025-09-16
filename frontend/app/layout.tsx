@@ -1,4 +1,7 @@
+import "./tailwind.css"
+import "./utilities.css"
 import "./globals.css"
+import BackgroundGlow from "./_components/BackgroundGlow"
 
 export const metadata = { 
   title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",
@@ -32,7 +35,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen relative overflow-x-hidden text-white font-sans">
+      <body className="min-h-screen relative overflow-x-hidden text-white font-sans bg-[#0B0F14] antialiased" style={{
+        background: 'var(--bg-neon)',
+        backgroundBlendMode: 'screen'
+      }}>
+        <BackgroundGlow />
         {children}
       </body>
     </html>

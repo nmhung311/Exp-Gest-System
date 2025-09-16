@@ -1,0 +1,113 @@
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Tailwind Components */
+@layer components {
+  .gradient-bg {
+    @apply bg-gradient-exp;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  .exp-card {
+    @apply bg-exp-surface border border-exp-border rounded-xl p-6 shadow-elevate;
+  }
+  
+  .exp-button-primary {
+    @apply bg-exp-accent hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300;
+  }
+  
+  .exp-button-secondary {
+    @apply bg-exp-surface hover:bg-exp-border text-exp-muted hover:text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 border border-exp-border;
+  }
+  
+  .exp-input {
+    @apply bg-exp-surface border border-exp-border text-white placeholder-exp-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-exp-accent focus:border-transparent;
+  }
+  
+  .exp-text-primary {
+    @apply text-white;
+  }
+  
+  .exp-text-secondary {
+    @apply text-exp-muted;
+  }
+  
+  .exp-text-accent {
+    @apply text-exp-accent;
+  }
+  
+  .exp-heading-1 {
+    @apply text-4xl font-bold text-white;
+  }
+  
+  .exp-heading-2 {
+    @apply text-3xl font-semibold text-white;
+  }
+  
+  .exp-heading-3 {
+    @apply text-2xl font-semibold text-white;
+  }
+  
+  .exp-heading-4 {
+    @apply text-xl font-semibold text-white;
+  }
+  
+  .exp-body-large {
+    @apply text-lg text-exp-muted;
+  }
+  
+  .exp-body-medium {
+    @apply text-base text-exp-muted;
+  }
+  
+  .exp-body-small {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .exp-body-regular {
+    @apply text-sm text-exp-muted;
+  }
+  
+  .login-left-column {
+    @apply bg-gradient-to-b from-slate-900/95 via-purple-900/90 to-cyan-900/85 bg-[length:200%_200%] animate-pulse;
+  }
+  
+  .login-right-column {
+    @apply bg-gradient-to-br from-slate-900 to-slate-800;
+  }
+  
+  .exp-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .exp-section {
+    @apply py-16;
+  }
+  
+  .exp-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-8;
+  }
+  
+  .exp-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .exp-grid-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+}
+
+/* Animation keyframes */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}

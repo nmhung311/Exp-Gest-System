@@ -749,7 +749,7 @@ export default function CheckinPage(){
           <div className="space-y-3 sm:space-y-4">
             <button
               onClick={() => setIsScannerActive(true)}
-              className="group relative w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white rounded-xl hover:from-cyan-600 hover:to-indigo-600 transition-all duration-300 font-semibold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:shadow-cyan-500/25 text-base"
+              className="group relative w-full px-6 py-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl hover:from-cyan-500/40 hover:to-blue-500/40 hover:border-cyan-400/50 hover:text-cyan-200 transition-all duration-300 font-semibold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:shadow-cyan-500/30 text-base backdrop-blur-sm transform hover:scale-105"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />

@@ -1,0 +1,324 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+
+interface DateTimePickerProps {
+  type: 'date' | 'time'
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}
+
+export default function DateTimePicker({ 
+  type, 
+  value, 
+  onChange, 
+  placeholder = "Chọn ngày/giờ",
+  className = ""
+}: DateTimePickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [position, setPosition] = useState<'top' | 'bottom'>('bottom')
+
+  // Generate time options (every 15 minutes) with AM/PM
+  const generateTimeOptions = () => {
+    const amOptions = []
+    const pmOptions = []
+    
+    // AM hours (0-11)
+    for (let hour = 0; hour < 12; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        const displayStr = new Date(2000, 0, 1, hour, minute).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+        amOptions.push({ value: timeStr, label: displayStr })
+      }
+    }
+    
+    // PM hours (12-23)
+    for (let hour = 12; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        const displayStr = new Date(2000, 0, 1, hour, minute).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+        pmOptions.push({ value: timeStr, label: displayStr })
+      }
+    }
+    
+    return { amOptions, pmOptions }
+  }
+
+  // Get calendar days for current month
+  const getCalendarDays = () => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    
+    // First day of the month
+    const firstDay = new Date(year, month, 1)
+    // First day of the week (Sunday = 0)
+    const startDate = new Date(firstDay)
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
+    
+    const days = []
+    const currentDate = new Date(startDate)
+    
+    // Generate 42 days (6 weeks)
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(currentDate))
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    return days
+  }
+
+  // Calculate position
+  const calculatePosition = () => {
+    if (typeof window === 'undefined') return 'bottom'
+    
+    const inputElement = document.querySelector(`.datetime-picker-${type}`)
+    if (!inputElement) return 'bottom'
+    
+    const rect = inputElement.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+    
+    // If there's not enough space below (less than 250px) and more space above, show on top
+    if (spaceBelow < 250 && spaceAbove > spaceBelow) {
+      return 'top'
+    }
+    
+    return 'bottom'
+  }
+
+  // Close picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen) {
+        const target = event.target as HTMLElement
+        if (!target.closest(`.datetime-picker-${type}`)) {
+          setIsOpen(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, type])
+
+  // Update position when picker opens
+  useEffect(() => {
+    if (isOpen) {
+      const newPosition = calculatePosition()
+      setPosition(newPosition)
+    }
+  }, [isOpen])
+
+  // Format display value
+  const getDisplayValue = () => {
+    if (!value) return ''
+    
+    if (type === 'date') {
+      return new Date(value).toLocaleDateString('vi-VN')
+    } else {
+      return new Date(2000, 0, 1, parseInt(value.split(':')[0]), parseInt(value.split(':')[1])).toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    }
+  }
+
+  // Handle date selection
+  const handleDateSelect = (day: Date) => {
+    if (day && day.getMonth() === currentMonth.getMonth()) {
+      const dateStr = day.toISOString().split('T')[0]
+      onChange(dateStr)
+      setIsOpen(false)
+    }
+  }
+
+  // Handle time selection
+  const handleTimeSelect = (timeValue: string) => {
+    onChange(timeValue)
+    setIsOpen(false)
+  }
+
+  return (
+    <div className={`relative datetime-picker-${type} ${className}`}>
+      {/* Input Field */}
+      <input
+        type="text"
+        value={getDisplayValue()}
+        readOnly
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm cursor-pointer"
+        placeholder={placeholder}
+      />
+      
+      {/* Calendar/Clock Icon */}
+      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+        {type === 'date' ? (
+          <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+      </div>
+      
+      {/* Date Picker */}
+      {type === 'date' && isOpen && (
+        <div className={`absolute left-0 z-50 w-64 bg-black/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl ${
+          position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+        }`}>
+          <div className="p-3">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                className="p-1.5 hover:bg-white/10 rounded transition-all duration-200"
+              >
+                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h3 className="text-sm font-semibold text-white">
+                {currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                className="p-1.5 hover:bg-white/10 rounded transition-all duration-200"
+              >
+                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Days of week */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
+                <div key={day} className="text-center text-xs font-medium text-white/60 py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {getCalendarDays().map((day, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleDateSelect(day)}
+                  className={`w-7 h-7 text-xs rounded transition-all duration-200 ${
+                    day && day.getMonth() === currentMonth.getMonth()
+                      ? 'text-white hover:bg-white/20 hover:text-cyan-400'
+                      : 'text-white/40'
+                  } ${
+                    value && day && day.toISOString().split('T')[0] === value
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/50 text-cyan-300 shadow-lg shadow-cyan-500/20'
+                      : ''
+                  }`}
+                  disabled={!day || day.getMonth() !== currentMonth.getMonth()}
+                >
+                  {day ? day.getDate() : ''}
+                </button>
+              ))}
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-between mt-3 pt-2 border-t border-white/20">
+              <button
+                onClick={() => {
+                  const today = new Date()
+                  const todayStr = today.toISOString().split('T')[0]
+                  onChange(todayStr)
+                  setIsOpen(false)
+                }}
+                className="text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors duration-200"
+              >
+                Hôm nay
+              </button>
+              <button
+                onClick={() => {
+                  onChange('')
+                  setIsOpen(false)
+                }}
+                className="text-white/60 hover:text-white/80 text-xs font-medium transition-colors duration-200"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Time Picker */}
+      {type === 'time' && isOpen && (
+        <div className={`absolute left-0 right-0 z-50 bg-black/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl ${
+          position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+        }`}>
+          <div className="p-3 max-h-64 overflow-hidden">
+            <div className="grid grid-cols-2 gap-3 h-full">
+              {/* AM Column */}
+              <div className="overflow-y-auto scrollbar-glass max-h-56">
+                <div className="text-xs font-semibold text-cyan-400 mb-2 px-2 py-1 bg-cyan-500/10 rounded text-center">
+                  SÁNG (AM)
+                </div>
+                <div className="space-y-1">
+                  {generateTimeOptions().amOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleTimeSelect(option.value)}
+                      className={`w-full text-left px-2 py-1.5 text-xs rounded transition-all duration-200 ${
+                        value === option.value
+                          ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/50 text-cyan-300'
+                          : 'text-white hover:bg-white/10 hover:text-cyan-400'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* PM Column */}
+              <div className="overflow-y-auto scrollbar-glass max-h-56">
+                <div className="text-xs font-semibold text-orange-400 mb-2 px-2 py-1 bg-orange-500/10 rounded text-center">
+                  CHIỀU (PM)
+                </div>
+                <div className="space-y-1">
+                  {generateTimeOptions().pmOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleTimeSelect(option.value)}
+                      className={`w-full text-left px-2 py-1.5 text-xs rounded transition-all duration-200 ${
+                        value === option.value
+                          ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/50 text-cyan-300'
+                          : 'text-white hover:bg-white/10 hover:text-cyan-400'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

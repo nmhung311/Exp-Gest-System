@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
 import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
+import InvitePreview from "../../../components/InvitePreview"
+import SystemModal from "../../../components/SystemModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
   id: number
@@ -46,6 +48,17 @@ export default function GuestsPage(){
   const [popupVisible, setPopupVisible] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [showInvitePreview, setShowInvitePreview] = useState(false)
+  const [selectedGuestForPreview, setSelectedGuestForPreview] = useState<Guest | null>(null)
+  const [inviteLink, setInviteLink] = useState<string>("")
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmData, setConfirmData] = useState<{
+    title: string
+    message: string
+    onConfirm: () => void
+    onCancel: () => void
+  } | null>(null)
+  const [mobileActionDropdown, setMobileActionDropdown] = useState<number | null>(null)
 
   // Helper function để hiển thị toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
@@ -58,6 +71,42 @@ export default function GuestsPage(){
       setTimeout(() => setShowPopup(false), 300)
     }, 3000)
   }
+
+  // Helper function để hiển thị popup confirmation
+  const showConfirm = (title: string, message: string, onConfirm: () => void, onCancel?: () => void) => {
+    setConfirmData({
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm()
+        setShowConfirmModal(false)
+        setConfirmData(null)
+      },
+      onCancel: () => {
+        if (onCancel) onCancel()
+        setShowConfirmModal(false)
+        setConfirmData(null)
+      }
+    })
+    setShowConfirmModal(true)
+  }
+
+  // Close mobile action dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileActionDropdown !== null) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.mobile-action-dropdown')) {
+          setMobileActionDropdown(null)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [mobileActionDropdown])
 
   // Touch handlers for swipe to dismiss
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -484,6 +533,44 @@ export default function GuestsPage(){
     setShowGuestModal(true)
   }, [eventFilter, events])
 
+  // Function để tiếp tục thêm khách sau khi xử lý trùng lặp
+  async function continueAddGuest(guestData: any) {
+    try {
+      console.log("Continuing to add guest:", guestData)
+      
+      const response = await api.createGuest(guestData)
+      
+      if (response.ok) {
+        const responseData = await response.json()
+        console.log("API response data:", responseData)
+        setShowGuestModal(false)
+        loadGuests()
+        showToast("Thêm khách mời thành công!", "success")
+        
+        // Thông báo cho trang check-in về thay đổi dữ liệu
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
+        setTimeout(() => {
+          setPopupVisible(false)
+          setTimeout(() => {
+            setShowPopup(false)
+          }, 300)
+        }, 2000)
+      } else {
+        const error = await response.text()
+        console.error("API error:", error)
+        setResult(`Lỗi: ${error}`)
+      }
+    } catch (e: any) {
+      console.error("Continue add guest error:", e)
+      setResult(`Lỗi kết nối: ${e.message}`)
+    }
+  }
+
   async function saveGuest() {
     console.log("Saving guest...")
     console.log("Guest form data:", guestForm)
@@ -521,6 +608,38 @@ export default function GuestsPage(){
         rsvp_status: guestForm.rsvp_status
       }
       
+      // Xử lý trùng lặp chỉ khi thêm khách mới (không phải edit)
+      if (!editingGuest) {
+        // Kiểm tra trùng lặp với khách hiện có
+        const existingDuplicate = guests.find(existing => 
+          isDuplicateGuest(guestData, existing)
+        )
+        
+        if (existingDuplicate) {
+          // Hiển thị popup confirmation thay vì browser confirm
+          showConfirm(
+            "Khách mời trùng lặp",
+            `Đã có khách mời "${existingDuplicate.name}" từ "${existingDuplicate.company || 'N/A'}" trong hệ thống.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới không?`,
+            async () => {
+              // Xóa khách cũ trước khi thêm khách mới
+              const deleteSuccess = await deleteDuplicateGuests([existingDuplicate])
+              if (!deleteSuccess) {
+                setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
+                return
+              }
+              // Reload danh sách khách sau khi xóa
+              await loadGuests()
+              // Tiếp tục thêm khách mới
+              await continueAddGuest(guestData)
+            },
+            () => {
+              setResult("Đã hủy thêm khách mời do trùng lặp.")
+            }
+          )
+          return
+        }
+      }
+      
       console.log("Sending guest data:", guestData)
       console.log("RSVP status being sent:", guestData.rsvp_status)
       
@@ -537,7 +656,13 @@ export default function GuestsPage(){
         console.log("API response data:", responseData)
         setShowGuestModal(false)
         loadGuests()
-        showToast(editingGuest ? "Cập nhật!" : "Thêm!", "success")
+        
+        // Thông báo khác nhau tùy theo trường hợp
+        if (editingGuest) {
+          showToast("Cập nhật thành công!", "success")
+        } else {
+          showToast("Thêm khách mời thành công!", "success")
+        }
         
         // Thông báo cho trang check-in về thay đổi dữ liệu
         localStorage.setItem('exp_guests_updated', Date.now().toString())
@@ -599,7 +724,7 @@ export default function GuestsPage(){
     }
   }
 
-  async function copyInviteLink(guestId: number, guestName: string) {
+  async function copyInviteLinkOld(guestId: number, guestName: string) {
     try {
       // Tạo token mới cho khách mời
       const response = await fetch(`http://localhost:5001/api/guests/${guestId}/qr`, {
@@ -640,6 +765,195 @@ export default function GuestsPage(){
     }
   }
 
+  // Function để mở modal preview thiệp mời
+  async function openInvitePreview(guest: Guest) {
+    setSelectedGuestForPreview(guest)
+    setShowInvitePreview(true)
+    
+    // Tạo link thiệp mời
+    try {
+      const response = await fetch(`http://localhost:5001/api/guests/${guest.id}/qr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const link = `http://localhost:3000/invite/${data.token}`
+        setInviteLink(link)
+      } else {
+        setInviteLink("")
+      }
+    } catch (error) {
+      console.error('Error generating invite link:', error)
+      setInviteLink("")
+    }
+  }
+
+  // Function để đóng modal preview thiệp mời
+  function closeInvitePreview() {
+    setShowInvitePreview(false)
+    setSelectedGuestForPreview(null)
+    setInviteLink("")
+  }
+
+  // Function để copy link thiệp mời từ modal
+  async function copyInviteLinkFromModal() {
+    if (!inviteLink) {
+      showToast("Chưa có link thiệp mời", "error")
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      triggerHaptic('light')
+      showToast("Đã copy link thiệp mời!", "success")
+    } catch (error) {
+      console.error('Error copying invite link:', error)
+      triggerHaptic('heavy')
+      showToast("Lỗi khi copy link", "error")
+    }
+  }
+
+  // Function để so sánh khách mời dựa trên tên và tổ chức
+  function isDuplicateGuest(guest1: any, guest2: any): boolean {
+    const name1 = (guest1.name || '').toLowerCase().trim()
+    const name2 = (guest2.name || '').toLowerCase().trim()
+    const org1 = (guest1.organization || guest1.company || '').toLowerCase().trim()
+    const org2 = (guest2.organization || guest2.company || '').toLowerCase().trim()
+    
+    return name1 === name2 && org1 === org2
+  }
+
+  // Function để xử lý khách mời trùng lặp (xóa khách cũ, thay thế bằng khách mới)
+  function deduplicateGuests(newGuests: any[], existingGuests: Guest[]): { 
+    uniqueGuests: any[], 
+    duplicates: any[], 
+    guestsToDelete: Guest[]
+  } {
+    const uniqueGuests: any[] = []
+    const duplicates: any[] = []
+    const guestsToDelete: Guest[] = []
+    const processedGuests = new Set<string>() // Để tránh xử lý cùng một khách nhiều lần
+
+    for (const newGuest of newGuests) {
+      // Tạo key duy nhất cho khách mới
+      const newGuestKey = `${(newGuest.name || '').toLowerCase().trim()}_${(newGuest.organization || newGuest.company || '').toLowerCase().trim()}`
+      
+      // Nếu đã xử lý khách này rồi thì bỏ qua
+      if (processedGuests.has(newGuestKey)) {
+        duplicates.push(newGuest)
+        continue
+      }
+
+      // Kiểm tra xem khách mới có trùng với khách hiện có không
+      const existingDuplicate = existingGuests.find(existing => 
+        isDuplicateGuest(newGuest, existing)
+      )
+
+      if (existingDuplicate) {
+        // Thêm khách cũ vào danh sách cần xóa (chỉ nếu chưa có trong danh sách)
+        if (!guestsToDelete.find(g => g.id === existingDuplicate.id)) {
+          guestsToDelete.push(existingDuplicate)
+        }
+        // Thêm khách mới vào danh sách import
+        uniqueGuests.push(newGuest)
+        // Đánh dấu là trùng lặp để thông báo
+        duplicates.push(newGuest)
+        // Đánh dấu đã xử lý
+        processedGuests.add(newGuestKey)
+      } else {
+        // Kiểm tra xem khách mới có trùng với khách mới khác trong uniqueGuests không
+        const newDuplicate = uniqueGuests.find(unique => 
+          isDuplicateGuest(newGuest, unique)
+        )
+
+        if (newDuplicate) {
+          duplicates.push(newGuest)
+        } else {
+          uniqueGuests.push(newGuest)
+          // Đánh dấu đã xử lý
+          processedGuests.add(newGuestKey)
+        }
+      }
+    }
+
+    return { uniqueGuests, duplicates, guestsToDelete }
+  }
+
+  // Function để tìm và xóa khách mời trùng lặp trong danh sách hiện có
+  function findDuplicatesInExistingGuests(guests: Guest[]): Guest[] {
+    const duplicates: Guest[] = []
+    const seen = new Map<string, Guest>()
+
+    for (const guest of guests) {
+      const key = `${(guest.name || '').toLowerCase().trim()}_${(guest.company || '').toLowerCase().trim()}`
+      
+      if (seen.has(key)) {
+        // Nếu đã có khách với key này, thêm cả khách cũ và mới vào danh sách xóa
+        const existingGuest = seen.get(key)!
+        if (!duplicates.find(g => g.id === existingGuest.id)) {
+          duplicates.push(existingGuest)
+        }
+        duplicates.push(guest)
+      } else {
+        seen.set(key, guest)
+      }
+    }
+
+    return duplicates
+  }
+
+  // Function để xóa khách mời trùng lặp
+  async function deleteDuplicateGuests(guestsToDelete: Guest[]): Promise<boolean> {
+    try {
+      console.log('Deleting duplicate guests:', guestsToDelete.map(g => ({ id: g.id, name: g.name })))
+      
+      let successCount = 0
+      let errorCount = 0
+      
+      for (const guest of guestsToDelete) {
+        console.log(`Deleting guest ${guest.id} (${guest.name})...`)
+        
+        try {
+          const response = await fetch(`http://localhost:5001/api/guests/${guest.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          console.log(`Delete response for guest ${guest.id}:`, response.status, response.statusText)
+          
+          if (response.ok) {
+            console.log(`Successfully deleted guest ${guest.id}`)
+            successCount++
+          } else if (response.status === 404) {
+            console.log(`Guest ${guest.id} already deleted or not found - skipping`)
+            successCount++ // Coi như thành công vì mục đích đã đạt được
+          } else {
+            const errorText = await response.text()
+            console.error(`Failed to delete guest ${guest.id}:`, response.status, response.statusText, errorText)
+            errorCount++
+          }
+        } catch (fetchError) {
+          console.error(`Network error deleting guest ${guest.id}:`, fetchError)
+          errorCount++
+        }
+      }
+      
+      console.log(`Deletion completed: ${successCount} successful, ${errorCount} errors`)
+      
+      // Trả về true nếu ít nhất một số khách được xóa thành công hoặc đã được xóa trước đó
+      return successCount > 0
+    } catch (error) {
+      console.error('Error deleting duplicate guests:', error)
+      return false
+    }
+  }
+
   // Handle JSON file upload
   function handleJsonFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -665,10 +979,111 @@ export default function GuestsPage(){
     reader.readAsText(file)
   }
 
+  // Function để tiếp tục import sau khi xử lý trùng lặp
+  async function continueImport(importGuests?: any[]) {
+    try {
+      // Bước 2: Xử lý khách mời trùng lặp giữa file import và danh sách hiện có
+      if (!importGuests) {
+        setResult("Lỗi: Không có dữ liệu khách mời để import.")
+        return
+      }
+      const { uniqueGuests, duplicates, guestsToDelete } = deduplicateGuests(importGuests, guests)
+      
+      // Bước 3: Xóa khách mời trùng lặp với file import
+      if (guestsToDelete.length > 0) {
+        console.log('About to delete guests from file import:', guestsToDelete.length, 'guests')
+        const deleteSuccess = await deleteDuplicateGuests(guestsToDelete)
+        console.log('Delete success result:', deleteSuccess)
+        if (!deleteSuccess) {
+          setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
+          return
+        }
+      }
+      
+      // Bước 4: Import khách mới
+      const guestsWithEvent = uniqueGuests.map((guest: any) => ({
+        ...guest,
+        event_id: parseInt(eventFilter)
+      }))
+      
+      console.log('Sending import request with guests:', guestsWithEvent.length)
+      
+      const res = await fetch("http://localhost:5001/api/guests/import",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(guestsWithEvent)
+      })
+      
+      console.log('Import response received:', res)
+      
+      if (!res) {
+        setResult("Lỗi: Không nhận được phản hồi từ server.")
+        return
+      }
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        setResult(`Lỗi server: ${res.status} - ${errorText}`)
+        return
+      }
+      
+      const data = await res.json()
+      console.log("Import response:", data)
+      
+      // Xử lý kết quả import với thông báo trùng lặp
+      const { duplicates: finalDuplicates } = deduplicateGuests(importGuests, guests)
+      const existingDuplicates = findDuplicatesInExistingGuests(guests)
+      let duplicateCount = finalDuplicates.length
+      let existingDuplicateCount = existingDuplicates.length
+      
+      let resultMessage = ""
+      
+      if (data.imported > 0 && data.failed === 0) {
+        resultMessage = `Thành công! Đã import ${data.imported} khách mời.`
+      } else if (data.imported > 0 && data.failed > 0) {
+        resultMessage = `Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`
+        if (data.errors && data.errors.length > 0) {
+          resultMessage += `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`
+        }
+      } else {
+        resultMessage = `Import thất bại: ${data.failed} khách không thể import.`
+        if (data.errors && data.errors.length > 0) {
+          resultMessage += `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`
+        }
+      }
+      
+      // Thêm thông báo về khách mời trùng lặp
+      if (existingDuplicateCount > 0 && duplicateCount > 0) {
+        resultMessage += `\n\nĐã xóa ${existingDuplicateCount} khách mời trùng lặp hiện có và ${duplicateCount} khách mời trùng lặp từ file import.`
+      } else if (existingDuplicateCount > 0) {
+        resultMessage += `\n\nĐã xóa ${existingDuplicateCount} khách mời trùng lặp hiện có.`
+      } else if (duplicateCount > 0) {
+        resultMessage += `\n\nCó ${duplicateCount} khách mời bị trùng lặp, hệ thống đã tự động thay thế bằng dữ liệu mới.`
+      }
+      
+      setResult(resultMessage)
+      
+      // Reload guests after import
+      loadGuests()
+      
+      // Close modal after successful import
+      if (data.imported > 0) {
+        setTimeout(() => {
+          setShowImportModal(false)
+        }, 2000)
+      }
+    } catch (e: any) {
+      console.error("Continue import error:", e)
+      setResult("Lỗi kết nối: " + e?.message)
+    }
+  }
+
   async function onImport(){
     setResult("Đang import...")
     try{
       let res
+      let newGuests: any[] = []
+      
       if (importType === "json") {
         // Parse JSON first to validate
         let jsonData
@@ -683,17 +1098,101 @@ export default function GuestsPage(){
           setResult("Vui lòng chọn sự kiện trước khi import")
           return
         }
-        // Thêm event_id vào tất cả khách mời được import (luôn gán vào sự kiện hiện tại)
-        const guestsWithEvent = jsonData.map((guest: any) => ({
-          ...guest,
-          event_id: parseInt(eventFilter)
-        }))
         
-        res = await fetch("http://localhost:5001/api/guests/import",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify(guestsWithEvent)
-        })
+        // Lưu dữ liệu gốc để xử lý trùng lặp
+        newGuests = jsonData
+        
+        // Bước 1: Xóa khách mời trùng lặp trong danh sách hiện có
+        const existingDuplicates = findDuplicatesInExistingGuests(guests)
+        if (existingDuplicates.length > 0) {
+          showConfirm(
+            "Xóa khách mời trùng lặp hiện có",
+            `Phát hiện ${existingDuplicates.length} khách mời trùng lặp trong danh sách hiện có.\n\nBạn có muốn xóa những khách mời trùng lặp này trước khi import không?`,
+            async () => {
+              const deleteExistingSuccess = await deleteDuplicateGuests(existingDuplicates)
+              if (!deleteExistingSuccess) {
+                setResult("Lỗi khi xóa khách mời trùng lặp hiện có. Vui lòng thử lại.")
+                return
+              }
+              // Reload danh sách khách sau khi xóa trùng lặp
+              await loadGuests()
+              // Tiếp tục import
+              await continueImport(newGuests)
+            },
+            async () => {
+              // Tiếp tục import mà không xóa trùng lặp hiện có
+              await continueImport(newGuests)
+            }
+          )
+          return
+        }
+        
+        // Kiểm tra trùng lặp với file import trước khi tiếp tục
+        const { uniqueGuests, duplicates, guestsToDelete } = deduplicateGuests(newGuests, guests)
+        
+        if (guestsToDelete.length > 0) {
+          // Có khách mời trùng lặp với file import
+          showConfirm(
+            "Khách mời trùng lặp với file import",
+            `Phát hiện ${guestsToDelete.length} khách mời trong hệ thống trùng lặp với file import.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới từ file import không?`,
+            async () => {
+              // Xóa khách cũ trước khi import
+              console.log('User confirmed to delete duplicates from file import:', guestsToDelete.length, 'guests')
+              const deleteSuccess = await deleteDuplicateGuests(guestsToDelete)
+              console.log('Delete success result from popup:', deleteSuccess)
+              if (!deleteSuccess) {
+                setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
+                return
+              }
+              // Reload danh sách khách sau khi xóa để cập nhật dữ liệu
+              await loadGuests()
+              // Tiếp tục import
+              await continueImport(newGuests)
+            },
+            async () => {
+              // Import mà không thay thế (chỉ import unique guests)
+              const guestsWithEvent = uniqueGuests.map((guest: any) => ({
+                ...guest,
+                event_id: parseInt(eventFilter)
+              }))
+              
+              const res = await fetch("http://localhost:5001/api/guests/import",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body: JSON.stringify(guestsWithEvent)
+              })
+              
+              if (!res.ok) {
+                const errorText = await res.text()
+                setResult(`Lỗi server: ${res.status} - ${errorText}`)
+                return
+              }
+              
+              const data = await res.json()
+              console.log("Import response:", data)
+              
+              if (data.imported > 0 && data.failed === 0) {
+                setResult(`Thành công! Đã import ${data.imported} khách mời. Bỏ qua ${duplicates.length} khách mời trùng lặp.`)
+              } else if (data.imported > 0 && data.failed > 0) {
+                setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại. Bỏ qua ${duplicates.length} khách mời trùng lặp.`)
+              } else {
+                setResult(`Import thất bại: ${data.failed} khách không thể import.`)
+              }
+              
+              loadGuests()
+              
+              if (data.imported > 0) {
+                setTimeout(() => {
+                  setShowImportModal(false)
+                }, 2000)
+              }
+            }
+          )
+          return
+        }
+        
+        // Tiếp tục import nếu không có trùng lặp
+        await continueImport(newGuests)
       } else {
         // CSV import
         const fileInput = document.getElementById('csvFile') as HTMLInputElement
@@ -723,6 +1222,7 @@ export default function GuestsPage(){
       const data = await res.json()
       console.log("Import response:", data)
       
+      // Fallback cho CSV import hoặc khi không có dữ liệu JSON
       if (data.imported > 0 && data.failed === 0) {
         setResult(`Thành công! Đã import ${data.imported} khách mời.`)
       } else if (data.imported > 0 && data.failed > 0) {
@@ -736,6 +1236,7 @@ export default function GuestsPage(){
           setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
         }
       }
+      
       // Reload guests after import
       loadGuests()
       
@@ -1080,7 +1581,7 @@ export default function GuestsPage(){
   }
 
   return (
-    <div className="space-y-6 px-4">
+    <div className="space-y-6 px-1.5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
@@ -1128,7 +1629,14 @@ export default function GuestsPage(){
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         {/* Total Guests Card */}
-        <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
+        <div 
+          onClick={() => setStatusFilter("all")}
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            statusFilter === "all" 
+              ? "bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400/60 shadow-lg shadow-cyan-500/30" 
+              : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/20"
+          }`}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2 sm:mb-2 sm:mb-3">
@@ -1139,7 +1647,10 @@ export default function GuestsPage(){
               </div>
               <div className="text-right">
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.total}</div>
-                <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng khách mời</div>
+                <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">
+                  <span className="sm:hidden">Tổng</span>
+                  <span className="hidden sm:inline">Tổng khách mời</span>
+                </div>
               </div>
             </div>
             <div className="h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
@@ -1149,7 +1660,14 @@ export default function GuestsPage(){
         </div>
 
         {/* Pending Card */}
-        <div className="group relative bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-sm border border-yellow-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-yellow-500/20 hover:to-orange-500/20 hover:border-yellow-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
+        <div 
+          onClick={() => setStatusFilter("pending")}
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            statusFilter === "pending" 
+              ? "bg-gradient-to-br from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400/60 shadow-lg shadow-yellow-500/30" 
+              : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-orange-500/20 hover:border-yellow-400/40 hover:shadow-lg hover:shadow-yellow-500/20"
+          }`}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -1170,7 +1688,14 @@ export default function GuestsPage(){
         </div>
 
         {/* Accepted Card */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+        <div 
+          onClick={() => setStatusFilter("accepted")}
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            statusFilter === "accepted" 
+              ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border-2 border-green-400/60 shadow-lg shadow-green-500/30" 
+              : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 hover:shadow-lg hover:shadow-green-500/20"
+          }`}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -1191,7 +1716,14 @@ export default function GuestsPage(){
         </div>
 
         {/* Declined Card */}
-        <div className="group relative bg-gradient-to-br from-red-500/10 to-pink-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20">
+        <div 
+          onClick={() => setStatusFilter("declined")}
+          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+            statusFilter === "declined" 
+              ? "bg-gradient-to-br from-red-500/30 to-pink-500/30 border-2 border-red-400/60 shadow-lg shadow-red-500/30" 
+              : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20 hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 hover:shadow-lg hover:shadow-red-500/20"
+          }`}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -1327,44 +1859,24 @@ export default function GuestsPage(){
 
       {/* Guests List Section */}
       <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 md:p-6" data-guest-list>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
-              <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span className="text-sm sm:text-base font-medium bg-gradient-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text">Danh sách khách mời</span>
-            </h2>
-            <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-400/30">
-              <span className="text-blue-400 text-sm font-semibold">{filteredGuests.length}</span>
+        {/* Desktop Layout */}
+        <div className="hidden lg:block space-y-4 mb-6">
+          {/* Header Row with Event Dropdown */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="text-white">Danh sách khách mời</span>
+              </h2>
+              <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-400/30">
+                <span className="text-blue-400 text-sm font-semibold">{filteredGuests.length}</span>
+              </div>
             </div>
-          </div>
-          
-          {/* Search and Filter */}
-          <div className="flex flex-col gap-2 lg:flex-row lg:gap-3">
-            {/* Search Bar */}
-            <input
-              type="text"
-              placeholder="Tìm kiếm khách mời..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full lg:w-auto lg:min-w-[200px]"
-            />
             
-            {/* All Filters - 2 per row on mobile, inline on PC */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-row gap-2 lg:gap-3">
-              <CustomDropdown
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "pending", label: "Chờ phản hồi" },
-                  { value: "accepted", label: "Đã xác nhận" },
-                  { value: "declined", label: "Đã từ chối" }
-                ]}
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value as any)}
-                placeholder="Chọn trạng thái"
-                className="w-full sm:min-w-[140px] lg:min-w-[140px]"
-              />
+            <div className="flex items-center gap-3">
+              <span className="text-white/60 text-sm font-medium">Chọn sự kiện -</span>
               <CustomDropdown
                 options={events.map(event => ({
                   value: event.id.toString(),
@@ -1372,29 +1884,42 @@ export default function GuestsPage(){
                 }))}
                 value={eventFilter}
                 onChange={(value) => setEventFilter(value)}
-                placeholder="Chọn sự kiện"
-                className="w-full sm:min-w-[180px] lg:min-w-[180px]"
+                placeholder="Chọn sự kiện..."
+                className="min-w-60 max-w-96 w-auto"
               />
+            </div>
+          </div>
+          
+          {/* Search Bar with Filters */}
+          <div className="flex items-center justify-between gap-4">
+            <input
+              type="text"
+              placeholder="Tìm kiếm khách mời..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-80"
+            />
+            <div className="flex gap-3">
               <CustomDropdown
                 options={tagFilterOptions}
                 value={tagFilter}
                 onChange={(value) => setTagFilter(value)}
                 placeholder="Chọn tag"
-                className="w-full sm:min-w-[120px] lg:min-w-[120px]"
+                className="w-40"
               />
               <CustomDropdown
                 options={organizationFilterOptions}
                 value={organizationFilter}
                 onChange={(value) => setOrganizationFilter(value)}
                 placeholder="Chọn tổ chức"
-                className="w-full sm:min-w-[140px] lg:min-w-[140px]"
+                className="w-40"
               />
               <CustomDropdown
                 options={roleFilterOptions}
                 value={roleFilter}
                 onChange={(value) => setRoleFilter(value)}
                 placeholder="Chọn vai trò"
-                className="w-full sm:min-w-[120px] lg:min-w-[120px]"
+                className="w-40"
               />
               <button
                 onClick={() => {
@@ -1404,7 +1929,7 @@ export default function GuestsPage(){
                   setOrganizationFilter("all")
                   setRoleFilter("all")
                 }}
-                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 whitespace-nowrap"
+                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-red-500/30 hover:to-red-600/30 hover:border-red-400/50 hover:text-red-300 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-xl hover:shadow-red-500/30 text-sm whitespace-nowrap transform hover:scale-105"
                 title="Xóa tất cả bộ lọc"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -1414,6 +1939,102 @@ export default function GuestsPage(){
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="lg:hidden space-y-4 mb-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span className="text-white">Danh sách khách mời</span>
+            </h2>
+            <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-400/30">
+              <span className="text-blue-400 text-sm font-semibold">{filteredGuests.length}</span>
+            </div>
+          </div>
+          
+          {/* Search Bar - Always visible */}
+          <input
+            type="text"
+            placeholder="Tìm kiếm khách mời..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full"
+          />
+          
+          {/* Other Filters - Hidden when bulk actions are active */}
+          {!showBulkActions && (
+            <>
+              {/* Event Dropdown */}
+              <CustomDropdown
+                options={events.map(event => ({
+                  value: event.id.toString(),
+                  label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
+                }))}
+                value={eventFilter}
+                onChange={(value) => setEventFilter(value)}
+                placeholder="Chọn sự kiện"
+                className="w-full"
+              />
+              
+              {/* Filters Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <CustomDropdown
+                  options={[
+                    { value: "all", label: "Tất cả trạng thái" },
+                    { value: "pending", label: "Chờ phản hồi" },
+                    { value: "accepted", label: "Đã xác nhận" },
+                    { value: "declined", label: "Đã từ chối" }
+                  ]}
+                  value={statusFilter}
+                  onChange={(value) => setStatusFilter(value as any)}
+                  placeholder="Chọn trạng thái"
+                  className="w-full"
+                />
+                <CustomDropdown
+                  options={tagFilterOptions}
+                  value={tagFilter}
+                  onChange={(value) => setTagFilter(value)}
+                  placeholder="Chọn tag"
+                  className="w-full"
+                />
+                <CustomDropdown
+                  options={organizationFilterOptions}
+                  value={organizationFilter}
+                  onChange={(value) => setOrganizationFilter(value)}
+                  placeholder="Chọn tổ chức"
+                  className="w-full"
+                />
+                <CustomDropdown
+                  options={roleFilterOptions}
+                  value={roleFilter}
+                  onChange={(value) => setRoleFilter(value)}
+                  placeholder="Chọn vai trò"
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Clear Filters Button */}
+              <button
+                onClick={() => {
+                  setSearchTerm("")
+                  setStatusFilter("all")
+                  setTagFilter("all")
+                  setOrganizationFilter("all")
+                  setRoleFilter("all")
+                }}
+                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 w-full"
+                title="Xóa tất cả bộ lọc"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Xóa lọc</span>
+              </button>
+            </>
+          )}
         </div>
 
         {loading ? (
@@ -1523,15 +2144,15 @@ export default function GuestsPage(){
                         </button>
                         
                         <button 
-                          onClick={() => copyInviteLink(guest.id, guest.name)}
-                          className="group relative px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg text-xs hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/20"
-                          title="Sao chép liên kết mời"
+                          onClick={() => openInvitePreview(guest)}
+                          className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 rounded-lg text-xs hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/20"
+                          title="Xem trước thiệp mời"
                         >
-                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
-                          <span className="hidden sm:inline font-medium">Link</span>
+                          <span className="hidden sm:inline font-medium">Thiệp</span>
                         </button>
                         
                         <button 
@@ -1582,8 +2203,7 @@ export default function GuestsPage(){
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-white/60">#{startIndex + index + 1}</div>
-                      <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit mt-1 ${
+                      <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit ${
                         guest.rsvp_status === 'accepted' ? 'bg-green-500/20 text-green-400' :
                         guest.rsvp_status === 'declined' ? 'bg-red-500/20 text-red-400' :
                         'bg-yellow-500/20 text-yellow-400'
@@ -1624,52 +2244,80 @@ export default function GuestsPage(){
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Mobile Actions - Single Button with Dropdown */}
+                  <div className="relative mobile-action-dropdown">
                     <button 
-                      onClick={() => openGuestModal(guest)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-xs hover:from-amber-500/30 hover:to-orange-500/30 hover:border-amber-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-amber-500/20"
-                      title="Chỉnh sửa thông tin khách mời"
+                      onClick={() => setMobileActionDropdown(mobileActionDropdown === guest.id ? null : guest.id)}
+                      className="w-full px-3 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                      title="Thao tác"
                     >
-                      <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                       </svg>
-                      <span className="font-medium">Sửa</span>
+                      <span className="font-medium">Thao tác</span>
+                      <svg className={`w-3 h-3 transition-transform duration-200 ${mobileActionDropdown === guest.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
                     </button>
                     
-                    <button 
-                      onClick={() => copyInviteLink(guest.id, guest.name)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg text-xs hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/20"
-                      title="Sao chép liên kết mời"
-                    >
-                      <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                      </svg>
-                      <span className="font-medium">Link</span>
-                    </button>
-                    
-                    <button 
-                      onClick={() => openQRPopup(guest)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-400 rounded-lg text-xs hover:from-purple-500/30 hover:to-indigo-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/20"
-                      title="Xem mã QR"
-                    >
-                      <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
-                      </svg>
-                      <span className="font-medium">QR</span>
-                    </button>
-                    
-                    <button 
-                      onClick={() => deleteGuest(guest.id, guest.name)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs hover:from-red-500/30 hover:to-rose-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
-                      title="Xóa khách mời"
-                    >
-                      <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                      <span className="font-medium">Xóa</span>
-                    </button>
+                    {/* Dropup Menu */}
+                    {mobileActionDropdown === guest.id && (
+                      <div className="absolute bottom-full left-0 right-0 mb-1 bg-black/90 backdrop-blur-md border border-white/20 rounded-lg shadow-xl z-10 overflow-hidden">
+                        <button 
+                          onClick={() => {
+                            openGuestModal(guest)
+                            setMobileActionDropdown(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                          <span>Sửa thông tin</span>
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            openInvitePreview(guest)
+                            setMobileActionDropdown(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>Xem thiệp mời</span>
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            openQRPopup(guest)
+                            setMobileActionDropdown(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-3.5 h-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Xem mã QR</span>
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            deleteGuest(guest.id, guest.name)
+                            setMobileActionDropdown(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-3.5 h-3.5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                          <span>Xóa khách mời</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1762,7 +2410,7 @@ export default function GuestsPage(){
         <Portal>
           <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-2 sm:p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowImportModal(false)}></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[95dvh] sm:max-h-[90dvh] overflow-y-auto">
+            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[95dvh] sm:max-h-[90dvh] overflow-y-auto scrollbar-glass">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1886,7 +2534,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
             </div>
             
             {result && (
-              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl max-h-40 sm:max-h-60 overflow-y-auto">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl max-h-40 sm:max-h-60 overflow-y-auto scrollbar-glass">
                 <div className="flex items-start gap-2">
                   <div className="flex-shrink-0 mt-0.5">
                     {result.includes('Thành công') && (
@@ -1934,7 +2582,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
         <Portal>
           <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowGuestModal(false)}></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
+            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[90dvh] overflow-y-auto scrollbar-glass">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -2148,93 +2796,81 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
       )}
 
       {/* QR Code Popup */}
-      {showQRPopup && selectedGuest && (
-        <Portal>
-          <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center bg-black/50 backdrop-blur-sm p-5">
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text pr-2">
-                  Mã QR - {selectedGuest.name}
-                </h3>
-                <button
-                  onClick={() => setShowQRPopup(false)}
-                  className="text-white/60 hover:text-white transition-colors p-1.5 sm:p-2 hover:bg-white/10 rounded-lg flex-shrink-0"
-                >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="text-center mb-4 sm:mb-6">
-                <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white rounded-2xl flex items-center justify-center p-3 sm:p-4 shadow-2xl border border-white/20">
-                  {qrImageUrl ? (
-                    <img
-                      src={qrImageUrl}
-                      alt="QR Code"
-                      className="w-full h-full object-contain"
-                      onError={() => setQrImageUrl("")}
-                    />
-                  ) : (
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-cyan-400 mx-auto mb-2 sm:mb-3"></div>
-                      <p className="text-gray-600 text-xs sm:text-sm">Đang tải QR code...</p>
-                    </div>
-                  )}
-                </div>
-                <p className="text-white/80 text-xs sm:text-sm mt-2 sm:mt-3">
-                  Mã QR cho {selectedGuest.name}
-                </p>
-              </div>
-
-              {/* Backup Text Code */}
-              {qrImageUrl && (
-                <div className="bg-black/30 border border-yellow-500/30 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
-                  <div className="text-yellow-400 text-xs sm:text-sm font-medium mb-2 text-center">
-                    Mã dự phòng (nếu không quét được QR):
-                  </div>
-                  <div className="bg-black/50 border border-yellow-500/20 rounded-lg p-2 sm:p-3 flex items-center gap-2">
-                    <code className="text-white font-mono text-xs break-all flex-1 text-center">
-                      {backupCode}
-                    </code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(backupCode)
-                        showToast("Đã copy mã dự phòng", "success")
-                      }}
-                      className="text-yellow-400 hover:text-yellow-300 transition-colors p-1 hover:bg-yellow-500/10 rounded flex-shrink-0"
-                      title="Copy mã dự phòng"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
+      <SystemModal
+        isOpen={showQRPopup}
+        onClose={() => setShowQRPopup(false)}
+        title={`Mã QR - ${selectedGuest?.name || ''}`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* QR Code Display */}
+          <div className="text-center">
+            <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white rounded-2xl flex items-center justify-center p-3 sm:p-4 shadow-2xl border border-white/20">
+              {qrImageUrl ? (
+                <img
+                  src={qrImageUrl}
+                  alt="QR Code"
+                  className="w-full h-full object-contain"
+                  onError={() => setQrImageUrl("")}
+                />
+              ) : (
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-cyan-400 mx-auto mb-2 sm:mb-3"></div>
+                  <p className="text-gray-600 text-xs sm:text-sm">Đang tải QR code...</p>
                 </div>
               )}
-              
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            </div>
+            <p className="text-white/80 text-xs sm:text-sm mt-2 sm:mt-3">
+              Mã QR cho {selectedGuest?.name || ''}
+            </p>
+          </div>
+
+          {/* Backup Text Code */}
+          {qrImageUrl && (
+            <div className="bg-black/30 border border-yellow-500/30 rounded-xl p-3 sm:p-4">
+              <div className="text-yellow-400 text-xs sm:text-sm font-medium mb-2 text-center">
+                Mã dự phòng (nếu không quét được QR):
+              </div>
+              <div className="bg-black/50 border border-yellow-500/20 rounded-lg p-2 sm:p-3 flex items-center gap-2">
+                <code className="text-white font-mono text-xs break-all flex-1 text-center">
+                  {backupCode}
+                </code>
                 <button
-                  onClick={() => downloadQR(selectedGuest.id, selectedGuest.name)}
-                  className="flex-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-500/50 text-blue-300 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/70 hover:text-blue-200 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 text-sm sm:text-base"
+                  onClick={() => {
+                    navigator.clipboard.writeText(backupCode)
+                    showToast("Đã copy mã dự phòng", "success")
+                  }}
+                  className="text-yellow-400 hover:text-yellow-300 transition-colors p-1 hover:bg-yellow-500/10 rounded flex-shrink-0"
+                  title="Copy mã dự phòng"
                 >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Tải xuống
-                </button>
-                <button
-                  onClick={() => setShowQRPopup(false)}
-                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
-                >
-                  Đóng
                 </button>
               </div>
-
             </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <button
+              onClick={() => selectedGuest && downloadQR(selectedGuest.id, selectedGuest.name)}
+              className="flex-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-500/50 text-blue-300 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/70 hover:text-blue-200 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 text-sm sm:text-base"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Tải xuống
+            </button>
+            <button
+              onClick={() => setShowQRPopup(false)}
+              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
+            >
+              Đóng
+            </button>
           </div>
-        </Portal>
-      )}
+        </div>
+      </SystemModal>
 
       {/* Export Format Popup */}
       {showExportPopup && (
@@ -2302,6 +2938,103 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 </button>
               </div>
             </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Modal Preview Thiệp Mời */}
+      <SystemModal
+        isOpen={showInvitePreview}
+        onClose={closeInvitePreview}
+        title={`Xem trước thiệp mời - ${selectedGuestForPreview?.name || ''}`}
+        size="5xl"
+        className="h-[95vh]"
+      >
+        <div className="space-y-4">
+          {/* Copy Link Button */}
+          {inviteLink && (
+            <div className="flex justify-end">
+              <button
+                onClick={copyInviteLinkFromModal}
+                className="group relative px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg text-xs hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/50 transition-all duration-300 flex items-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/20"
+                title="Copy link thiệp mời"
+              >
+                <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                  <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                </svg>
+                <span className="hidden sm:inline font-medium">Copy Link</span>
+              </button>
+            </div>
+          )}
+          
+          {/* Invite Preview Content */}
+          {selectedGuestForPreview && (
+            <InvitePreview
+              eventData={{
+                id: selectedGuestForPreview.event_id || 1,
+                name: selectedGuestForPreview.event_name || 'Sự kiện mẫu',
+                description: 'Sự kiện đặc biệt của công ty',
+                date: new Date().toISOString(),
+                time: '19:00',
+                location: 'Tòa nhà EXP Technology',
+                venue_address: '123 Lê Lợi, Quận 1, TP.HCM',
+                venue_map_url: 'https://maps.google.com',
+                dress_code: 'Trang phục lịch sự',
+                program_outline: JSON.stringify([
+                  { time: '18:00', item: 'Đón khách' },
+                  { time: '18:30', item: 'Khai mạc' },
+                  { time: '19:00', item: 'Tiệc tối' },
+                  { time: '20:30', item: 'Chương trình văn nghệ' },
+                  { time: '21:30', item: 'Kết thúc' }
+                ]),
+                max_guests: 100,
+                status: 'upcoming'
+              }}
+              guestData={{
+                title: selectedGuestForPreview.title || 'Mr',
+                name: selectedGuestForPreview.name || 'Nguyễn Văn A',
+                role: selectedGuestForPreview.position || 'CEO',
+                organization: selectedGuestForPreview.company || 'Công ty TNHH Dịch vụ và Phát triển Công nghệ Hachitech Solution',
+                tag: selectedGuestForPreview.tag || 'Hachitech'
+              }}
+              onClose={closeInvitePreview}
+            />
+          )}
+        </div>
+      </SystemModal>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmData && (
+        <Portal>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 w-full max-w-md overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-yellow-500/20 rounded-lg">
+                    <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">{confirmData.title}</h3>
+                </div>
+                <p className="text-white/80 text-sm mb-6 whitespace-pre-line">{confirmData.message}</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={confirmData.onCancel}
+                    className="flex-1 px-4 py-2 bg-gray-500/20 border border-gray-500/30 text-gray-300 rounded-lg hover:bg-gray-500/30 hover:border-gray-400/50 transition-all duration-300 text-sm font-medium"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={confirmData.onConfirm}
+                    className="flex-1 px-4 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-500/30 hover:border-blue-400/50 transition-all duration-300 text-sm font-medium"
+                  >
+                    Xác nhận
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </Portal>

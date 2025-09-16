@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import CustomDropdown from '../../../components/CustomDropdown'
 import CustomCheckbox from '../../../components/CustomCheckbox'
-import BackgroundOverlay from '../../../components/BackgroundOverlay'
 import SimpleInvitePreview from '../../../components/SimpleInvitePreview'
+import DateTimePicker from '../../../components/DateTimePicker'
 
 import { api } from "@/lib/api"
 interface Event {
@@ -42,6 +42,7 @@ export default function EventsPage() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
   const [editEventId, setEditEventId] = useState<number | null>(null)
   const [showFAB, setShowFAB] = useState(false)
+
 
   // Form data
   const [formData, setFormData] = useState({
@@ -513,7 +514,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="space-y-4 px-2 sm:px-0 max-w-[420px] mx-auto md:max-w-none">
+    <div className="space-y-6 px-4 sm:px-6 lg:px-8 max-w-[420px] mx-auto md:max-w-none">
       {toastVisible && mounted && createPortal(
         <div className={`fixed top-16 right-0 z-[99999] transform transition-all duration-300 ${toastVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
           <div className={`px-4 py-3 rounded-l-2xl shadow-2xl max-w-xs backdrop-blur-md border text-white ${
@@ -558,12 +559,12 @@ export default function EventsPage() {
           </div>
         </div>, document.body
       )}
-      {/* Header - Compact */}
-      <div className="text-center">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text mb-1">
+      {/* Header Section - Desktop Optimized */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
           Quản Lý Sự Kiện
         </h1>
-        <p className="text-white/70 text-sm sm:text-sm">Tạo và quản lý các sự kiện của công ty</p>
+        <p className="text-white/70 text-base">Tạo và quản lý các sự kiện của công ty</p>
       </div>
 
       {/* Primary CTA - Mobile First */}
@@ -579,18 +580,6 @@ export default function EventsPage() {
         </button>
       </div>
 
-      {/* Desktop CTA */}
-      <div className="hidden md:block">
-        <button 
-          onClick={() => openEventModal()}
-          className="group relative px-3 py-2 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-400/50 text-blue-300 rounded-lg hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/60 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Tạo sự kiện
-        </button>
-      </div>
 
       {/* Mobile Search Bar */}
       <div className="md:hidden">
@@ -610,29 +599,44 @@ export default function EventsPage() {
               </div>
               </div>
 
-      {/* Desktop Filter Bar */}
-      <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-3">
-        <input
-          type="text"
-          placeholder="Tìm kiếm sự kiện..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm"
-        />
-        <CustomDropdown
-          options={[
-            { value: "all", label: "Tất cả trạng thái" },
-            { value: "upcoming", label: "Sắp diễn ra" },
-            { value: "ongoing", label: "Đang diễn ra" },
-            { value: "completed", label: "Đã hoàn thành" },
-            { value: "cancelled", label: "Đã hủy" }
-          ]}
-          value={statusFilter}
-          onChange={(value) => setStatusFilter(value)}
-          placeholder="Chọn trạng thái"
-          className="w-full sm:min-w-[140px]"
-        />
-            </div>
+      {/* Desktop Filter Bar - Optimized Layout */}
+      <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Tìm kiếm sự kiện..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
+          />
+          <CustomDropdown
+            options={[
+              { value: "all", label: "Tất cả trạng thái" },
+              { value: "upcoming", label: "Sắp diễn ra" },
+              { value: "ongoing", label: "Đang diễn ra" },
+              { value: "completed", label: "Đã hoàn thành" },
+              { value: "cancelled", label: "Đã hủy" }
+            ]}
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value)}
+            placeholder="Chọn trạng thái"
+            className="min-w-[140px]"
+          />
+        </div>
+        
+        {/* Desktop CTA - Inline with search */}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => openEventModal()}
+            className="group relative px-4 py-3 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-400/50 text-blue-300 rounded-lg hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/60 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm font-semibold"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Tạo sự kiện
+          </button>
+        </div>
+      </div>
 
       {/* Statistics Cards - Mobile 2x2 Grid */}
       <div className="md:hidden">
@@ -735,203 +739,243 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {/* Desktop Statistics Cards */}
-      <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      {/* Desktop Statistics Cards - Optimized Layout */}
+      <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-6">
         {/* Total Events */}
-        <div className={`group relative backdrop-blur-sm rounded-lg p-3 transition-all duration-300 ${
+        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
           statusFilter === 'all' 
             ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/50 shadow-lg shadow-blue-500/20' 
             : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 hover:shadow-lg hover:shadow-blue-500/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
               statusFilter === 'all' ? 'bg-blue-500/30' : 'bg-blue-500/20'
             }`}>
-              <svg className={`w-4 h-4 sm:w-4 sm:h-4 transition-all duration-300 ${
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-all duration-300 ${
                 statusFilter === 'all' ? 'text-blue-300' : 'text-blue-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               <div className="text-right">
-              <div className={`text-lg sm:text-xl font-bold transition-all duration-300 ${
+              <div className={`text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 mb-1 ${
                 statusFilter === 'all' ? 'text-blue-200' : 'text-white'
               }`}>{stats.total}</div>
-              <div className={`text-sm font-medium transition-all duration-300 ${
+              <div className={`text-xs sm:text-sm font-medium transition-all duration-300 ${
                 statusFilter === 'all' ? 'text-blue-200' : 'text-blue-300/80'
-              }`}>Tổng</div>
+              }`}>Tổng sự kiện</div>
               </div>
+          </div>
+          <div className="h-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full w-full"></div>
           </div>
         </div>
 
         {/* Upcoming */}
-        <div className={`group relative backdrop-blur-sm rounded-lg p-3 transition-all duration-300 ${
+        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
           statusFilter === 'upcoming' 
             ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/50 shadow-lg shadow-yellow-500/20' 
             : 'bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 hover:shadow-lg hover:shadow-yellow-500/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
               statusFilter === 'upcoming' ? 'bg-yellow-500/30' : 'bg-yellow-500/20'
             }`}>
-              <svg className={`w-4 h-4 sm:w-4 sm:h-4 transition-all duration-300 ${
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-all duration-300 ${
                 statusFilter === 'upcoming' ? 'text-yellow-300' : 'text-yellow-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="text-right">
-              <div className={`text-lg sm:text-xl font-bold transition-all duration-300 ${
+              <div className={`text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 mb-1 ${
                 statusFilter === 'upcoming' ? 'text-yellow-200' : 'text-white'
               }`}>{stats.upcoming}</div>
-              <div className={`text-sm font-medium transition-all duration-300 ${
+              <div className={`text-xs sm:text-sm font-medium transition-all duration-300 ${
                 statusFilter === 'upcoming' ? 'text-yellow-200' : 'text-yellow-300/80'
               }`}>Sắp diễn ra</div>
             </div>
           </div>
+          <div className="h-1 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.upcoming / stats.total) * 100 : 0}%`}}></div>
+          </div>
         </div>
 
         {/* Ongoing */}
-        <div className={`group relative backdrop-blur-sm rounded-lg p-3 transition-all duration-300 ${
+        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
           statusFilter === 'ongoing' 
             ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/50 shadow-lg shadow-green-500/20' 
             : 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 hover:shadow-lg hover:shadow-green-500/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
               statusFilter === 'ongoing' ? 'bg-green-500/30' : 'bg-green-500/20'
             }`}>
-              <svg className={`w-4 h-4 sm:w-4 sm:h-4 transition-all duration-300 ${
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-all duration-300 ${
                 statusFilter === 'ongoing' ? 'text-green-300' : 'text-green-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div className="text-right">
-              <div className={`text-lg sm:text-xl font-bold transition-all duration-300 ${
+              <div className={`text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 mb-1 ${
                 statusFilter === 'ongoing' ? 'text-green-200' : 'text-white'
               }`}>{stats.ongoing}</div>
-              <div className={`text-sm font-medium transition-all duration-300 ${
+              <div className={`text-xs sm:text-sm font-medium transition-all duration-300 ${
                 statusFilter === 'ongoing' ? 'text-green-200' : 'text-green-300/80'
               }`}>Đang diễn ra</div>
             </div>
           </div>
+          <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.ongoing / stats.total) * 100 : 0}%`}}></div>
+          </div>
         </div>
 
         {/* Completed */}
-        <div className={`group relative backdrop-blur-sm rounded-lg p-3 transition-all duration-300 ${
+        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
           statusFilter === 'completed' 
             ? 'bg-gradient-to-br from-gray-500/20 to-slate-500/20 border border-gray-400/50 shadow-lg shadow-gray-500/20' 
             : 'bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 hover:from-gray-500/20 hover:to-slate-500/20 hover:border-gray-400/40 hover:shadow-lg hover:shadow-gray-500/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
               statusFilter === 'completed' ? 'bg-gray-500/30' : 'bg-gray-500/20'
             }`}>
-              <svg className={`w-4 h-4 sm:w-4 sm:h-4 transition-all duration-300 ${
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-all duration-300 ${
                 statusFilter === 'completed' ? 'text-gray-300' : 'text-gray-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="text-right">
-              <div className={`text-lg sm:text-xl font-bold transition-all duration-300 ${
+              <div className={`text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 mb-1 ${
                 statusFilter === 'completed' ? 'text-gray-200' : 'text-white'
               }`}>{stats.completed}</div>
-              <div className={`text-sm font-medium transition-all duration-300 ${
+              <div className={`text-xs sm:text-sm font-medium transition-all duration-300 ${
                 statusFilter === 'completed' ? 'text-gray-200' : 'text-gray-300/80'
               }`}>Hoàn thành</div>
             </div>
           </div>
+          <div className="h-1 bg-gradient-to-r from-gray-500/30 to-slate-500/30 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-gray-400 to-slate-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%`}}></div>
+          </div>
         </div>
 
         {/* Cancelled */}
-        <div className={`group relative backdrop-blur-sm rounded-lg p-3 transition-all duration-300 ${
+        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
           statusFilter === 'cancelled' 
             ? 'bg-gradient-to-br from-red-500/20 to-rose-500/20 border border-red-400/50 shadow-lg shadow-red-500/20' 
             : 'bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/20 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 hover:shadow-lg hover:shadow-red-500/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
               statusFilter === 'cancelled' ? 'bg-red-500/30' : 'bg-red-500/20'
             }`}>
-              <svg className={`w-4 h-4 sm:w-4 sm:h-4 transition-all duration-300 ${
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-all duration-300 ${
                 statusFilter === 'cancelled' ? 'text-red-300' : 'text-red-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
               <div className="text-right">
-              <div className={`text-lg sm:text-xl font-bold transition-all duration-300 ${
+              <div className={`text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 mb-1 ${
                 statusFilter === 'cancelled' ? 'text-red-200' : 'text-white'
               }`}>{stats.cancelled}</div>
-              <div className={`text-sm font-medium transition-all duration-300 ${
+              <div className={`text-xs sm:text-sm font-medium transition-all duration-300 ${
                 statusFilter === 'cancelled' ? 'text-red-200' : 'text-red-300/80'
               }`}>Đã hủy</div>
             </div>
+          </div>
+          <div className="h-1 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-red-400 to-rose-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.cancelled / stats.total) * 100 : 0}%`}}></div>
           </div>
         </div>
       </div>
 
 
-      {/* Events List - Compact */}
-      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-lg p-3 sm:p-4">
-        {/* Desktop Table View - Compact */}
-          <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-1/3">Tên sự kiện</th>
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-1/6">Ngày & Giờ</th>
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-1/6">Địa điểm</th>
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-16">Khách</th>
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-24">Trạng thái</th>
-              <th className="text-left py-2 px-3 text-white/80 font-medium text-sm w-28">Thao tác</th>
+      {/* Events List Section - Desktop Optimized */}
+      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 md:p-6">
+        {/* Desktop Table View - Optimized Layout */}
+        <div className="hidden md:block overflow-x-auto scrollbar-glass">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-white/70 uppercase bg-black/40 border-b border-white/10">
+              <tr>
+                <th className="px-6 py-4 w-1/4 font-semibold">Tên sự kiện</th>
+                <th className="px-6 py-4 w-1/6 font-semibold">Ngày & Giờ</th>
+                <th className="px-6 py-4 w-1/6 font-semibold">Địa điểm</th>
+                <th className="px-6 py-4 w-16 font-semibold">Khách</th>
+                <th className="px-6 py-4 w-35 font-semibold">Trạng thái</th>
+                <th className="px-6 py-4 w-28 font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {paginatedEvents.map((event) => (
-                <tr key={event.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                <td className="py-2 px-3 w-1/3">
+                <tr key={event.id} className="bg-black/20 border-b border-white/10 hover:bg-black/30 transition-colors">
+                  <td className="px-6 py-4 w-1/4">
                     <div>
-                    <h3 className="text-white font-medium text-sm truncate">{event.name}</h3>
-                    <p className="text-white/60 text-sm mt-0.5 line-clamp-1">{event.description}</p>
+                      <h3 className="text-white font-medium text-sm">{event.name}</h3>
+                      <p className="text-white/60 text-xs mt-1 line-clamp-1">{event.description}</p>
                     </div>
                   </td>
-                <td className="py-2 px-3 w-1/6">
-                  <div className="text-white/80 text-sm">
-                      <div>{new Date(event.date).toLocaleDateString('vi-VN')}</div>
-                      <div className="text-sm text-white/60">{event.time}</div>
-                    </div>
+                  <td className="px-6 py-4 w-1/6 text-white/80">
+                    <div className="text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</div>
+                    <div className="text-xs text-white/60">{event.time}</div>
                   </td>
-                <td className="py-2 px-3 text-white/80 w-1/6 text-sm truncate">{event.location}</td>
-                <td className="py-2 px-3 text-white/80 w-16 text-center text-sm">{event.max_guests}</td>
-                <td className="py-2 px-3 w-24">
-                  <span className={`px-3 py-2 text-sm rounded-full ${getStatusColor(event.status)}`}>
-                      {getStatusText(event.status)}
+                  <td className="px-6 py-4 w-1/6 text-white/80 text-sm">{event.location}</td>
+                  <td className="px-6 py-4 w-16 text-white/80 text-sm text-center">{event.max_guests}</td>
+                  <td className="px-6 py-4 w-35">
+                    <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit ${
+                      event.status === 'upcoming' ? 'bg-yellow-500/20 text-yellow-400' :
+                      event.status === 'ongoing' ? 'bg-green-500/20 text-green-400' :
+                      event.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {event.status === 'upcoming' ? (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                      ) : event.status === 'ongoing' ? (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M13 10V3L4 14h7v7l9-11h-7z" clipRule="evenodd" />
+                        </svg>
+                      ) : event.status === 'completed' ? (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className="hidden sm:inline">
+                        {event.status === 'upcoming' ? 'Sắp diễn ra' :
+                         event.status === 'ongoing' ? 'Đang diễn ra' :
+                         event.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'}
+                      </span>
                     </span>
                   </td>
-                <td className="py-2 px-3 w-28">
+                  <td className="px-6 py-4 w-28">
                     <div className="flex gap-2">
                       <button
                         onClick={() => openEventModal(event)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 rounded-lg hover:from-amber-500/30 hover:to-orange-500/30 hover:border-amber-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm text-sm"
+                        className="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs hover:bg-yellow-500/30 transition-colors flex items-center gap-1"
                         title="Chỉnh sửa sự kiện"
                       >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                         </svg>
-                        Sửa
+                        <span className="hidden sm:inline">Sửa</span>
                       </button>
                       <button
                         onClick={() => deleteEvent(event.id, event.name)}
-                      className="group relative px-3 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-400 rounded-lg text-sm hover:from-red-500/30 hover:to-rose-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm"
+                        className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition-colors flex items-center gap-1"
                         title="Xóa sự kiện"
                       >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                         </svg>
-                        Xóa
+                        <span className="hidden sm:inline">Xóa</span>
                       </button>
                     </div>
                   </td>
@@ -1059,12 +1103,22 @@ export default function EventsPage() {
                   <div className="space-y-4">
               <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">Tên sự kiện</label>
-                <input
-                  type="text"
+                <textarea
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value })
+                    // Auto resize textarea
+                    e.target.style.height = 'auto'
+                    e.target.style.height = e.target.scrollHeight + 'px'
+                  }}
+                  onInput={(e) => {
+                    // Auto resize on input
+                    e.currentTarget.style.height = 'auto'
+                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
+                  }}
+                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200 resize-none min-h-[60px] overflow-hidden"
                   placeholder="Nhập tên sự kiện"
+                  rows={1}
                 />
               </div>
 
@@ -1072,9 +1126,20 @@ export default function EventsPage() {
                       <label className="block text-white/80 text-sm font-medium mb-2">Mô tả</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 h-24 resize-none text-sm transition-all duration-200"
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value })
+                    // Auto resize textarea
+                    e.target.style.height = 'auto'
+                    e.target.style.height = e.target.scrollHeight + 'px'
+                  }}
+                  onInput={(e) => {
+                    // Auto resize on input
+                    e.currentTarget.style.height = 'auto'
+                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
+                  }}
+                        className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 resize-none text-sm transition-all duration-200 overflow-hidden min-h-[96px]"
                   placeholder="Mục đích sự kiện, ghi chú nhanh..."
+                  rows={1}
                 />
               </div>
 
@@ -1083,20 +1148,22 @@ export default function EventsPage() {
                       <div className="grid grid-cols-2 gap-2">
                   <div>
                           <label className="block text-white/60 text-sm font-medium mb-1">Ngày</label>
-                  <input
+                  <DateTimePicker
                     type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm"
+                    onChange={(value) => setFormData({ ...formData, date: value })}
+                    placeholder="Chọn ngày"
+                    className="w-full"
                   />
                 </div>
                 <div>
                           <label className="block text-white/60 text-sm font-medium mb-1">Giờ</label>
-                  <input
+                  <DateTimePicker
                     type="time"
                     value={formData.time}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                            className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm"
+                    onChange={(value) => setFormData({ ...formData, time: value })}
+                    placeholder="Chọn giờ"
+                    className="w-full"
                   />
                         </div>
                       </div>
@@ -1223,11 +1290,11 @@ export default function EventsPage() {
                     Timeline chương trình
                   </h3>
                 <div className="bg-black/20 border border-white/20 rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                    <table className="w-full min-w-[400px]">
+                  <div className="overflow-x-auto scrollbar-thin">
+                    <table className="w-full min-w-[500px]">
                     <thead className="bg-white/5">
                       <tr>
-                          <th className="text-left text-white/70 text-sm font-medium px-3 py-2 w-20">Giờ</th>
+                          <th className="text-left text-white/70 text-sm font-medium px-3 py-2 w-32">Giờ</th>
                           <th className="text-left text-white/70 text-sm font-medium px-3 py-2">Nội dung</th>
                           <th className="px-1 py-1.5 w-8"></th>
                       </tr>
@@ -1236,15 +1303,14 @@ export default function EventsPage() {
                       {programRows.map((row, idx) => (
                         <tr key={idx} className="border-t border-white/10">
                             <td className="px-3 py-2">
-                            <input
+                            <DateTimePicker
                               type="time"
                               value={row.time}
-                              onChange={(e) => {
-                                const v = e.target.value
+                              onChange={(v) => {
                                 setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,time:v}:r))
                               }}
-                                className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
-                                placeholder="18:00"
+                              placeholder="Chọn giờ "
+                              className="w-full"
                             />
                           </td>
                             <td className="px-3 py-2">
@@ -1346,7 +1412,7 @@ export default function EventsPage() {
       {/* Event Detail Modal */}
       {selectedEventId && mounted && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-glass">
             {(() => {
               const event = events.find(e => e.id === selectedEventId)
               if (!event) return null

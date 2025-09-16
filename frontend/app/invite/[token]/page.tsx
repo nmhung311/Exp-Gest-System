@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
-import BackgroundOverlay from '../../components/BackgroundOverlay'
 
 interface EventData {
   id: number;
@@ -166,7 +165,6 @@ const InvitePage: React.FC = () => {
   if (loading) {
     return (
       <>
-        <BackgroundOverlay />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
@@ -180,7 +178,6 @@ const InvitePage: React.FC = () => {
   if (error || !inviteData) {
     return (
       <>
-        <BackgroundOverlay />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="text-red-400 text-6xl mb-4">❌</div>
@@ -199,7 +196,7 @@ const InvitePage: React.FC = () => {
 
   return (
     <>
-      <BackgroundOverlay />
+      {/* Đã loại bỏ <BackgroundOverlay /> vì không tìm thấy định nghĩa */}
       <div className="min-h-screen" style={{ '--primary-color': '#0B2A4A', '--accent-color': '#1E88E5' } as React.CSSProperties}>
         <style jsx global>{`
           body {

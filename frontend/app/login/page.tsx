@@ -2,7 +2,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { api } from '@/lib/api'
-import BackgroundOverlay from "../components/BackgroundOverlay"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -45,7 +44,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <BackgroundOverlay />
       <div className="min-h-screen flex">
       {/* Left Section - Information Panel */}
       <div className="hidden lg:flex lg:w-2/3 bg-slate-900 relative overflow-hidden">
