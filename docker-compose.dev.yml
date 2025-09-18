@@ -24,7 +24,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     ports:
-      - "5001:5001"
+      - "9009:9009"
     environment:
       - FLASK_ENV=development
       - FLASK_APP=app.py

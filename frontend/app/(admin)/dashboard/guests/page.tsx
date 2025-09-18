@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
 import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
-import InvitePreview from "../../../components/InvitePreview"
+import InvitePreviewNew from "../../../components/InvitePreviewNew"
 import SystemModal from "../../../components/SystemModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
@@ -25,7 +25,15 @@ interface Guest {
 interface Event {
   id: number
   name: string
+  description: string
   date: string
+  time: string
+  location: string
+  venue_address?: string
+  venue_map_url?: string
+  dress_code?: string
+  program_outline?: string
+  max_guests: number
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
 }
 
@@ -267,7 +275,7 @@ export default function GuestsPage(){
       console.log('Guest name:', guest.name)
       
       // Lấy token mới và thông tin thời gian hết hạn
-      const tokenResponse = await fetch(`http://localhost:5001/api/guests/${guest.id}/qr`, {
+      const tokenResponse = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}/qr`, {
         method: 'POST'
       })
       
@@ -284,7 +292,7 @@ export default function GuestsPage(){
         setBackupCode(tokenData.token)
         
         // Tạo URL cho QR code với timestamp để tránh cache
-        const qrUrl = `http://localhost:5001/api/guests/${guest.id}/qr-image?t=${Date.now()}`
+        const qrUrl = `http://192.168.1.135:9009/api/guests/${guest.id}/qr-image?t=${Date.now()}`
         setQrImageUrl(qrUrl)
       } else {
         const errorData = await tokenResponse.json()
@@ -332,7 +340,7 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("http://localhost:5001/api/guests/bulk-checkin", {
+      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -368,7 +376,7 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("http://localhost:5001/api/guests/bulk-checkout", {
+      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -407,7 +415,7 @@ export default function GuestsPage(){
     }
     
     try {
-      const response = await fetch("http://localhost:5001/api/guests/bulk-delete", {
+      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -453,7 +461,7 @@ export default function GuestsPage(){
     }
     
     try {
-      const response = await fetch("http://localhost:5001/api/guests/bulk-rsvp", {
+      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-rsvp", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -694,7 +702,7 @@ export default function GuestsPage(){
     }
     
     try {
-      const response = await fetch(`http://localhost:5001/api/guests/${guestId}`, {
+      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guestId}`, {
         method: "DELETE"
       })
       
@@ -727,13 +735,13 @@ export default function GuestsPage(){
   async function copyInviteLinkOld(guestId: number, guestName: string) {
     try {
       // Tạo token mới cho khách mời
-      const response = await fetch(`http://localhost:5001/api/guests/${guestId}/qr`, {
+      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guestId}/qr`, {
         method: 'POST'
       })
       
       if (response.ok) {
         const data = await response.json()
-        const inviteLink = `http://localhost:3000/invite/${data.token}`
+        const inviteLink = `http://192.168.1.135:9009/invite/${data.token}`
         
         // Copy vào clipboard
         await navigator.clipboard.writeText(inviteLink)
@@ -772,7 +780,7 @@ export default function GuestsPage(){
     
     // Tạo link thiệp mời
     try {
-      const response = await fetch(`http://localhost:5001/api/guests/${guest.id}/qr`, {
+      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}/qr`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -781,7 +789,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         const data = await response.json()
-        const link = `http://localhost:3000/invite/${data.token}`
+        const link = `http://192.168.1.135:9009/invite/${data.token}`
         setInviteLink(link)
       } else {
         setInviteLink("")
@@ -918,7 +926,7 @@ export default function GuestsPage(){
         console.log(`Deleting guest ${guest.id} (${guest.name})...`)
         
         try {
-          const response = await fetch(`http://localhost:5001/api/guests/${guest.id}`, {
+          const response = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
@@ -1008,7 +1016,7 @@ export default function GuestsPage(){
       
       console.log('Sending import request with guests:', guestsWithEvent.length)
       
-      const res = await fetch("http://localhost:5001/api/guests/import",{
+      const res = await fetch("http://192.168.1.135:9009/api/guests/import",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify(guestsWithEvent)
@@ -1156,7 +1164,7 @@ export default function GuestsPage(){
                 event_id: parseInt(eventFilter)
               }))
               
-              const res = await fetch("http://localhost:5001/api/guests/import",{
+              const res = await fetch("http://192.168.1.135:9009/api/guests/import",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
                 body: JSON.stringify(guestsWithEvent)
@@ -1207,7 +1215,7 @@ export default function GuestsPage(){
         const formData = new FormData()
         formData.append('file', fileInput.files[0])
         formData.append('event_id', eventFilter) // Gửi event_id hiện tại
-        res = await fetch("http://localhost:5001/api/guests/import-csv",{
+        res = await fetch("http://192.168.1.135:9009/api/guests/import-csv",{
           method:"POST",
           body: formData
         })
@@ -2970,38 +2978,41 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
           )}
           
           {/* Invite Preview Content */}
-          {selectedGuestForPreview && (
-            <InvitePreview
-              eventData={{
-                id: selectedGuestForPreview.event_id || 1,
-                name: selectedGuestForPreview.event_name || 'Sự kiện mẫu',
-                description: 'Sự kiện đặc biệt của công ty',
-                date: new Date().toISOString(),
-                time: '19:00',
-                location: 'Tòa nhà EXP Technology',
-                venue_address: '123 Lê Lợi, Quận 1, TP.HCM',
-                venue_map_url: 'https://maps.google.com',
-                dress_code: 'Trang phục lịch sự',
-                program_outline: JSON.stringify([
-                  { time: '18:00', item: 'Đón khách' },
-                  { time: '18:30', item: 'Khai mạc' },
-                  { time: '19:00', item: 'Tiệc tối' },
-                  { time: '20:30', item: 'Chương trình văn nghệ' },
-                  { time: '21:30', item: 'Kết thúc' }
-                ]),
-                max_guests: 100,
-                status: 'upcoming'
-              }}
+          {selectedGuestForPreview && (() => {
+            const event = events.find(e => e.id === selectedGuestForPreview.event_id) || events[0];
+            return (
+              <InvitePreviewNew
+                eventData={{
+                  id: event?.id || selectedGuestForPreview.event_id || 1,
+                  name: event?.name || selectedGuestForPreview.event_name || 'Sự kiện',
+                  description: event?.description || 'Sự kiện đặc biệt',
+                  date: event?.date || new Date().toISOString(),
+                  time: event?.time || '18:00',
+                  location: event?.location || 'Địa điểm sự kiện',
+                  venue_address: event?.venue_address || '',
+                  venue_map_url: event?.venue_map_url || '',
+                  dress_code: event?.dress_code || '',
+                  program_outline: event?.program_outline || '',
+                  max_guests: event?.max_guests || 100,
+                  status: (event?.status as 'upcoming' | 'ongoing' | 'completed' | 'cancelled') || 'upcoming'
+                }}
               guestData={{
-                title: selectedGuestForPreview.title || 'Mr',
-                name: selectedGuestForPreview.name || 'Nguyễn Văn A',
-                role: selectedGuestForPreview.position || 'CEO',
-                organization: selectedGuestForPreview.company || 'Công ty TNHH Dịch vụ và Phát triển Công nghệ Hachitech Solution',
-                tag: selectedGuestForPreview.tag || 'Hachitech'
+                id: selectedGuestForPreview.id,
+                email: selectedGuestForPreview.email || '',
+                title: selectedGuestForPreview.title || '',
+                name: selectedGuestForPreview.name || '',
+                role: selectedGuestForPreview.position || '',
+                organization: selectedGuestForPreview.company || '',
+                group_tag: selectedGuestForPreview.tag || '',
+                is_vip: false,
+                rsvp_status: (selectedGuestForPreview.rsvp_status as 'pending' | 'accepted' | 'declined') || 'pending',
+                checkin_status: (selectedGuestForPreview.checkin_status as 'not_arrived' | 'checked_in' | 'checked_out') || 'not_arrived'
               }}
-              onClose={closeInvitePreview}
-            />
-          )}
+                token={inviteLink || ''}
+                onClose={closeInvitePreview}
+              />
+            );
+          })()}
         </div>
       </SystemModal>
 

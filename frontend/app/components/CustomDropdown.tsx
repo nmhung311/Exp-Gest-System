@@ -5,6 +5,7 @@ interface DropdownOption {
   value: string
   label: string
   disabled?: boolean
+  icon?: React.ReactNode
 }
 
 interface CustomDropdownProps {
@@ -66,9 +67,16 @@ export default function CustomDropdown({
           ${isOpen ? 'bg-white/10 border-white/30' : ''}
         `}
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        <div className="flex items-center gap-2 truncate">
+          {selectedOption?.icon && (
+            <span className="flex-shrink-0">
+              {selectedOption.icon}
+            </span>
+          )}
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+        </div>
         <svg 
           className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none" 
@@ -96,9 +104,15 @@ export default function CustomDropdown({
                   ${option.value === value ? 'bg-blue-500/30 text-blue-300 border-l-2 border-blue-400' : 'text-white/90'}
                   ${index === 0 ? 'rounded-t-lg' : ''}
                   ${index === options.length - 1 ? 'rounded-b-lg' : ''}
+                  flex items-center gap-2
                 `}
               >
-                {option.label}
+                {option.icon && (
+                  <span className="flex-shrink-0">
+                    {option.icon}
+                  </span>
+                )}
+                <span className="truncate">{option.label}</span>
               </button>
             ))}
           </div>

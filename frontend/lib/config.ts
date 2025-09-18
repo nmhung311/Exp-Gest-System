@@ -5,11 +5,11 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 // API Base URLs
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (isDevelopment ? 'http://localhost:5001' : 'https://your-domain.com')
+  (isDevelopment ? '' : 'http://192.168.1.135:5008')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  (isDevelopment ? 'http://localhost:3000' : 'https://your-domain.com')
+  (isDevelopment ? 'http://192.168.1.135:9009' : 'http://192.168.1.135:9009')
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -32,7 +32,7 @@ export const API_ENDPOINTS = {
   CHECKIN: `${API_BASE_URL}/api/checkin`,
   CHECKIN_BY_ID: (id: string) => `${API_BASE_URL}/api/checkin/${id}`,
   
-  // Auth
+  // Auth - Gọi trực tiếp đến backend (không qua Next.js API routes)
   AUTH: {
     LOGIN: `${API_BASE_URL}/api/auth/login`,
     REGISTER: `${API_BASE_URL}/api/auth/register`,

@@ -1,28 +1,44 @@
 version: '3.8'
 
 services:
-  # Frontend (Next.js)
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://27.72.246.67:9009/api
+      - NODE_ENV=production
     ports:
       - "3000:3000"
+    command: "npm run start"
+    depends_on: [backend]
+    networks:
+      - app-network
+    env_file:
+      - ./frontend/.env.production
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
-      - NODE_ENV=production
-    depends_on:
-      - backend
+      - FLASK_ENV=production
+      - CORS_ORIGINS=http://27.72.246.67:9009
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=5001
+    ports:
+      - "5001:5001"
+    command: "gunicorn -w 2 -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:5001"
     networks:
       - app-network
 
-  # Backend (Flask)
-  backend:
-    build: ./backend
-    ports:
-      - "5001:5001"
-    environment:
-      - FLASK_ENV=production
-      - FLASK_APP=app.py
+  nginx:
+    image: nginx:stable-alpine
     volumes:
-      - ./backend/instance:/app/instance
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "9009:9009"
+    depends_on: [frontend, backend]
     networks:
       - app-network
 

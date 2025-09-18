@@ -9,7 +9,8 @@
     "build:cloudflare": "next build && cp ../_headers out/ && cp ../_redirects out/",
     "set-prod": "node set-production-env.js",
     "build:prod": "npm run set-prod && npm run build",
-    "dev:local": "NEXT_PUBLIC_API_BASE_URL=http://localhost:5001 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000 next dev"
+    "dev:local": "NEXT_PUBLIC_API_BASE_URL=http://27.72.246.67:9009 NEXT_PUBLIC_FRONTEND_URL=http://27.72.246.67:9009 next dev",
+    "dev:ip": "NEXT_PUBLIC_API_BASE_URL=http://27.72.246.67:9009 NEXT_PUBLIC_FRONTEND_URL=http://27.72.246.67:9009 next dev -H 27.72.246.67"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.5",

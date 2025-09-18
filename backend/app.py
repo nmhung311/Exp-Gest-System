@@ -5,7 +5,7 @@ import json
 from queue import Queue, Empty
 import pytz
 from db import db
-from models import Guest, Token, Checkin, Event, User
+from models import Guest, Token, Checkin, Event, User, UserToken
 import secrets
 import csv
 import io
@@ -20,7 +20,24 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///exp_guest.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    CORS(app)
+    
+    # CORS configuration with environment variable support
+    cors_origins = os.getenv("CORS_ORIGINS", "http://27.72.246.67:9009")
+    if isinstance(cors_origins, str):
+        cors_origins = [origin.strip() for origin in cors_origins.split(",")]
+    
+    # Add default origins for development
+    default_origins = [
+        "http://27.72.246.67:3000", 
+        "http://27.72.246.67:3001", 
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://192.168.1.135:3000", 
+        "http://192.168.1.135:3001"
+    ]
+    
+    all_origins = list(set(cors_origins + default_origins))
+    CORS(app, origins=all_origins, supports_credentials=True)
     db.init_app(app)
 
     # Ensure tables and columns exist even when running via `python -m backend.app`
@@ -111,8 +128,20 @@ def create_app() -> Flask:
             if not user or not user.verify_password(password):
                 return {"message": "invalid credentials"}, 401
 
+            # Tạo token đơn giản hơn để dễ verify
             token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
             token = hashlib.sha256(token_raw.encode()).hexdigest()
+            
+            # Lưu token vào database để verify sau này
+            token_obj = UserToken.query.filter_by(user_id=user.id).first()
+            if token_obj:
+                token_obj.token = token
+                token_obj.created_at = datetime.now()
+            else:
+                token_obj = UserToken(user_id=user.id, token=token)
+                db.session.add(token_obj)
+            db.session.commit()
+            
             return {"token": token, "user": user.to_public_dict()}, 200
         except Exception as e:
             return {"message": f"login error: {str(e)}"}, 500
@@ -135,23 +164,17 @@ def create_app() -> Flask:
             
             token = auth_header.split(' ')[1]
             
-            # Tìm user từ token bằng cách hash lại token_raw
-            # Vì token được tạo từ user_id:username:random và hash bằng SHA256
-            users = User.query.all()
-            for user in users:
-                # Tạo lại token_raw để so sánh
-                token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
-                # Thử với một số random strings phổ biến
-                for i in range(10):  # Thử tối đa 10 lần
-                    test_token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
-                    if hashlib.sha256(test_token_raw.encode()).hexdigest() == token:
-                        return {"user": user.to_public_dict()}, 200
-                
-                # Fallback: thử với token_raw cố định (không an toàn nhưng tạm thời)
-                if hashlib.sha256(token_raw.encode()).hexdigest() == token:
-                    return {"user": user.to_public_dict()}, 200
+            # Tìm token trong database
+            token_obj = UserToken.query.filter_by(token=token).first()
+            if not token_obj:
+                return {"message": "Invalid token"}, 401
             
-            return {"message": "Invalid token"}, 401
+            # Lấy user từ token
+            user = User.query.get(token_obj.user_id)
+            if not user:
+                return {"message": "User not found"}, 401
+            
+            return {"user": user.to_public_dict()}, 200
                 
         except Exception as e:
             return {"message": f"get current user error: {str(e)}"}, 500
@@ -1083,10 +1106,10 @@ def create_app() -> Flask:
                     "name": guest.name,
                     "email": guest.email,
                     "title": guest.title or "Ông/Bà",
-                    "role": guest.role or "Khách mời",
-                    "organization": guest.organization or "",
-                    "group_tag": guest.group_tag or "",
-                    "is_vip": guest.is_vip or False,
+                    "role": guest.position or "Khách mời",
+                    "organization": guest.company or "",
+                    "group_tag": guest.tag or "",
+                    "is_vip": guest.tag == "VIP" if guest.tag else False,
                     "rsvp_status": guest.rsvp_status or "pending",
                     "checkin_status": guest.checkin_status or "not_arrived"
                 }
@@ -1106,6 +1129,6 @@ app = create_app()
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5008, debug=False)
 
 

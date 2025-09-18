@@ -12,4 +12,4 @@ From project root:
 python -m backend.app
 ```
 
-Health check: `http://localhost:5001/health`
+Health check: `http://localhost:9009/health`

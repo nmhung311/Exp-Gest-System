@@ -352,7 +352,7 @@ export default function CheckinPage(){
   // Function to delete check-in
   const deleteCheckin = async (guest: CheckedInGuest) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/checkin/${guest.id}`, {
+      const response = await fetch(`http://192.168.1.135:9009/api/checkin/${guest.id}`, {
         method: 'DELETE'
       })
 

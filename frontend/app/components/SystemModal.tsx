@@ -38,7 +38,7 @@ export default function SystemModal({
   return (
     <Portal>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998] flex items-center justify-center p-2 sm:p-4">
-        <div className={`bg-gray-900/95 border border-white/20 rounded-xl w-full ${sizeClasses[size]} max-h-[95dvh] flex flex-col shadow-2xl ${className}`}>
+        <div className={`bg-gray-900/20 backdrop-blur-md border border-white/10 rounded-xl w-full ${sizeClasses[size]} max-h-[95dvh] flex flex-col shadow-2xl ${className}`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-white/10">
             <h2 className="text-lg sm:text-xl font-bold text-white pr-4">

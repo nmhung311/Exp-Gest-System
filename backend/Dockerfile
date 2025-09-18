@@ -20,7 +20,7 @@ COPY . .
 RUN mkdir -p instance
 
 # Expose port
-EXPOSE 5001
+EXPOSE 9009
 
 # Start the application
 CMD ["python", "app.py"]

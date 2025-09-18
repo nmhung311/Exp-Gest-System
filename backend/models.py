@@ -99,6 +99,21 @@ class Token(db.Model):
         return False
 
 
+class UserToken(db.Model):
+    __tablename__ = "user_tokens"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    token = db.Column(db.String(128), nullable=False, unique=True)
+    status = db.Column(db.String(20), default="active")  # active/revoked
+    created_at = db.Column(db.DateTime, default=get_hanoi_time)
+    expires_at = db.Column(db.DateTime, nullable=True)
+
+    def is_expired(self):
+        if self.expires_at is None:
+            return False
+        return datetime.now() > self.expires_at
+
+
 class Checkin(db.Model):
     __tablename__ = "checkins"
     id = db.Column(db.Integer, primary_key=True)

@@ -13,7 +13,7 @@ export default function ScanPanel() {
     setLoading(true)
     setStatus("Đang kiểm tra...")
     try{
-      const res = await fetch("http://localhost:5001/api/checkin",{
+      const res = await fetch("http://192.168.1.135:9009/api/checkin",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({token, gate:"G1", staff:"admin"})

@@ -59,7 +59,7 @@ export default function StatsPage() {
 
   const loadGuests = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/guests')
+      const response = await fetch('http://192.168.1.135:9009/api/guests')
       if (response.ok) {
         const data = await response.json()
         setGuests(data)
@@ -71,7 +71,7 @@ export default function StatsPage() {
 
   const loadCheckedInGuests = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/guests/checked-in')
+      const response = await fetch('http://192.168.1.135:9009/api/guests/checked-in')
       if (response.ok) {
         const data = await response.json()
         setCheckedInGuests(data)
