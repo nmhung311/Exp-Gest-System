@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import BackgroundGlow from '../_components/BackgroundGlow'
 
 interface EventData {
   id: number;
@@ -47,6 +48,7 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [programRows, setProgramRows] = useState<Array<{time: string, item: string}>>([])
 
+
   // Parse program outline
   const parseProgramOutline = (src: string | undefined | null): Array<{time: string, item: string}> => {
     if (!src) return []
@@ -69,7 +71,11 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
   useEffect(() => {
     const generateQRCode = async () => {
       try {
-        const qrString = token
+        const qrString = token || 'DEMO-TOKEN'
+        if (!qrString || qrString.trim() === '') {
+          console.warn('No token provided for QR code generation')
+          return
+        }
         const qrUrl = await QRCode.toDataURL(qrString, {
           width: 200,
           margin: 2,
@@ -81,6 +87,16 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
         setQrCodeUrl(qrUrl)
       } catch (error) {
         console.error('Error generating QR code:', error)
+        // Fallback QR code
+        try {
+          const fallbackUrl = await QRCode.toDataURL('DEMO-EVENT-CONFIRMATION', {
+            width: 200,
+            margin: 2
+          })
+          setQrCodeUrl(fallbackUrl)
+        } catch (fallbackError) {
+          console.error('Error generating fallback QR code:', fallbackError)
+        }
       }
     }
 
@@ -94,7 +110,9 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
   const rsvpDeadline = new Date(eventData.date).toLocaleDateString('vi-VN')
 
   return (
-    <div className="min-h-screen bg-transparent text-white flex items-center justify-center">
+    <>
+      <BackgroundGlow />
+      <div className="min-h-screen text-white flex items-center justify-center">
         <style jsx global>{`
           body {
             font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -116,7 +134,7 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
           .main-title { text-align: center; margin-bottom: 50px; }
           .event-title { font-size: 48px; font-weight: 700; color: #fff; margin-bottom: 10px; }
           .title-underline { width: 200px; height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); margin: 0 auto; border-radius: 2px; }
-          .invitation-card { background: rgba(255,255,255,0.03); backdrop-blur-md; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 40px; margin-bottom: 30px; }
+          .invitation-card { background: rgba(255,255,255,0.05); backdrop-blur-sm; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; margin-bottom: 30px; }
           .greeting { font-size: 24px; color: #fff; margin-bottom: 20px; }
           .invitation-text { font-size: 18px; color: #94A3B8; margin-bottom: 40px; }
           .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
@@ -257,7 +275,7 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
                 </svg>
                 Tôi sẽ tham dự
               </button>
-              <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 border border-red-600 hover:border-red-700 inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg">
+              <button className="exp-button-secondary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300">
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
@@ -267,7 +285,8 @@ const InvitePreviewNew: React.FC<InvitePreviewNewProps> = ({
             <div className="rsvp-deadline">Hạn chót xác nhận: {rsvpDeadline}</div>
           </div>
         </div>
-    </div>
+      </div>
+    </>
   )
 }
 

@@ -30,14 +30,18 @@ def create_app() -> Flask:
     default_origins = [
         "http://27.72.246.67:3000", 
         "http://27.72.246.67:3001", 
+        "http://27.72.246.67:9009",
         "http://localhost:3000", 
         "http://127.0.0.1:3000", 
         "http://192.168.1.135:3000", 
-        "http://192.168.1.135:3001"
+        "http://192.168.1.135:3001",
+        "http://192.168.1.135:9009"
     ]
     
-    all_origins = list(set(cors_origins + default_origins))
-    CORS(app, origins=all_origins, supports_credentials=True)
+    # Disable CORS in Flask since Nginx handles it
+    # CORS(app, origins="*", supports_credentials=False, 
+    #      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    #      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     db.init_app(app)
 
     # Ensure tables and columns exist even when running via `python -m backend.app`
@@ -75,12 +79,7 @@ def create_app() -> Flask:
         except Exception as e:
             print(f"DB init error: {e}")
 
-    @app.after_request
-    def add_cors_headers(response):
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response
+    # CORS headers are handled by Flask-CORS, no need for manual headers
 
     @app.get("/health")
     def health() -> tuple[dict, int]:

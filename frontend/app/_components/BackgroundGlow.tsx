@@ -26,13 +26,6 @@ export default function BackgroundGlow() {
           before:pointer-events-none
         "
       />
-      {/* lớp noise để tránh banding */}
-      <div
-        className="
-          absolute inset-0 opacity-10 will-change-opacity
-          bg-[url('/noise.png')] bg-repeat
-        "
-      />
     </div>
   );
 }

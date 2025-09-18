@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
+import BackgroundGlow from '../_components/BackgroundGlow'
 
 // SVG Icons
 const CalendarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -87,6 +88,19 @@ interface InvitePreviewProps {
 export default function InvitePreview({ eventData, guestData, onClose }: InvitePreviewProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [mounted, setMounted] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
+
+  // Copy invite link function
+  const copyInviteLink = async () => {
+    try {
+      const inviteUrl = `${window.location.origin}/invite/${eventData.id || 'demo-token'}`
+      await navigator.clipboard.writeText(inviteUrl)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (error) {
+      console.error('Error copying invite link:', error)
+    }
+  }
 
   // Demo data for invitation based on new structure
   const demoData = {
@@ -211,9 +225,11 @@ export default function InvitePreview({ eventData, guestData, onClose }: InviteP
   if (!mounted) return null
 
   return (
-    <div className="fixed inset-0 bg-exp-bg z-50 flex items-center justify-center p-4">
-      {/* Main invitation card */}
-      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto">
+    <>
+      <BackgroundGlow />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Main invitation card */}
+        <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto">
         <div className="bg-exp-surface border border-exp-border rounded-xl overflow-hidden shadow-elevate">
           {/* Header with system theme */}
           <div className="relative bg-gradient-exp px-8 py-12 text-center text-white">
@@ -406,20 +422,20 @@ export default function InvitePreview({ eventData, guestData, onClose }: InviteP
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <a 
-                    href={demoData.rsvp.accept_url}
-                    className="exp-button-primary inline-flex items-center"
+                  <button 
+                    className="exp-button-primary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
+                    onClick={(e) => e.preventDefault()}
                   >
-                    <StarIcon className="w-5 h-5 mr-2" />
+                    <StarIcon className="w-5 h-5" />
                     Tham dự
-                  </a>
-                  <a 
-                    href={demoData.rsvp.decline_url}
-                    className="exp-button-secondary inline-flex items-center"
+                  </button>
+                  <button 
+                    className="exp-button-secondary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
+                    onClick={(e) => e.preventDefault()}
                   >
-                    <CloseIcon className="w-5 h-5 mr-2" />
+                    <CloseIcon className="w-5 h-5" />
                     Từ chối
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -455,6 +471,19 @@ export default function InvitePreview({ eventData, guestData, onClose }: InviteP
                   <p className="text-red-200 font-bold">
                     ⚠️ QUAN TRỌNG: Mỗi QR code chỉ sử dụng được 1 lần. Không chia sẻ QR code này với người khác.
                   </p>
+                </div>
+                
+                {/* Copy Link Button */}
+                <div className="mt-6">
+                  <button 
+                    onClick={copyInviteLink}
+                    className="exp-button-secondary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
+                  >
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                    </svg>
+                    {copySuccess ? 'Đã copy!' : 'Copy link thiệp'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -498,6 +527,6 @@ export default function InvitePreview({ eventData, guestData, onClose }: InviteP
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

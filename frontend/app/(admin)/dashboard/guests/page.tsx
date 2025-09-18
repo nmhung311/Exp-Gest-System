@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo, useCallback } from "react"
 import CustomDropdown from "../../../components/CustomDropdown"
 import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
-import InvitePreviewNew from "../../../components/InvitePreviewNew"
 import SystemModal from "../../../components/SystemModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
@@ -174,6 +173,7 @@ export default function GuestsPage(){
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState("")
   const [backupCode, setBackupCode] = useState("")
+  const [copySuccess, setCopySuccess] = useState(false)
   
   // Multiple selection states
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set())
@@ -821,6 +821,57 @@ export default function GuestsPage(){
     } catch (error) {
       console.error('Error copying invite link:', error)
       triggerHaptic('heavy')
+      showToast("Lỗi khi copy link", "error")
+    }
+  }
+
+  // Function để copy link thiệp mời từ QR popup
+  async function copyInviteLink() {
+    try {
+      console.log('=== COPY INVITE LINK ===')
+      console.log('backupCode:', backupCode)
+      console.log('backupCode length:', backupCode?.length)
+      
+      if (!backupCode) {
+        console.log('No backupCode available')
+        showToast("Chưa có token để copy", "error")
+        return
+      }
+      
+      const inviteUrl = `${window.location.origin}/invite/${backupCode}`
+      console.log('Generated invite URL:', inviteUrl)
+      
+      // Check if clipboard API is available
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(inviteUrl)
+        setCopySuccess(true)
+        showToast("Đã copy link thiệp mời!", "success")
+        setTimeout(() => setCopySuccess(false), 2000)
+      } else {
+        // Fallback: create a temporary textarea and copy
+        const textArea = document.createElement('textarea')
+        textArea.value = inviteUrl
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        
+        try {
+          document.execCommand('copy')
+          setCopySuccess(true)
+          showToast("Đã copy link thiệp mời!", "success")
+          setTimeout(() => setCopySuccess(false), 2000)
+        } catch (err) {
+          console.error('Fallback copy failed:', err)
+          showToast("Không thể copy link. Vui lòng copy thủ công: " + inviteUrl, "error")
+        } finally {
+          document.body.removeChild(textArea)
+        }
+      }
+    } catch (error) {
+      console.error('Error copying invite link:', error)
       showToast("Lỗi khi copy link", "error")
     }
   }
@@ -2165,13 +2216,13 @@ export default function GuestsPage(){
                         
                         <button 
                           onClick={() => openQRPopup(guest)}
-                          className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-400 rounded-lg text-xs hover:from-purple-500/30 hover:to-indigo-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/20"
-                          title="Xem mã QR"
+                          className="group relative px-3 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                          title="Copy link thiệp"
                         >
                           <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                           </svg>
-                          <span className="hidden sm:inline font-medium">QR</span>
+                          <span className="hidden sm:inline font-medium">Copy Link</span>
                         </button>
                         
                         <button 
@@ -2305,10 +2356,10 @@ export default function GuestsPage(){
                           }}
                           className="w-full px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
                         >
-                          <svg className="w-3.5 h-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
+                          <svg className="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                           </svg>
-                          <span>Xem mã QR</span>
+                          <span>Copy Link Thiệp</span>
                         </button>
                         
                         <button 
@@ -2803,73 +2854,57 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
         </div>
       )}
 
-      {/* QR Code Popup */}
+      {/* Copy Link Popup */}
       <SystemModal
         isOpen={showQRPopup}
         onClose={() => setShowQRPopup(false)}
-        title={`Mã QR - ${selectedGuest?.name || ''}`}
+        title={`Copy Link Thiệp - ${selectedGuest?.name || ''}`}
         size="lg"
       >
         <div className="space-y-4">
-          {/* QR Code Display */}
+          {/* Copy Link Display */}
           <div className="text-center">
-            <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white rounded-2xl flex items-center justify-center p-3 sm:p-4 shadow-2xl border border-white/20">
-              {qrImageUrl ? (
-                <img
-                  src={qrImageUrl}
-                  alt="QR Code"
-                  className="w-full h-full object-contain"
-                  onError={() => setQrImageUrl("")}
-                />
+            <div className="w-full max-w-md mx-auto bg-exp-surface/50 border border-exp-border rounded-xl p-6 shadow-elevate">
+              <div className="mb-4">
+                <svg className="w-12 h-12 mx-auto text-exp-accent mb-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-lg font-semibold text-white mb-2">Link Thiệp Mời</h3>
+                <p className="text-white/70 text-sm">Click nút bên dưới để copy link thiệp mời</p>
+              </div>
+              
+              {backupCode ? (
+                <div className="bg-exp-surface/30 border border-exp-border rounded-lg p-3 mb-4">
+                  <p className="text-xs text-white/50 mb-1">Token:</p>
+                  <p className="text-sm text-white font-mono break-all">{backupCode}</p>
+                </div>
               ) : (
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-cyan-400 mx-auto mb-2 sm:mb-3"></div>
-                  <p className="text-gray-600 text-xs sm:text-sm">Đang tải QR code...</p>
+                <div className="bg-exp-surface/30 border border-exp-border rounded-lg p-3 mb-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-exp-accent mx-auto mb-2"></div>
+                  <p className="text-sm text-white/70">Đang tạo token...</p>
                 </div>
               )}
             </div>
-            <p className="text-white/80 text-xs sm:text-sm mt-2 sm:mt-3">
-              Mã QR cho {selectedGuest?.name || ''}
-            </p>
           </div>
 
-          {/* Backup Text Code */}
-          {qrImageUrl && (
-            <div className="bg-black/30 border border-yellow-500/30 rounded-xl p-3 sm:p-4">
-              <div className="text-yellow-400 text-xs sm:text-sm font-medium mb-2 text-center">
-                Mã dự phòng (nếu không quét được QR):
-              </div>
-              <div className="bg-black/50 border border-yellow-500/20 rounded-lg p-2 sm:p-3 flex items-center gap-2">
-                <code className="text-white font-mono text-xs break-all flex-1 text-center">
-                  {backupCode}
-                </code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(backupCode)
-                    showToast("Đã copy mã dự phòng", "success")
-                  }}
-                  className="text-yellow-400 hover:text-yellow-300 transition-colors p-1 hover:bg-yellow-500/10 rounded flex-shrink-0"
-                  title="Copy mã dự phòng"
-                >
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Copy Link Button */}
+          <div className="text-center">
+            <button
+              onClick={copyInviteLink}
+              disabled={!backupCode}
+              className={`exp-button-primary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ${
+                !backupCode ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+              </svg>
+              {copySuccess ? 'Đã copy!' : 'Copy Link Thiệp'}
+            </button>
+          </div>
           
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <button
-              onClick={() => selectedGuest && downloadQR(selectedGuest.id, selectedGuest.name)}
-              className="flex-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-500/50 text-blue-300 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:from-blue-500/40 hover:to-cyan-500/40 hover:border-blue-400/70 hover:text-blue-200 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 text-sm sm:text-base"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Tải xuống
-            </button>
             <button
               onClick={() => setShowQRPopup(false)}
               className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
@@ -2977,42 +3012,17 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
             </div>
           )}
           
-          {/* Invite Preview Content */}
-          {selectedGuestForPreview && (() => {
-            const event = events.find(e => e.id === selectedGuestForPreview.event_id) || events[0];
-            return (
-              <InvitePreviewNew
-                eventData={{
-                  id: event?.id || selectedGuestForPreview.event_id || 1,
-                  name: event?.name || selectedGuestForPreview.event_name || 'Sự kiện',
-                  description: event?.description || 'Sự kiện đặc biệt',
-                  date: event?.date || new Date().toISOString(),
-                  time: event?.time || '18:00',
-                  location: event?.location || 'Địa điểm sự kiện',
-                  venue_address: event?.venue_address || '',
-                  venue_map_url: event?.venue_map_url || '',
-                  dress_code: event?.dress_code || '',
-                  program_outline: event?.program_outline || '',
-                  max_guests: event?.max_guests || 100,
-                  status: (event?.status as 'upcoming' | 'ongoing' | 'completed' | 'cancelled') || 'upcoming'
-                }}
-              guestData={{
-                id: selectedGuestForPreview.id,
-                email: selectedGuestForPreview.email || '',
-                title: selectedGuestForPreview.title || '',
-                name: selectedGuestForPreview.name || '',
-                role: selectedGuestForPreview.position || '',
-                organization: selectedGuestForPreview.company || '',
-                group_tag: selectedGuestForPreview.tag || '',
-                is_vip: false,
-                rsvp_status: (selectedGuestForPreview.rsvp_status as 'pending' | 'accepted' | 'declined') || 'pending',
-                checkin_status: (selectedGuestForPreview.checkin_status as 'not_arrived' | 'checked_in' | 'checked_out') || 'not_arrived'
-              }}
-                token={inviteLink || ''}
-                onClose={closeInvitePreview}
+          {/* Hiển thị trực tiếp trang thiệp mời */}
+          {inviteLink && (
+            <div className="w-full h-[80vh] border border-white/20 rounded-xl overflow-hidden">
+              <iframe
+                src={`${window.location.origin}/invite/${inviteLink.split('/').pop()}`}
+                className="w-full h-full"
+                title="Xem trước thiệp mời"
+                sandbox="allow-same-origin allow-scripts"
               />
-            );
-          })()}
+            </div>
+          )}
         </div>
       </SystemModal>
 

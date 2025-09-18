@@ -1,9 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
-import BackgroundGlow from '../../_components/BackgroundGlow'
+import BackgroundGlow from '../_components/BackgroundGlow'
 
 interface EventData {
   id: number;
@@ -33,22 +32,21 @@ interface GuestData {
   checkin_status: 'not_arrived' | 'checked_in' | 'checked_out';
 }
 
-interface InviteData {
-  event: EventData;
-  guest: GuestData;
+interface ReusableInvitePageProps {
+  eventData: EventData;
+  guestData: GuestData;
   token: string;
+  onClose?: () => void;
 }
 
-const InvitePage: React.FC = () => {
-  const params = useParams()
-  const token = params.token as string
-  
-  const [inviteData, setInviteData] = useState<InviteData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const ReusableInvitePage: React.FC<ReusableInvitePageProps> = ({
+  eventData,
+  guestData,
+  token,
+  onClose
+}) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [programRows, setProgramRows] = useState<Array<{time: string, item: string}>>([])
-
 
   // Parse program outline
   const parseProgramOutline = (src: string | undefined | null): Array<{time: string, item: string}> => {
@@ -56,26 +54,23 @@ const InvitePage: React.FC = () => {
     try {
       const parsed = JSON.parse(src)
       if (Array.isArray(parsed)) {
-        return parsed
-          .map((r: any) => ({ time: String(r[0] ?? r.time ?? ''), item: String(r[1] ?? r.item ?? '') }))
-          .filter(r => r.time || r.item)
+        return parsed.map(item => ({
+          time: item.time || '',
+          item: item.item || item.description || ''
+        }))
       }
-    } catch {}
-    // fallback: "18:00-Đón khách; 18:30-Khai mạc"
-    return src.split(';').map(s => s.trim()).filter(Boolean).map(s => {
-      const [t, ...rest] = s.split('-')
-      return { time: (t || '').trim(), item: rest.join('-').trim() }
-    })
+    } catch (error) {
+      console.error('Error parsing program outline:', error)
+    }
+    return []
   }
 
   // Generate QR code
   useEffect(() => {
     const generateQRCode = async () => {
       try {
-        // Sử dụng token trực tiếp thay vì JSON data
-        const token = inviteData?.token || 'DEMO-TOKEN'
-        const qrString = token
-        const qrUrl = await QRCode.toDataURL(qrString, {
+        const qrToken = token || 'DEMO-TOKEN'
+        const qrUrl = await QRCode.toDataURL(qrToken, {
           width: 200,
           margin: 2,
           color: {
@@ -86,128 +81,48 @@ const InvitePage: React.FC = () => {
         setQrCodeUrl(qrUrl)
       } catch (error) {
         console.error('Error generating QR code:', error)
-        const fallbackUrl = await QRCode.toDataURL('DEMO-EVENT-CONFIRMATION', {
+        // Fallback QR code
+        const fallbackQR = await QRCode.toDataURL('DEMO-TOKEN', {
           width: 200,
-          margin: 2
-        })
-        setQrCodeUrl(fallbackUrl)
-      }
-    }
-
-    if (inviteData) {
-      generateQRCode()
-      setProgramRows(parseProgramOutline(inviteData.event.program_outline))
-    }
-  }, [inviteData])
-
-  // Load invite data
-  useEffect(() => {
-    const loadInviteData = async () => {
-      try {
-        setLoading(true)
-        
-        // Try to load from API first
-        const response = await fetch(`http://192.168.1.135:9009/api/invite/${token}`)
-        
-        if (response.ok) {
-          const data = await response.json()
-          setInviteData(data)
-        } else {
-          // Fallback to demo data if API fails
-          const demoData: InviteData = {
-            event: {
-              id: 1,
-              name: 'Lễ kỷ niệm 15 năm thành lập',
-              description: 'EXP Technology Company Limited',
-              date: '2025-10-10',
-              time: '18:00',
-              location: 'Trung tâm Hội nghị tỉnh Thái Nguyên',
-              venue_address: 'Số 1 Đường XYZ, TP. Thái Nguyên',
-              venue_map_url: 'https://maps.google.com',
-              dress_code: 'Business casual',
-              program_outline: JSON.stringify([
-                ['18:00', 'Đón khách & Check-in'],
-                ['18:30', 'Khai mạc'],
-                ['19:00', 'Vinh danh & Tri ân'],
-                ['20:00', 'Gala & Networking']
-              ]),
-              max_guests: 200,
-              status: 'upcoming'
-            },
-            guest: {
-              id: 1,
-              name: 'Bùi Hiếu',
-              email: 'buihieu@example.com',
-              title: 'Mr',
-              role: 'CTO',
-              organization: 'Công ty TNHH Dịch vụ và Phát triển Công nghệ Hachitech Solution',
-              group_tag: 'Hachitech',
-              is_vip: false,
-              rsvp_status: 'pending',
-              checkin_status: 'not_arrived'
-            },
-            token: token
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
           }
-          setInviteData(demoData)
-        }
-      } catch (err) {
-        console.error('Error loading invite data:', err)
-        setError('Không thể tải thông tin thiệp mời: ' + err)
-      } finally {
-        setLoading(false)
+        })
+        setQrCodeUrl(fallbackQR)
       }
     }
 
-    if (token) {
-      loadInviteData()
-    }
+    generateQRCode()
   }, [token])
 
-  if (loading) {
+  // Parse program outline when eventData changes
+  useEffect(() => {
+    if (eventData?.program_outline) {
+      const parsed = parseProgramOutline(eventData.program_outline)
+      setProgramRows(parsed)
+    }
+  }, [eventData?.program_outline])
+
+  if (!eventData || !guestData) {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center">
+        <BackgroundGlow />
+        <div className="min-h-screen text-white flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-white/80">Đang tải thiệp mời...</p>
+            <p className="text-white/80">Đang tải dữ liệu...</p>
           </div>
         </div>
       </>
     )
   }
 
-  if (error) {
-    return (
-      <>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-red-400 text-6xl mb-4">❌</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Lỗi tải thiệp mời</h1>
-            <p className="text-white/80">{error}</p>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  if (!inviteData) {
-    return (
-      <>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-yellow-400 text-6xl mb-4">⏳</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Đang tải...</h1>
-            <p className="text-white/80">Vui lòng chờ trong giây lát</p>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  const formattedDate = new Date(inviteData.event.date).toLocaleDateString('vi-VN', {
+  const formattedDate = new Date(eventData.date).toLocaleDateString('vi-VN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
-  const rsvpDeadline = new Date(inviteData.event.date).toLocaleDateString('vi-VN')
+  const rsvpDeadline = new Date(eventData.date).toLocaleDateString('vi-VN')
 
   return (
     <>
@@ -221,15 +136,13 @@ const InvitePage: React.FC = () => {
             background-color: #0B0F14;
           }
           .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-          .header { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 40px; }
-          .header-top { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-          .logo-container { width: 60px; height: 60px; margin-right: 15px; }
+          .header { display: flex; align-items: center; margin-bottom: 40px; }
+          .logo-container { width: 80px; height: 80px; margin-right: 20px; }
           .logo-image { width: 100%; height: 100%; object-fit: contain; }
-          .company-info { display: flex; flex-direction: column; align-items: flex-start; }
+          .company-info { flex: 1; }
           .company-name { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 5px; }
           .company-slogan { font-size: 18px; color: #8B5CF6; margin-bottom: 5px; }
           .company-full { font-size: 16px; color: #94A3B8; }
-          .company-description { font-size: 14px; color: #94A3B8; text-align: center; margin-top: 10px; font-style: italic; }
           .main-title { text-align: center; margin-bottom: 50px; }
           .event-title { font-size: 48px; font-weight: 700; color: #fff; margin-bottom: 10px; }
           .title-underline { width: 200px; height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); margin: 0 auto; border-radius: 2px; }
@@ -256,94 +169,118 @@ const InvitePage: React.FC = () => {
           .rsvp-decline { background: #EF4444; color: #fff; border: none; }
           .rsvp-decline:hover { background: #DC2626; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3); }
           .rsvp-deadline { color: #94A3B8; font-size: 14px; }
-          @media (min-width: 769px) {
-            .logo-container { width: 120px; height: 120px; margin-right: 30px; }
-            .company-name { font-size: 36px; font-weight: 700; }
-            .company-description { font-size: 16px; }
-            .header-top { margin-bottom: 15px; }
-          }
           @media (max-width: 768px) {
             .details-grid { grid-template-columns: 1fr; gap: 20px; }
             .rsvp-buttons { flex-direction: column; }
             .event-title { font-size: 36px; }
             .main-container { padding: 20px 15px; }
-            .company-description { 
-              font-size: 14px; 
-              line-height: 1.4;
-              max-width: 280px;
-            }
-            .company-description::before {
-              content: "Từ Thái nguyên vươn xa 15 năm\A học tập và trải nghiệm";
-              white-space: pre-line;
-            }
-            .company-description {
-              font-size: 0;
-            }
-            .company-description::before {
-              font-size: 14px;
-            }
           }
         `}</style>
         
         <div className="main-container">
           {/* Header */}
           <div className="header">
-            <div className="header-top">
-              <div className="logo-container">
-                <img src="/company-logo.png" alt="EXP Technology Logo" className="logo-image" />
-              </div>
-              <div className="company-info">
-                <div className="company-name">EXP Technology</div>
-              </div>
+            <div className="logo-container">
+              <img src="/logo.png" alt="Logo" className="logo-image" />
             </div>
-            <div className="company-description">Từ Thái nguyên vươn xa 15 năm học tập và trải nghiệm</div>
+            <div className="company-info">
+              <div className="company-name">Exp Gest System</div>
+              <div className="company-slogan">Hệ thống quản lý sự kiện</div>
+              <div className="company-full">Event Management System</div>
+            </div>
           </div>
 
           {/* Main Title */}
           <div className="main-title">
-            <h1 className="event-title">Lễ kỷ niệm 15 năm thành lập</h1>
+            <h1 className="event-title">{eventData.name}</h1>
             <div className="title-underline"></div>
           </div>
-          
+
           {/* Invitation Card */}
           <div className="invitation-card">
-            <div className="greeting">Kính gửi {inviteData.guest.name}</div>
+            <div className="greeting">
+              Xin chào {guestData.title} {guestData.name},
+            </div>
             <div className="invitation-text">
-              Trân trọng mời quý khách tham dự chương trình
+              {eventData.description}
             </div>
 
+            {/* Event Details Grid */}
             <div className="details-grid">
-              {/* Time & Location Section */}
+              {/* Event Info */}
               <div className="detail-section">
                 <h3>
                   <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
-                  Thời gian & Địa điểm
+                  Thông tin sự kiện
                 </h3>
                 <div className="detail-item">
                   <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
-                  <span className="detail-text">{formattedDate} lúc {inviteData.event.time}</span>
+                  <span className="detail-text">{formattedDate}</span>
+                </div>
+                <div className="detail-item">
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <span className="detail-text">{eventData.time}</span>
                 </div>
                 <div className="detail-item">
                   <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
-                  <span className="detail-text">{inviteData.event.location}</span>
+                  <span className="detail-text">{eventData.location}</span>
                 </div>
-                {inviteData.event.venue_address && (
+                {eventData.venue_address && (
                   <div className="detail-item">
                     <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                     </svg>
-                    <span className="detail-text">{inviteData.event.venue_address}</span>
+                    <span className="detail-text">{eventData.venue_address}</span>
                   </div>
                 )}
               </div>
 
-              {/* Program Section */}
+              {/* Guest Info */}
+              <div className="detail-section">
+                <h3>
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                  Thông tin khách mời
+                </h3>
+                <div className="detail-item">
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                  <span className="detail-text">{guestData.title} {guestData.name}</span>
+                </div>
+                <div className="detail-item">
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                  <span className="detail-text">{guestData.email}</span>
+                </div>
+                <div className="detail-item">
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span className="detail-text">{guestData.role}</span>
+                </div>
+                <div className="detail-item">
+                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="detail-text">{guestData.organization}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Program Outline */}
+            {programRows.length > 0 && (
               <div className="detail-section">
                 <h3>
                   <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
@@ -351,41 +288,30 @@ const InvitePage: React.FC = () => {
                   </svg>
                   Chương trình
                 </h3>
-                {programRows.length > 0 ? (
-                  programRows.map((row, index) => (
-                    <div key={index} className="program-item">
-                      <span className="program-time">{row.time}</span>
-                      <span className="program-description">{row.item}</span>
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    <div className="program-item">
-                      <span className="program-time">18:00</span>
-                      <span className="program-description">Đón khách & Check-in</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">18:30</span>
-                      <span className="program-description">Khai mạc</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">19:00</span>
-                      <span className="program-description">Vinh danh & Tri ân</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">20:00</span>
-                      <span className="program-description">Gala & Networking</span>
-                    </div>
-                  </>
-                )}
+                {programRows.map((row, index) => (
+                  <div key={index} className="program-item">
+                    <span className="program-time">{row.time}</span>
+                    <span className="program-description">{row.item}</span>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
 
             {/* Additional Info */}
-            <div className="additional-info">
-              <div className="info-item">Trang phục: Business casual</div>
-              <div className="info-item">Vui lòng xác nhận tham dự trước ngày {rsvpDeadline}</div>
-            </div>
+            {(eventData.dress_code || eventData.venue_map_url) && (
+              <div className="additional-info">
+                {eventData.dress_code && (
+                  <div className="info-item">
+                    <strong>Trang phục:</strong> {eventData.dress_code}
+                  </div>
+                )}
+                {eventData.venue_map_url && (
+                  <div className="info-item">
+                    <strong>Bản đồ:</strong> <a href={eventData.venue_map_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Xem bản đồ</a>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RSVP Card */}
@@ -408,7 +334,7 @@ const InvitePage: React.FC = () => {
                 Không thể tham dự
               </button>
             </div>
-          <div className="rsvp-deadline">Hạn chót xác nhận: {rsvpDeadline}</div>
+            <div className="rsvp-deadline">Hạn chót xác nhận: {rsvpDeadline}</div>
           </div>
         </div>
       </div>
@@ -416,4 +342,4 @@ const InvitePage: React.FC = () => {
   )
 }
 
-export default InvitePage
+export default ReusableInvitePage
