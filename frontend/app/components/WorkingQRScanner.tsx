@@ -189,7 +189,7 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
         console.error('Scan frame error:', err)
         setDebugInfo(`Lỗi quét: ${err}`)
       }
-    }, 200) // Quét mỗi 200ms
+    }, 2000) // Quét mỗi 2 giây
   }
 
   if (error) {

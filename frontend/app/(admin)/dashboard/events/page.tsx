@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import CustomDropdown from '../../../components/CustomDropdown'
-import CustomCheckbox from '../../../components/CustomCheckbox'
-import SimpleInvitePreview from '../../../components/SimpleInvitePreview'
-import DateTimePicker from '../../../components/DateTimePicker'
+import CustomDropdown from '../../components/CustomDropdown'
+import CustomCheckbox from '../../components/CustomCheckbox'
+import SimpleInvitePreview from '../../components/SimpleInvitePreview'
+import DateTimePicker from '../../components/DateTimePicker'
 
 import { api } from "@/lib/api"
 interface Event {
@@ -14,7 +14,6 @@ interface Event {
   description: string
   date: string
   time: string
-  location: string
   venue_address?: string
   venue_map_url?: string
   program_outline?: string
@@ -50,7 +49,6 @@ export default function EventsPage() {
     description: '',
     date: '',
     time: '',
-    location: '',
     venue_address: '',
     venue_map_url: '',
     program_outline: '',
@@ -155,7 +153,6 @@ export default function EventsPage() {
         description: event.description,
         date: event.date,
         time: event.time,
-        location: event.location,
         venue_address: event.venue_address || '',
         venue_map_url: event.venue_map_url || '',
         program_outline: event.program_outline || '',
@@ -172,7 +169,6 @@ export default function EventsPage() {
         description: '',
         date: '',
         time: '',
-        location: '',
         venue_address: '',
         venue_map_url: '',
         program_outline: '',
@@ -194,7 +190,6 @@ export default function EventsPage() {
       description: '',
       date: '',
       time: '',
-      location: '',
       venue_address: '',
       venue_map_url: '',
       program_outline: '',
@@ -246,8 +241,8 @@ export default function EventsPage() {
         return
       }
       
-      if (!formData.location?.trim()) {
-        setToastMsg('Vui lòng nhập địa điểm sự kiện')
+      if (!formData.venue_address?.trim()) {
+        setToastMsg('Vui lòng nhập địa chỉ chi tiết sự kiện')
         setToastType('warning')
         setToastVisible(true)
         setSaving(false)
@@ -315,7 +310,6 @@ export default function EventsPage() {
             description: formData.description?.trim() || '',
             date: formData.date,
             time: formData.time,
-            location: formData.location.trim(),
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
             program_outline: program_outline_payload,
@@ -330,8 +324,13 @@ export default function EventsPage() {
             const errorData = await res.json()
             errorMessage = errorData.error || errorMessage
           } catch {
-            const errorText = await res.text()
-            errorMessage = errorText || errorMessage
+            // If JSON parsing fails, try to get text
+            try {
+              const errorText = await res.text()
+              errorMessage = errorText || errorMessage
+            } catch {
+              errorMessage = `HTTP ${res.status}: ${res.statusText}`
+            }
           }
           throw new Error(errorMessage)
         }
@@ -346,7 +345,6 @@ export default function EventsPage() {
             description: formData.description?.trim() || '',
             date: formData.date,
             time: formData.time,
-            location: formData.location.trim(),
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
             program_outline: program_outline_payload,
@@ -361,8 +359,13 @@ export default function EventsPage() {
             const errorData = await res.json()
             errorMessage = errorData.error || errorMessage
           } catch {
-            const errorText = await res.text()
-            errorMessage = errorText || errorMessage
+            // If JSON parsing fails, try to get text
+            try {
+              const errorText = await res.text()
+              errorMessage = errorText || errorMessage
+            } catch {
+              errorMessage = `HTTP ${res.status}: ${res.statusText}`
+            }
           }
           throw new Error(errorMessage)
         }
@@ -429,7 +432,7 @@ export default function EventsPage() {
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.location.toLowerCase().includes(searchTerm.toLowerCase())
+                         (event.venue_address && event.venue_address.toLowerCase().includes(searchTerm.toLowerCase()))
     
     // For mobile: use selectedStatuses, for desktop: use statusFilter
     const matchesStatus = selectedStatuses.length > 0 
@@ -742,10 +745,10 @@ export default function EventsPage() {
       {/* Desktop Statistics Cards - Optimized Layout */}
       <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-6">
         {/* Total Events */}
-        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
+        <div className={`status-card-all group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden cursor-pointer ${
           statusFilter === 'all' 
             ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/50 shadow-lg shadow-blue-500/20' 
-            : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 hover:shadow-lg hover:shadow-blue-500/20'
+            : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20'
         }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -772,10 +775,10 @@ export default function EventsPage() {
         </div>
 
         {/* Upcoming */}
-        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
+        <div className={`status-card-upcoming group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden cursor-pointer ${
           statusFilter === 'upcoming' 
             ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/50 shadow-lg shadow-yellow-500/20' 
-            : 'bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/40 hover:shadow-lg hover:shadow-yellow-500/20'
+            : 'bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/20'
         }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -802,10 +805,10 @@ export default function EventsPage() {
         </div>
 
         {/* Ongoing */}
-        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
+        <div className={`status-card-ongoing group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden cursor-pointer ${
           statusFilter === 'ongoing' 
             ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/50 shadow-lg shadow-green-500/20' 
-            : 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 hover:shadow-lg hover:shadow-green-500/20'
+            : 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20'
         }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -832,10 +835,10 @@ export default function EventsPage() {
         </div>
 
         {/* Completed */}
-        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
+        <div className={`status-card-completed group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden cursor-pointer ${
           statusFilter === 'completed' 
             ? 'bg-gradient-to-br from-gray-500/20 to-slate-500/20 border border-gray-400/50 shadow-lg shadow-gray-500/20' 
-            : 'bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 hover:from-gray-500/20 hover:to-slate-500/20 hover:border-gray-400/40 hover:shadow-lg hover:shadow-gray-500/20'
+            : 'bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20'
         }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -862,10 +865,10 @@ export default function EventsPage() {
         </div>
 
         {/* Cancelled */}
-        <div className={`group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 ${
+        <div className={`status-card-cancelled group relative backdrop-blur-sm rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden cursor-pointer ${
           statusFilter === 'cancelled' 
             ? 'bg-gradient-to-br from-red-500/20 to-rose-500/20 border border-red-400/50 shadow-lg shadow-red-500/20' 
-            : 'bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/20 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-400/40 hover:shadow-lg hover:shadow-red-500/20'
+            : 'bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/20'
         }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -921,15 +924,10 @@ export default function EventsPage() {
                     <div className="text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</div>
                     <div className="text-xs text-white/60">{event.time}</div>
                   </td>
-                  <td className="px-6 py-4 w-1/6 text-white/80 text-sm">{event.location}</td>
+                  <td className="px-6 py-4 w-1/6 text-white/80 text-sm">{event.venue_address || 'Chưa có địa chỉ'}</td>
                   <td className="px-6 py-4 w-16 text-white/80 text-sm text-center">{event.max_guests}</td>
                   <td className="px-6 py-4 w-35">
-                    <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit ${
-                      event.status === 'upcoming' ? 'bg-yellow-500/20 text-yellow-400' :
-                      event.status === 'ongoing' ? 'bg-green-500/20 text-green-400' :
-                      event.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
-                      'bg-red-500/20 text-red-400'
-                    }`}>
+                    <span className={`table-status-badge-${event.status} text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit transition-all duration-300 cursor-pointer overflow-hidden relative`}>
                       {event.status === 'upcoming' ? (
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -995,7 +993,7 @@ export default function EventsPage() {
                   <h3 className="text-white font-medium text-sm truncate">{event.name}</h3>
                   <p className="text-white/60 text-sm mt-0.5 line-clamp-1">{event.description}</p>
                   </div>
-                <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[11px] text-white/90 ml-2 flex-shrink-0">
+                <span className={`status-badge-${event.status} rounded-full border px-2 py-0.5 text-[11px] ml-2 flex-shrink-0 transition-all duration-300 cursor-pointer overflow-hidden relative`}>
                     {getStatusText(event.status)}
                   </span>
                 </div>
@@ -1021,7 +1019,7 @@ export default function EventsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span className="text-white/80 truncate">{event.location}</span>
+                    <span className="text-white/80 truncate">{event.venue_address || 'Chưa có địa chỉ'}</span>
                   </div>
                 </div>
 
@@ -1184,38 +1182,27 @@ export default function EventsPage() {
                   </h3>
                   <div className="space-y-3">
               <div>
-                      <label className="block text-white/80 text-sm font-medium mb-1">Địa điểm</label>
+                      <label className="block text-white/80 text-sm font-medium mb-1">Địa chỉ chi tiết</label>
                 <input
                   type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  value={formData.venue_address}
+                  onChange={(e) => setFormData({ ...formData, venue_address: e.target.value })}
                         className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm"
-                  placeholder="Nhập địa điểm tổ chức"
+                  placeholder="Nhập địa chỉ chi tiết tổ chức"
                 />
               </div>
 
                 <div>
-                      <label className="block text-white/60 text-sm font-medium mb-1">Địa chỉ chi tiết</label>
-                  <input
-                    type="text"
-                    value={formData.venue_address}
-                    onChange={(e) => setFormData({ ...formData, venue_address: e.target.value })}
-                        className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
-                    placeholder="Tầng 2, phòng họp A, 123 Lê Lợi, Quận 1, TP.HCM"
-                  />
-                </div>
-
-                <div>
                       <label className="block text-white/60 text-sm font-medium mb-1">Link Google Maps</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.venue_map_url}
                     onChange={(e) => setFormData({ ...formData, venue_map_url: e.target.value })}
                         className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
                     placeholder="https://maps.google.com/..."
-                    title="Dán URL Google Maps hợp lệ (bắt đầu bằng http/https)"
                   />
-              </div>
+                </div>
+
 
                     <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -1282,15 +1269,15 @@ export default function EventsPage() {
                   </div>
               </div>
 
-                <div className="bg-white/5 rounded-lg p-6">
+                <div className="bg-white/5 rounded-lg p-6 overflow-visible">
                   <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Timeline chương trình
                   </h3>
-                <div className="bg-black/20 border border-white/20 rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto scrollbar-thin">
+                <div className="bg-black/20 border border-white/20 rounded-lg overflow-visible">
+                  <div className="overflow-x-auto overflow-y-visible scrollbar-thin">
                     <table className="w-full min-w-[500px]">
                     <thead className="bg-white/5">
                       <tr>
@@ -1328,7 +1315,7 @@ export default function EventsPage() {
                             <td className="px-1 py-1 text-right">
                             <button
                               onClick={() => setProgramRows(prev => prev.filter((_,i)=>i!==idx))}
-                              className="p-1 text-red-300 hover:text-red-200"
+                              className="remove-row-button p-1 transition-all duration-300 overflow-hidden"
                               title="Xóa dòng"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1342,7 +1329,7 @@ export default function EventsPage() {
                   <div className="p-2 border-t border-white/10 flex justify-between items-center">
                     <button
                       onClick={() => setProgramRows(prev => [...prev, { time: '', item: '' }])}
-                        className="px-3 py-2 text-sm rounded bg-white/10 border border-white/20 text-white hover:bg-white/15"
+                      className="add-row-button px-3 py-2 text-sm rounded transition-all duration-300 overflow-hidden"
                     >
                       Thêm dòng
                     </button>
@@ -1362,7 +1349,7 @@ export default function EventsPage() {
                 <div className="flex gap-2 sm:order-1">
                   <button
                     onClick={openPreviewModal}
-                    className="group relative px-3 py-2 bg-white/5 border border-white/20 text-white/80 rounded-lg hover:bg-green-500/10 hover:border-green-500/30 hover:text-green-400 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+                    className="preview-button group relative px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm overflow-hidden"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -1373,7 +1360,7 @@ export default function EventsPage() {
                   </button>
                   <button
                     onClick={closeEventModal}
-                    className="group relative px-3 py-2 bg-white/5 border border-white/20 text-white/80 rounded-lg hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+                    className="cancel-button group relative px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm overflow-hidden"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1385,7 +1372,7 @@ export default function EventsPage() {
                 {/* Primary Action Button - Right Side */}
                 <button
                   onClick={saveEvent}
-                  className="group relative flex-1 sm:flex-none sm:min-w-[200px] px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 text-sm sm:text-base"
+                  className="save-event-button group relative flex-1 sm:flex-none sm:min-w-[200px] px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-300 font-semibold flex items-center justify-center gap-2 text-sm sm:text-base overflow-hidden"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1450,7 +1437,7 @@ export default function EventsPage() {
                           </div>
                         </div>
                         
-                        {event.location && (
+                        {event.venue_address && (
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-green-500/20 rounded-lg">
                               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1459,8 +1446,8 @@ export default function EventsPage() {
                               </svg>
                             </div>
                             <div>
-                              <div className="text-white/60 text-sm">Địa điểm</div>
-                              <div className="text-white font-medium">{event.location}</div>
+                              <div className="text-white/60 text-sm">Địa chỉ chi tiết</div>
+                              <div className="text-white font-medium">{event.venue_address}</div>
                             </div>
                           </div>
                         )}
@@ -1591,6 +1578,356 @@ export default function EventsPage() {
           </svg>
         </button>
       )}
+
+      {/* CSS Animation cho hiệu ứng shimmer */}
+      <style jsx>{`
+        /* Nút Save Event (xanh lá cây) */
+        .save-event-button {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #22c55e;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border: none;
+          position: relative;
+          overflow: hidden;
+          min-width: 200px;
+          justify-content: center;
+        }
+        
+        .save-event-button:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+          border-color: rgba(34, 197, 94, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(34, 197, 94, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
+          color: #ffffff;
+        }
+        
+        .save-event-button:active {
+          transform: translateY(-1px) scale(0.98);
+          box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
+        }
+        
+        /* Nút Preview (xanh dương) */
+        .preview-button {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          color: #3b82f6;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+          overflow: hidden;
+          justify-content: center;
+        }
+        
+        .preview-button:hover {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+          border-color: rgba(59, 130, 246, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4), 0 0 25px rgba(59, 130, 246, 0.2);
+          color: #ffffff;
+        }
+        
+        .preview-button:active {
+          transform: translateY(-1px) scale(0.98);
+          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+        }
+        
+        /* Nút Cancel (đỏ) */
+        .cancel-button {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+          overflow: hidden;
+          justify-content: center;
+        }
+        
+        .cancel-button:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+          border-color: rgba(239, 68, 68, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(239, 68, 68, 0.4), 0 0 25px rgba(239, 68, 68, 0.2);
+          color: #ffffff;
+        }
+        
+        .cancel-button:active {
+          transform: translateY(-1px) scale(0.98);
+          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Nút Add Row (vàng cam) */
+        .add-row-button {
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2));
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          color: #f59e0b;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+          overflow: hidden;
+          justify-content: center;
+        }
+        
+        .add-row-button:hover {
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4));
+          border-color: rgba(245, 158, 11, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4), 0 0 25px rgba(245, 158, 11, 0.2);
+          color: #ffffff;
+        }
+        
+        .add-row-button:active {
+          transform: translateY(-1px) scale(0.98);
+          box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5);
+        }
+        
+        /* Nút Remove Row (đỏ nhạt) */
+        .remove-row-button {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+          overflow: hidden;
+          justify-content: center;
+          border-radius: 6px;
+        }
+        
+        .remove-row-button:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
+          border-color: rgba(239, 68, 68, 0.5);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3), 0 0 15px rgba(239, 68, 68, 0.2);
+          color: #ffffff;
+        }
+        
+        .remove-row-button:active {
+          transform: translateY(-1px) scale(0.95);
+          box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* Status Badges với hiệu ứng hover RSVP - Updated */
+        .status-badge-upcoming {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          color: #3b82f6;
+        }
+        
+        .status-badge-upcoming:hover {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+          border-color: rgba(59, 130, 246, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3), 0 0 15px rgba(59, 130, 246, 0.2);
+          color: #ffffff;
+        }
+        
+        .status-badge-ongoing {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #22c55e;
+        }
+        
+        .status-badge-ongoing:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+          border-color: rgba(34, 197, 94, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3), 0 0 15px rgba(34, 197, 94, 0.2);
+          color: #ffffff;
+        }
+        
+        .status-badge-completed {
+          background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+          border: 1px solid rgba(107, 114, 128, 0.3);
+          color: #6b7280;
+        }
+        
+        .status-badge-completed:hover {
+          background: linear-gradient(135deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.4));
+          border-color: rgba(107, 114, 128, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(107, 114, 128, 0.3), 0 0 15px rgba(107, 114, 128, 0.2);
+          color: #ffffff;
+        }
+        
+        .status-badge-cancelled {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+        
+        .status-badge-cancelled:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+          border-color: rgba(239, 68, 68, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3), 0 0 15px rgba(239, 68, 68, 0.2);
+          color: #ffffff;
+        }
+        
+        /* Table Status Badges với hiệu ứng hover RSVP */
+        .table-status-badge-upcoming {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          color: #3b82f6;
+        }
+        
+        .table-status-badge-upcoming:hover {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+          border-color: rgba(59, 130, 246, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3), 0 0 15px rgba(59, 130, 246, 0.2);
+          color: #ffffff;
+        }
+        
+        .table-status-badge-ongoing {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #22c55e;
+        }
+        
+        .table-status-badge-ongoing:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+          border-color: rgba(34, 197, 94, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3), 0 0 15px rgba(34, 197, 94, 0.2);
+          color: #ffffff;
+        }
+        
+        .table-status-badge-completed {
+          background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+          border: 1px solid rgba(107, 114, 128, 0.3);
+          color: #6b7280;
+        }
+        
+        .table-status-badge-completed:hover {
+          background: linear-gradient(135deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.4));
+          border-color: rgba(107, 114, 128, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(107, 114, 128, 0.3), 0 0 15px rgba(107, 114, 128, 0.2);
+          color: #ffffff;
+        }
+        
+        .table-status-badge-cancelled {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+        
+        .table-status-badge-cancelled:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+          border-color: rgba(239, 68, 68, 0.7);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3), 0 0 15px rgba(239, 68, 68, 0.2);
+          color: #ffffff;
+        }
+        
+        /* Status Cards với hiệu ứng hover RSVP */
+        .status-card-all:hover {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+          border-color: rgba(59, 130, 246, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4), 0 0 25px rgba(59, 130, 246, 0.2);
+        }
+        
+        .status-card-upcoming:hover {
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4));
+          border-color: rgba(245, 158, 11, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4), 0 0 25px rgba(245, 158, 11, 0.2);
+        }
+        
+        .status-card-ongoing:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+          border-color: rgba(34, 197, 94, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(34, 197, 94, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
+        }
+        
+        .status-card-completed:hover {
+          background: linear-gradient(135deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.4));
+          border-color: rgba(107, 114, 128, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(107, 114, 128, 0.4), 0 0 25px rgba(107, 114, 128, 0.2);
+        }
+        
+        .status-card-cancelled:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+          border-color: rgba(239, 68, 68, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(239, 68, 68, 0.4), 0 0 25px rgba(239, 68, 68, 0.2);
+        }
+        
+        /* Hiệu ứng shimmer cho tất cả nút, status badges và status cards */
+        .save-event-button::before,
+        .preview-button::before,
+        .cancel-button::before,
+        .add-row-button::before,
+        .remove-row-button::before,
+        .status-badge-upcoming::before,
+        .status-badge-ongoing::before,
+        .status-badge-completed::before,
+        .status-badge-cancelled::before,
+        .table-status-badge-upcoming::before,
+        .table-status-badge-ongoing::before,
+        .table-status-badge-completed::before,
+        .table-status-badge-cancelled::before,
+        .status-card-all::before,
+        .status-card-upcoming::before,
+        .status-card-ongoing::before,
+        .status-card-completed::before,
+        .status-card-cancelled::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+          transition: left 0.6s ease;
+        }
+        
+        .save-event-button:hover::before,
+        .preview-button:hover::before,
+        .cancel-button:hover::before,
+        .add-row-button:hover::before,
+        .remove-row-button:hover::before,
+        .status-badge-upcoming:hover::before,
+        .status-badge-ongoing:hover::before,
+        .status-badge-completed:hover::before,
+        .status-badge-cancelled:hover::before,
+        .table-status-badge-upcoming:hover::before,
+        .table-status-badge-ongoing:hover::before,
+        .table-status-badge-completed:hover::before,
+        .table-status-badge-cancelled:hover::before,
+        .status-card-all:hover::before,
+        .status-card-upcoming:hover::before,
+        .status-card-ongoing:hover::before,
+        .status-card-completed:hover::before,
+        .status-card-cancelled:hover::before {
+          left: 100%;
+        }
+        
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
     </div>
   )
 }

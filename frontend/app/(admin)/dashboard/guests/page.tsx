@@ -4,6 +4,7 @@ import CustomDropdown from "../../../components/CustomDropdown"
 import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
 import SystemModal from "../../../components/SystemModal"
+import CopyLinkModal from "../../../components/CopyLinkModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 interface Guest {
   id: number
@@ -36,10 +37,28 @@ interface Event {
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
 }
 
+interface DuplicateGuest {
+  newGuest: Guest
+  existingGuest: Guest
+  index: number
+}
+
+interface DuplicateModalData {
+  newGuests: Guest[]
+  existingGuests: Guest[]
+  importType: 'json' | 'csv'
+  jsonData?: any[]
+  csvFile?: File
+}
+
 export default function GuestsPage(){
+  // Import states
   const [text, setText] = useState(`[]`)
   const [result, setResult] = useState<string>("")
   const [importType, setImportType] = useState<"json" | "csv">("json")
+  const [isImporting, setIsImporting] = useState(false)
+  const [selectedJsonFile, setSelectedJsonFile] = useState<string>("")
+  const [selectedCsvFile, setSelectedCsvFile] = useState<string>("")
   const [guests, setGuests] = useState<Guest[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(false)
@@ -66,6 +85,28 @@ export default function GuestsPage(){
     onCancel: () => void
   } | null>(null)
   const [mobileActionDropdown, setMobileActionDropdown] = useState<number | null>(null)
+  
+  // Copy link modal states
+  const [showCopyLinkModal, setShowCopyLinkModal] = useState(false)
+  const [copyLinkData, setCopyLinkData] = useState<{
+    inviteLink: string
+    qrCodeUrl?: string
+    eventName?: string
+  } | null>(null)
+
+  // Duplicate handling states
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateData, setDuplicateData] = useState<DuplicateModalData | null>(null)
+  const [selectedDuplicates, setSelectedDuplicates] = useState<Set<number>>(new Set())
+  
+  // Confirmation popup states
+  const [showDuplicateConfirmModal, setShowDuplicateConfirmModal] = useState(false)
+  const [duplicateConfirmData, setDuplicateConfirmData] = useState<{
+    title: string
+    message: string
+    onConfirm: () => void
+    onCancel: () => void
+  } | null>(null)
 
   // Helper function để hiển thị toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
@@ -158,8 +199,8 @@ export default function GuestsPage(){
   const [guestForm, setGuestForm] = useState({
     name: "",
     title: "",
-    role: "",
-    organization: "",
+    position: "",
+    company: "",
     tag: "",
     email: "",
     phone: "",
@@ -169,11 +210,8 @@ export default function GuestsPage(){
   })
   const [currentPage, setCurrentPage] = useState(1)
   const guestsPerPage = 6
-  const [showQRPopup, setShowQRPopup] = useState(false)
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null)
-  const [qrImageUrl, setQrImageUrl] = useState("")
   const [backupCode, setBackupCode] = useState("")
-  const [copySuccess, setCopySuccess] = useState(false)
   
   // Multiple selection states
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set())
@@ -184,10 +222,12 @@ export default function GuestsPage(){
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel')
   const [showExportPopup, setShowExportPopup] = useState(false)
   const [exportScope, setExportScope] = useState<'all' | 'selected'>('selected')
+  // Import functionality enabled
 
   // Load guests and events on component mount
   useEffect(() => {
     console.log("GuestsPage mounted, loading data...")
+    
     // Khôi phục sự kiện đã chọn từ localStorage (nếu có)
     try {
       const saved = localStorage.getItem("exp_selected_event")
@@ -198,22 +238,33 @@ export default function GuestsPage(){
     loadEvents()
   }, [])
 
-  // Cleanup timer on unmount
+  // Set default event filter when events are loaded
+  useEffect(() => {
+    if (events.length > 0 && (!eventFilter || eventFilter === "")) {
+      console.log("Setting default event filter to first event:", events[0].id)
+      setEventFilter(events[0].id.toString())
+    }
+  }, [events]) // Remove eventFilter from dependency to prevent infinite loop
 
   async function loadGuests() {
     setLoading(true)
     try {
+      console.log("=== LOADING GUESTS ===")
       const res = await fetch(API_ENDPOINTS.GUESTS)
       console.log("Load guests response:", res.status)
       if (res.ok) {
         const data = await res.json()
-        console.log("Guests data:", data)
+        console.log("Guests data received:", data)
         console.log("Guests with rsvp_status:", data.guests?.map((g: any) => ({
+          id: g.id,
           name: g.name,
+          position: g.position,
+          company: g.company,
           rsvp_status: g.rsvp_status,
           checkin_status: g.checkin_status
         })))
         setGuests(data.guests || [])
+        console.log("Guests state updated with", data.guests?.length || 0, "guests")
       } else {
         console.error("Failed to load guests:", res.status, res.statusText)
       }
@@ -223,6 +274,20 @@ export default function GuestsPage(){
       setLoading(false)
     }
   }
+
+  // Function to refresh guests data immediately (for real-time updates)
+  const refreshGuests = useCallback(() => {
+    console.log("Manual refresh of guests data...")
+    loadGuests()
+    // Show a brief notification that data is being refreshed
+    const notification = document.createElement('div')
+    notification.textContent = 'Đang cập nhật dữ liệu khách mời...'
+    notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50'
+    document.body.appendChild(notification)
+    setTimeout(() => {
+      document.body.removeChild(notification)
+    }, 2000)
+  }, [])
 
   const loadEvents = async () => {
     try {
@@ -268,15 +333,17 @@ export default function GuestsPage(){
   async function openQRPopup(guest: Guest) {
     try {
       setSelectedGuest(guest)
-      setShowQRPopup(true)
       
-      console.log('=== OPEN QR POPUP ===')
+      console.log('=== OPEN COPY LINK MODAL ===')
       console.log('Guest ID:', guest.id)
       console.log('Guest name:', guest.name)
       
       // Lấy token mới và thông tin thời gian hết hạn
-      const tokenResponse = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}/qr`, {
-        method: 'POST'
+      const tokenResponse = await fetch(`/api/guests/${guest.id}/qr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       })
       
       console.log('Token response status:', tokenResponse.status)
@@ -288,20 +355,31 @@ export default function GuestsPage(){
         console.log("Token value:", tokenData.token)
         console.log("Token length:", tokenData.token?.length)
         
-        // Sử dụng token thật từ API làm backup code
-        setBackupCode(tokenData.token)
+        const inviteUrl = `${window.location.origin}/invite/${tokenData.token}`
+        console.log('Generated invite URL:', inviteUrl)
         
-        // Tạo URL cho QR code với timestamp để tránh cache
-        const qrUrl = `http://192.168.1.135:9009/api/guests/${guest.id}/qr-image?t=${Date.now()}`
-        setQrImageUrl(qrUrl)
+        // Tạo QR code URL
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}`
+        
+        // Lấy tên sự kiện hiện tại
+        const currentEvent = events.find(e => e.id === guest.event_id)
+        const eventName = currentEvent?.name || 'Sự kiện'
+        
+        // Mở popup copy link modal
+        setCopyLinkData({
+          inviteLink: inviteUrl,
+          qrCodeUrl: qrCodeUrl,
+          eventName: eventName
+        })
+        setShowCopyLinkModal(true)
       } else {
-        const errorData = await tokenResponse.json()
-        console.error("Token creation failed:", errorData)
-        showToast("Lỗi tạo QR", "error")
+        const errorText = await tokenResponse.text()
+        console.error("Token creation failed:", errorText)
+        showToast("Lỗi tạo QR: " + errorText, "error")
       }
     } catch (e) {
       console.error("Error in openQRPopup:", e)
-      showToast("Lỗi tải QR", "error")
+      showToast("Lỗi kết nối: " + e.message, "error")
     }
   }
 
@@ -340,7 +418,7 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-checkin", {
+      const response = await fetch("/api/guests/bulk-checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -376,7 +454,7 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-checkout", {
+      const response = await fetch("/api/guests/bulk-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -404,24 +482,24 @@ export default function GuestsPage(){
   }
 
   const bulkDelete = async () => {
-    if (!eventFilter) {
-      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
+    if (selectedGuests.size === 0) {
+      setResult("Vui lòng chọn khách cần xóa")
       return
     }
-    if (selectedGuests.size === 0) return
     
     if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedGuests.size} khách đã chọn?`)) {
       return
     }
     
     try {
-      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guest_ids: Array.from(selectedGuests)
-        })
+      console.log("Bulk delete - Selected guests:", Array.from(selectedGuests))
+      const response = await api.bulkDeleteGuests({
+        guest_ids: Array.from(selectedGuests)
       })
+      
+      console.log("Bulk delete response status:", response.status)
+      const responseData = await response.json()
+      console.log("Bulk delete response data:", responseData)
       
       if (response.ok) {
         showToast(`Xóa ${selectedGuests.size}!`, "success")
@@ -461,7 +539,7 @@ export default function GuestsPage(){
     }
     
     try {
-      const response = await fetch("http://192.168.1.135:9009/api/guests/bulk-rsvp", {
+      const response = await fetch("/api/guests/bulk-rsvp", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -511,8 +589,8 @@ export default function GuestsPage(){
       setGuestForm({
         name: guest.name || "",
         title: guest.title || "",
-        role: guest.position || "",
-        organization: guest.company || "",
+        position: guest.position || "",
+        company: guest.company || "",
         tag: guest.tag || "",
         email: guest.email || "",
         phone: guest.phone || "",
@@ -528,8 +606,8 @@ export default function GuestsPage(){
       setGuestForm({
         name: "",
         title: "",
-        role: "",
-        organization: "",
+        position: "",
+        company: "",
         tag: "",
         email: "",
         phone: "",
@@ -606,8 +684,8 @@ export default function GuestsPage(){
       const guestData = {
         name: guestForm.name,
         title: guestForm.title,
-        role: guestForm.role,
-        organization: guestForm.organization,
+        role: guestForm.position,  // Backend maps role to position
+        organization: guestForm.company,  // Backend maps organization to company
         tag: guestForm.tag,
         email: guestForm.email,
         phone: guestForm.phone,
@@ -630,7 +708,7 @@ export default function GuestsPage(){
             `Đã có khách mời "${existingDuplicate.name}" từ "${existingDuplicate.company || 'N/A'}" trong hệ thống.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới không?`,
             async () => {
               // Xóa khách cũ trước khi thêm khách mới
-              const deleteSuccess = await deleteDuplicateGuests([existingDuplicate])
+              const deleteSuccess = await deleteGuestSilent(existingDuplicate.id)
               if (!deleteSuccess) {
                 setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
                 return
@@ -696,19 +774,64 @@ export default function GuestsPage(){
     }
   }
 
+  // Helper function để xóa guest mà không cần confirmation dialog
+  async function deleteGuestSilent(guestId: number): Promise<boolean> {
+    try {
+      console.log("🚀 Starting silent delete request for guest ID:", guestId)
+      const response = await fetch(`/api/guests/${guestId}`, {
+        method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      console.log("📊 Delete response status:", response.status)
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log("✅ Delete result:", result)
+        return true
+      } else {
+        console.error("❌ Delete failed with status:", response.status)
+        const errorText = await response.text()
+        console.error("❌ Delete error response:", errorText)
+        return false
+      }
+    } catch (error) {
+      console.error("❌ Delete error:", error)
+      return false
+    }
+  }
+
   async function deleteGuest(guestId: number, guestName: string) {
-    if (!confirm(`Bạn có chắc chắn muốn xóa khách mời "${guestName}"?`)) {
+    console.log("📋 deleteGuest called with:", { guestId, guestName })
+    
+    const confirmed = confirm(`Bạn có chắc chắn muốn xóa khách mời "${guestName}"?`)
+    console.log("🤔 User confirmed:", confirmed)
+    
+    if (!confirmed) {
+      console.log("❌ User cancelled deletion")
       return
     }
     
     try {
-      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guestId}`, {
-        method: "DELETE"
+      console.log("🚀 Starting delete request for guest ID:", guestId)
+      const response = await fetch(`/api/guests/${guestId}`, {
+        method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json',
+        }
       })
       
+      console.log("📊 Delete response status:", response.status)
+      console.log("📊 Delete response headers:", Object.fromEntries(response.headers.entries()))
+      
       if (response.ok) {
-        loadGuests()
-        showToast("Xóa!", "success")
+        const result = await response.json()
+        console.log("✅ Delete result:", result)
+        
+        await loadGuests()
+        showToast("Xóa khách mời thành công!", "success")
         
         // Thông báo cho trang check-in về thay đổi dữ liệu
         localStorage.setItem('exp_guests_updated', Date.now().toString())
@@ -724,24 +847,26 @@ export default function GuestsPage(){
           }, 300)
         }, 2000)
       } else {
-        const error = await response.text()
-        setResult(`Lỗi: ${error}`)
+        const errorText = await response.text()
+        console.error("❌ Delete error:", { status: response.status, errorText })
+        showToast(`Lỗi khi xóa khách mời: ${response.status} - ${errorText}`, "error")
       }
     } catch (e: any) {
-      setResult(`Lỗi kết nối: ${e.message}`)
+      console.error("💥 Error deleting guest:", e)
+      showToast("Lỗi kết nối khi xóa khách mời", "error")
     }
   }
 
   async function copyInviteLinkOld(guestId: number, guestName: string) {
     try {
       // Tạo token mới cho khách mời
-      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guestId}/qr`, {
+      const response = await fetch(`/api/guests/${guestId}/qr`, {
         method: 'POST'
       })
       
       if (response.ok) {
         const data = await response.json()
-        const inviteLink = `http://192.168.1.135:9009/invite/${data.token}`
+        const inviteLink = `${window.location.origin}/invite/${data.token}`
         
         // Copy vào clipboard
         await navigator.clipboard.writeText(inviteLink)
@@ -780,7 +905,7 @@ export default function GuestsPage(){
     
     // Tạo link thiệp mời
     try {
-      const response = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}/qr`, {
+      const response = await fetch(`/api/guests/${guest.id}/qr`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -789,7 +914,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         const data = await response.json()
-        const link = `http://192.168.1.135:9009/invite/${data.token}`
+        const link = `${window.location.origin}/invite/${data.token}`
         setInviteLink(link)
       } else {
         setInviteLink("")
@@ -806,6 +931,23 @@ export default function GuestsPage(){
     setSelectedGuestForPreview(null)
     setInviteLink("")
   }
+
+  // Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from same origin
+      if (event.origin !== window.location.origin) return
+      
+      if (event.data.type === 'RSVP_UPDATE') {
+        // Refresh guests data when RSVP is updated
+        loadGuests()
+        showToast("RSVP đã được cập nhật!", "success")
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [loadGuests])
 
   // Function để copy link thiệp mời từ modal
   async function copyInviteLinkFromModal() {
@@ -825,12 +967,54 @@ export default function GuestsPage(){
     }
   }
 
-  // Function để copy link thiệp mời từ QR popup
+  // Function để mở popup copy link thiệp mời trực tiếp
+  async function copyInviteLinkDirect(guest: Guest) {
+    try {
+      console.log('=== OPEN COPY LINK MODAL DIRECT ===')
+      console.log('Guest ID:', guest.id)
+      console.log('Guest name:', guest.name)
+      
+      // Tạo token mới cho khách mời qua Next.js API route
+      const response = await fetch(`/api/guests/${guest.id}/qr`, {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const inviteUrl = `${window.location.origin}/invite/${data.token}`
+        
+        console.log('Generated invite URL:', inviteUrl)
+        
+        // Tạo QR code URL
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}`
+        
+        // Lấy tên sự kiện hiện tại
+        const currentEvent = events.find(e => e.id === guest.event_id)
+        const eventName = currentEvent?.name || 'Sự kiện'
+        
+        // Mở popup copy link modal thay vì copy trực tiếp
+        setCopyLinkData({
+          inviteLink: inviteUrl,
+          qrCodeUrl: qrCodeUrl,
+          eventName: eventName
+        })
+        setShowCopyLinkModal(true)
+      } else {
+        const errorData = await response.json()
+        console.error("Token creation failed:", errorData)
+        showToast("Lỗi tạo link thiệp mời", "error")
+      }
+    } catch (e) {
+      console.error("Error in copyInviteLinkDirect:", e)
+      showToast("Lỗi tạo link thiệp mời", "error")
+    }
+  }
+
+  // Function để mở popup copy link thiệp mời
   async function copyInviteLink() {
     try {
-      console.log('=== COPY INVITE LINK ===')
+      console.log('=== OPEN COPY LINK MODAL ===')
       console.log('backupCode:', backupCode)
-      console.log('backupCode length:', backupCode?.length)
       
       if (!backupCode) {
         console.log('No backupCode available')
@@ -841,188 +1025,256 @@ export default function GuestsPage(){
       const inviteUrl = `${window.location.origin}/invite/${backupCode}`
       console.log('Generated invite URL:', inviteUrl)
       
-      // Check if clipboard API is available
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(inviteUrl)
-        setCopySuccess(true)
-        showToast("Đã copy link thiệp mời!", "success")
-        setTimeout(() => setCopySuccess(false), 2000)
-      } else {
-        // Fallback: create a temporary textarea and copy
-        const textArea = document.createElement('textarea')
-        textArea.value = inviteUrl
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-999999px'
-        textArea.style.top = '-999999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        
-        try {
-          document.execCommand('copy')
-          setCopySuccess(true)
-          showToast("Đã copy link thiệp mời!", "success")
-          setTimeout(() => setCopySuccess(false), 2000)
-        } catch (err) {
-          console.error('Fallback copy failed:', err)
-          showToast("Không thể copy link. Vui lòng copy thủ công: " + inviteUrl, "error")
-        } finally {
-          document.body.removeChild(textArea)
-        }
-      }
+      // Tạo QR code URL (có thể sử dụng service như qr-server.com)
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}`
+      
+      // Lấy tên sự kiện hiện tại
+      const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+      const eventName = currentEvent?.name || 'Sự kiện'
+      
+      // Mở popup copy link modal
+      setCopyLinkData({
+        inviteLink: inviteUrl,
+        qrCodeUrl: qrCodeUrl,
+        eventName: eventName
+      })
+      setShowCopyLinkModal(true)
+      
     } catch (error) {
-      console.error('Error copying invite link:', error)
-      showToast("Lỗi khi copy link", "error")
+      console.error('Error opening copy link modal:', error)
+      showToast("Lỗi khi mở popup copy link", "error")
     }
   }
 
-  // Function để so sánh khách mời dựa trên tên và tổ chức
+  // Function để so sánh khách mời dựa trên tên và tag
   function isDuplicateGuest(guest1: any, guest2: any): boolean {
     const name1 = (guest1.name || '').toLowerCase().trim()
     const name2 = (guest2.name || '').toLowerCase().trim()
-    const org1 = (guest1.organization || guest1.company || '').toLowerCase().trim()
-    const org2 = (guest2.organization || guest2.company || '').toLowerCase().trim()
+    const tag1 = (guest1.tag || '').toLowerCase().trim()
+    const tag2 = (guest2.tag || '').toLowerCase().trim()
     
-    return name1 === name2 && org1 === org2
+    return name1 === name2 && tag1 === tag2
+  }
+
+  // Function để tìm khách trùng lặp cho import (chỉ trong cùng sự kiện)
+  function findDuplicateGuestsForImport(newGuests: Guest[], eventId: number): {
+    duplicates: { newGuest: Guest, existingGuest: Guest, index: number }[]
+    nonDuplicates: Guest[]
+  } {
+    // Lấy danh sách khách hiện có trong sự kiện được chọn
+    const existingGuestsInEvent = guests.filter(guest => guest.event_id === eventId)
+    
+    const duplicates: { newGuest: Guest, existingGuest: Guest, index: number }[] = []
+    const nonDuplicates: Guest[] = []
+    
+    newGuests.forEach((newGuest, index) => {
+      const existingGuest = existingGuestsInEvent.find(existing => 
+        isDuplicateGuest(newGuest, existing)
+      )
+      
+      if (existingGuest) {
+        duplicates.push({ newGuest, existingGuest, index })
+      } else {
+        nonDuplicates.push(newGuest)
+      }
+    })
+    
+    return { duplicates, nonDuplicates }
+  }
+
+  // Function để xử lý import với logic mới
+  async function processImportWithDuplicates(
+    newGuests: Guest[], 
+    eventId: number, 
+    selectedDuplicates: Set<number>,
+    duplicateData: DuplicateModalData,
+    actionType: 'keep' | 'merge' | 'merge_and_import' = 'keep'
+  ) {
+    try {
+      setIsImporting(true)
+      let successCount = 0
+      let errorCount = 0
+      const errors: string[] = []
+
+      // 0. Kiểm tra giới hạn khách trước khi xử lý
+      const currentEvent = events.find(e => e.id === eventId)
+      const currentGuestCount = guests.filter(g => g.event_id === eventId).length
+      
+      // Tính số khách sẽ được thêm vào (không phải merge)
+      let guestsToAdd = 0
+      
+      if (actionType === 'keep') {
+        // "Giữ lại": Chỉ thêm những khách được chọn
+        guestsToAdd = selectedDuplicates.size
+      } else if (actionType === 'merge') {
+        // "Hợp nhất": Không thêm khách mới, chỉ merge
+        guestsToAdd = 0
+      } else if (actionType === 'merge_and_import') {
+        // "Hợp nhất": Merge những khách được chọn + thêm những khách không được chọn
+        guestsToAdd = newGuests.length - selectedDuplicates.size
+      }
+      
+      // Thêm số khách không trùng lặp
+      const { duplicates, nonDuplicates } = findDuplicateGuestsForImport(newGuests, eventId)
+      guestsToAdd += nonDuplicates.length
+      
+      const totalAfterImport = currentGuestCount + guestsToAdd
+      
+      if (currentEvent && totalAfterImport > currentEvent.max_guests) {
+        const remainingSlots = currentEvent.max_guests - currentGuestCount
+        setResult(`Không thể import: Sự kiện chỉ còn ${remainingSlots} chỗ trống nhưng bạn đang cố thêm ${guestsToAdd} khách. Tổng sẽ là ${totalAfterImport} khách, vượt quá giới hạn ${currentEvent.max_guests} khách.`)
+        setIsImporting(false)
+        return
+      }
+
+      // 1. Xử lý khách không trùng lặp - import bình thường
+      
+      for (const guest of nonDuplicates) {
+        try {
+          const guestData = {
+            ...guest,
+            event_id: eventId,
+            checkin_status: 'not_arrived',
+            rsvp_status: 'pending'
+          }
+          
+          const response = await api.createGuest(guestData)
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+            errors.push(`Lỗi import khách ${guest.name}: ${await response.text()}`)
+          }
+        } catch (error) {
+          errorCount++
+          errors.push(`Lỗi import khách ${guest.name}: ${error}`)
+        }
+      }
+
+      // 2. Xử lý khách trùng lặp
+      // Logic mới: Phân biệt 3 loại hành động
+      // - "keep": Import những khách được chọn vào danh sách (tạo khách mới)
+      // - "merge": Hợp nhất những khách được chọn (cập nhật khách hiện có)
+      // - "merge_and_import": Hợp nhất những khách được chọn + Import những khách còn lại
+      
+      for (const duplicate of duplicates) {
+        if (selectedDuplicates.has(duplicate.index)) {
+          if (actionType === 'keep') {
+            // Logic "Giữ lại": Import vào danh sách (tạo khách mới)
+            try {
+              const guestData = {
+                ...duplicate.newGuest,
+                event_id: eventId,
+                checkin_status: 'not_arrived',
+                rsvp_status: 'pending'
+              }
+              
+              const response = await api.createGuest(guestData)
+              if (response.ok) {
+                successCount++
+              } else {
+                errorCount++
+                errors.push(`Lỗi import khách ${duplicate.newGuest.name}: ${await response.text()}`)
+              }
+            } catch (error) {
+              errorCount++
+              errors.push(`Lỗi import khách ${duplicate.newGuest.name}: ${error}`)
+            }
+          } else if (actionType === 'merge' || actionType === 'merge_and_import') {
+            // Logic "Hợp nhất": Cập nhật khách hiện có
+            try {
+              const updatedGuestData = {
+                ...duplicate.newGuest,
+                id: duplicate.existingGuest.id, // Giữ ID của khách hiện có
+                event_id: eventId,
+                checkin_status: duplicate.existingGuest.checkin_status, // Giữ trạng thái check-in
+                rsvp_status: duplicate.existingGuest.rsvp_status // Giữ trạng thái RSVP
+              }
+              
+              const response = await api.updateGuest(duplicate.existingGuest.id.toString(), updatedGuestData)
+              if (response.ok) {
+                successCount++
+              } else {
+                errorCount++
+                errors.push(`Lỗi cập nhật khách ${duplicate.newGuest.name}: ${await response.text()}`)
+              }
+            } catch (error) {
+              errorCount++
+              errors.push(`Lỗi cập nhật khách ${duplicate.newGuest.name}: ${error}`)
+            }
+          }
+        } else {
+          // Khách không được chọn
+          if (actionType === 'merge_and_import') {
+            // Logic "Hợp nhất": Import những khách không được chọn vào danh sách
+            try {
+              const guestData = {
+                ...duplicate.newGuest,
+                event_id: eventId,
+                checkin_status: 'not_arrived',
+                rsvp_status: 'pending'
+              }
+              
+              const response = await api.createGuest(guestData)
+              if (response.ok) {
+                successCount++
+              } else {
+                errorCount++
+                errors.push(`Lỗi import khách ${duplicate.newGuest.name}: ${await response.text()}`)
+              }
+            } catch (error) {
+              errorCount++
+              errors.push(`Lỗi import khách ${duplicate.newGuest.name}: ${error}`)
+            }
+          }
+          // Các actionType khác: bỏ qua khách không được chọn
+        }
+      }
+
+      // 3. Hiển thị kết quả
+      if (errorCount === 0) {
+        setResult(`Import thành công! Đã xử lý ${successCount} khách mời.`)
+        showToast(`Import thành công ${successCount} khách mời!`, 'success')
+      } else {
+        setResult(`Import một phần: ${successCount} thành công, ${errorCount} thất bại.\n\nLỗi chi tiết:\n${errors.join('\n')}`)
+        showToast(`Import một phần: ${successCount} thành công, ${errorCount} thất bại`, 'warning')
+      }
+
+      // 4. Reload danh sách khách
+      await loadGuests()
+
+    } catch (error) {
+      console.error('Import error:', error)
+      setResult(`Lỗi import: ${error}`)
+      showToast('Lỗi import dữ liệu', 'error')
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   // Function để xử lý khách mời trùng lặp (xóa khách cũ, thay thế bằng khách mới)
-  function deduplicateGuests(newGuests: any[], existingGuests: Guest[]): { 
-    uniqueGuests: any[], 
-    duplicates: any[], 
-    guestsToDelete: Guest[]
-  } {
-    const uniqueGuests: any[] = []
-    const duplicates: any[] = []
-    const guestsToDelete: Guest[] = []
-    const processedGuests = new Set<string>() // Để tránh xử lý cùng một khách nhiều lần
+  // Removed deduplicateGuests function - import functionality disabled
 
-    for (const newGuest of newGuests) {
-      // Tạo key duy nhất cho khách mới
-      const newGuestKey = `${(newGuest.name || '').toLowerCase().trim()}_${(newGuest.organization || newGuest.company || '').toLowerCase().trim()}`
-      
-      // Nếu đã xử lý khách này rồi thì bỏ qua
-      if (processedGuests.has(newGuestKey)) {
-        duplicates.push(newGuest)
-        continue
-      }
+  // Function để tìm và xóa khách mời trùng lặp trong danh sách hiện có (chỉ trong sự kiện đã chọn)
+  // Removed findDuplicatesInExistingGuests function - import functionality disabled
 
-      // Kiểm tra xem khách mới có trùng với khách hiện có không
-      const existingDuplicate = existingGuests.find(existing => 
-        isDuplicateGuest(newGuest, existing)
-      )
-
-      if (existingDuplicate) {
-        // Thêm khách cũ vào danh sách cần xóa (chỉ nếu chưa có trong danh sách)
-        if (!guestsToDelete.find(g => g.id === existingDuplicate.id)) {
-          guestsToDelete.push(existingDuplicate)
-        }
-        // Thêm khách mới vào danh sách import
-        uniqueGuests.push(newGuest)
-        // Đánh dấu là trùng lặp để thông báo
-        duplicates.push(newGuest)
-        // Đánh dấu đã xử lý
-        processedGuests.add(newGuestKey)
-      } else {
-        // Kiểm tra xem khách mới có trùng với khách mới khác trong uniqueGuests không
-        const newDuplicate = uniqueGuests.find(unique => 
-          isDuplicateGuest(newGuest, unique)
-        )
-
-        if (newDuplicate) {
-          duplicates.push(newGuest)
-        } else {
-          uniqueGuests.push(newGuest)
-          // Đánh dấu đã xử lý
-          processedGuests.add(newGuestKey)
-        }
-      }
-    }
-
-    return { uniqueGuests, duplicates, guestsToDelete }
-  }
-
-  // Function để tìm và xóa khách mời trùng lặp trong danh sách hiện có
-  function findDuplicatesInExistingGuests(guests: Guest[]): Guest[] {
-    const duplicates: Guest[] = []
-    const seen = new Map<string, Guest>()
-
-    for (const guest of guests) {
-      const key = `${(guest.name || '').toLowerCase().trim()}_${(guest.company || '').toLowerCase().trim()}`
-      
-      if (seen.has(key)) {
-        // Nếu đã có khách với key này, thêm cả khách cũ và mới vào danh sách xóa
-        const existingGuest = seen.get(key)!
-        if (!duplicates.find(g => g.id === existingGuest.id)) {
-          duplicates.push(existingGuest)
-        }
-        duplicates.push(guest)
-      } else {
-        seen.set(key, guest)
-      }
-    }
-
-    return duplicates
-  }
-
-  // Function để xóa khách mời trùng lặp
-  async function deleteDuplicateGuests(guestsToDelete: Guest[]): Promise<boolean> {
-    try {
-      console.log('Deleting duplicate guests:', guestsToDelete.map(g => ({ id: g.id, name: g.name })))
-      
-      let successCount = 0
-      let errorCount = 0
-      
-      for (const guest of guestsToDelete) {
-        console.log(`Deleting guest ${guest.id} (${guest.name})...`)
-        
-        try {
-          const response = await fetch(`http://192.168.1.135:9009/api/guests/${guest.id}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          console.log(`Delete response for guest ${guest.id}:`, response.status, response.statusText)
-          
-          if (response.ok) {
-            console.log(`Successfully deleted guest ${guest.id}`)
-            successCount++
-          } else if (response.status === 404) {
-            console.log(`Guest ${guest.id} already deleted or not found - skipping`)
-            successCount++ // Coi như thành công vì mục đích đã đạt được
-          } else {
-            const errorText = await response.text()
-            console.error(`Failed to delete guest ${guest.id}:`, response.status, response.statusText, errorText)
-            errorCount++
-          }
-        } catch (fetchError) {
-          console.error(`Network error deleting guest ${guest.id}:`, fetchError)
-          errorCount++
-        }
-      }
-      
-      console.log(`Deletion completed: ${successCount} successful, ${errorCount} errors`)
-      
-      // Trả về true nếu ít nhất một số khách được xóa thành công hoặc đã được xóa trước đó
-      return successCount > 0
-    } catch (error) {
-      console.error('Error deleting duplicate guests:', error)
-      return false
-    }
-  }
+  // Removed deleteDuplicateGuests function - import functionality disabled
 
   // Handle JSON file upload
   function handleJsonFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
-    if (!file) return
-
-    if (!file.name.toLowerCase().endsWith('.json')) {
-      setResult("Vui lòng chọn file JSON")
+    if (!file) {
+      setSelectedJsonFile("")
       return
     }
 
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setResult("Vui lòng chọn file JSON")
+      setSelectedJsonFile("")
+      return
+    }
+
+    setSelectedJsonFile(file.name)
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
@@ -1033,116 +1285,55 @@ export default function GuestsPage(){
         setResult("File JSON đã được tải thành công!")
       } catch (error) {
         setResult("File JSON không hợp lệ. Vui lòng kiểm tra lại cú pháp.")
+        setSelectedJsonFile("")
       }
     }
     reader.readAsText(file)
   }
 
-  // Function để tiếp tục import sau khi xử lý trùng lặp
-  async function continueImport(importGuests?: any[]) {
-    try {
-      // Bước 2: Xử lý khách mời trùng lặp giữa file import và danh sách hiện có
-      if (!importGuests) {
-        setResult("Lỗi: Không có dữ liệu khách mời để import.")
-        return
-      }
-      const { uniqueGuests, duplicates, guestsToDelete } = deduplicateGuests(importGuests, guests)
-      
-      // Bước 3: Xóa khách mời trùng lặp với file import
-      if (guestsToDelete.length > 0) {
-        console.log('About to delete guests from file import:', guestsToDelete.length, 'guests')
-        const deleteSuccess = await deleteDuplicateGuests(guestsToDelete)
-        console.log('Delete success result:', deleteSuccess)
-        if (!deleteSuccess) {
-          setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
-          return
-        }
-      }
-      
-      // Bước 4: Import khách mới
-      const guestsWithEvent = uniqueGuests.map((guest: any) => ({
-        ...guest,
-        event_id: parseInt(eventFilter)
-      }))
-      
-      console.log('Sending import request with guests:', guestsWithEvent.length)
-      
-      const res = await fetch("http://192.168.1.135:9009/api/guests/import",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(guestsWithEvent)
-      })
-      
-      console.log('Import response received:', res)
-      
-      if (!res) {
-        setResult("Lỗi: Không nhận được phản hồi từ server.")
-        return
-      }
-      
-      if (!res.ok) {
-        const errorText = await res.text()
-        setResult(`Lỗi server: ${res.status} - ${errorText}`)
-        return
-      }
-      
-      const data = await res.json()
-      console.log("Import response:", data)
-      
-      // Xử lý kết quả import với thông báo trùng lặp
-      const { duplicates: finalDuplicates } = deduplicateGuests(importGuests, guests)
-      const existingDuplicates = findDuplicatesInExistingGuests(guests)
-      let duplicateCount = finalDuplicates.length
-      let existingDuplicateCount = existingDuplicates.length
-      
-      let resultMessage = ""
-      
-      if (data.imported > 0 && data.failed === 0) {
-        resultMessage = `Thành công! Đã import ${data.imported} khách mời.`
-      } else if (data.imported > 0 && data.failed > 0) {
-        resultMessage = `Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`
-        if (data.errors && data.errors.length > 0) {
-          resultMessage += `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`
-        }
-      } else {
-        resultMessage = `Import thất bại: ${data.failed} khách không thể import.`
-        if (data.errors && data.errors.length > 0) {
-          resultMessage += `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`
-        }
-      }
-      
-      // Thêm thông báo về khách mời trùng lặp
-      if (existingDuplicateCount > 0 && duplicateCount > 0) {
-        resultMessage += `\n\nĐã xóa ${existingDuplicateCount} khách mời trùng lặp hiện có và ${duplicateCount} khách mời trùng lặp từ file import.`
-      } else if (existingDuplicateCount > 0) {
-        resultMessage += `\n\nĐã xóa ${existingDuplicateCount} khách mời trùng lặp hiện có.`
-      } else if (duplicateCount > 0) {
-        resultMessage += `\n\nCó ${duplicateCount} khách mời bị trùng lặp, hệ thống đã tự động thay thế bằng dữ liệu mới.`
-      }
-      
-      setResult(resultMessage)
-      
-      // Reload guests after import
-      loadGuests()
-      
-      // Close modal after successful import
-      if (data.imported > 0) {
-        setTimeout(() => {
-          setShowImportModal(false)
-        }, 2000)
-      }
-    } catch (e: any) {
-      console.error("Continue import error:", e)
-      setResult("Lỗi kết nối: " + e?.message)
+  // Handle CSV file upload
+  function handleCsvFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) {
+      setSelectedCsvFile("")
+      return
     }
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setResult("Vui lòng chọn file CSV")
+      setSelectedCsvFile("")
+      return
+    }
+
+    setSelectedCsvFile(file.name)
+    setResult("File CSV đã được chọn!")
   }
 
-  async function onImport(){
+  // Reset import modal state
+  function resetImportModal() {
+    setSelectedJsonFile("")
+    setSelectedCsvFile("")
+    setText("[]")
+    setResult("")
+    setIsImporting(false)
+  }
+
+  // Enhanced import function with duplicate handling
+  async function onImport() {
+    if (isImporting) return
+    
+    setIsImporting(true)
     setResult("Đang import...")
-    try{
-      let res
-      let newGuests: any[] = []
-      
+    
+    try {
+      if (!eventFilter) {
+        setResult("Vui lòng chọn sự kiện trước khi import")
+        return
+      }
+
+      let newGuests: Guest[] = []
+      let csvFile: File | undefined
+
       if (importType === "json") {
         // Parse JSON first to validate
         let jsonData
@@ -1153,167 +1344,198 @@ export default function GuestsPage(){
           return
         }
         
-        if (!eventFilter) {
-          setResult("Vui lòng chọn sự kiện trước khi import")
-          return
-        }
+        // Convert JSON data to Guest format
+        newGuests = jsonData.map((guest: any) => ({
+          id: guest.id || 0, // Temporary ID, will be assigned by backend
+          name: guest.name || '',
+          title: guest.title || '',
+          position: guest.position || '',
+          company: guest.company || '',
+          tag: guest.tag || '',
+          email: guest.email || '',
+          phone: guest.phone || '',
+          event_id: parseInt(eventFilter),
+          checkin_status: 'not_arrived',
+          rsvp_status: 'pending',
+          created_at: guest.created_at || new Date().toISOString()
+        }))
         
-        // Lưu dữ liệu gốc để xử lý trùng lặp
-        newGuests = jsonData
-        
-        // Bước 1: Xóa khách mời trùng lặp trong danh sách hiện có
-        const existingDuplicates = findDuplicatesInExistingGuests(guests)
-        if (existingDuplicates.length > 0) {
-          showConfirm(
-            "Xóa khách mời trùng lặp hiện có",
-            `Phát hiện ${existingDuplicates.length} khách mời trùng lặp trong danh sách hiện có.\n\nBạn có muốn xóa những khách mời trùng lặp này trước khi import không?`,
-            async () => {
-              const deleteExistingSuccess = await deleteDuplicateGuests(existingDuplicates)
-              if (!deleteExistingSuccess) {
-                setResult("Lỗi khi xóa khách mời trùng lặp hiện có. Vui lòng thử lại.")
-                return
-              }
-              // Reload danh sách khách sau khi xóa trùng lặp
-              await loadGuests()
-              // Tiếp tục import
-              await continueImport(newGuests)
-            },
-            async () => {
-              // Tiếp tục import mà không xóa trùng lặp hiện có
-              await continueImport(newGuests)
-            }
-          )
-          return
-        }
-        
-        // Kiểm tra trùng lặp với file import trước khi tiếp tục
-        const { uniqueGuests, duplicates, guestsToDelete } = deduplicateGuests(newGuests, guests)
-        
-        if (guestsToDelete.length > 0) {
-          // Có khách mời trùng lặp với file import
-          showConfirm(
-            "Khách mời trùng lặp với file import",
-            `Phát hiện ${guestsToDelete.length} khách mời trong hệ thống trùng lặp với file import.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới từ file import không?`,
-            async () => {
-              // Xóa khách cũ trước khi import
-              console.log('User confirmed to delete duplicates from file import:', guestsToDelete.length, 'guests')
-              const deleteSuccess = await deleteDuplicateGuests(guestsToDelete)
-              console.log('Delete success result from popup:', deleteSuccess)
-              if (!deleteSuccess) {
-                setResult("Lỗi khi xóa khách mời trùng lặp. Vui lòng thử lại.")
-                return
-              }
-              // Reload danh sách khách sau khi xóa để cập nhật dữ liệu
-              await loadGuests()
-              // Tiếp tục import
-              await continueImport(newGuests)
-            },
-            async () => {
-              // Import mà không thay thế (chỉ import unique guests)
-              const guestsWithEvent = uniqueGuests.map((guest: any) => ({
-                ...guest,
-                event_id: parseInt(eventFilter)
-              }))
-              
-              const res = await fetch("http://192.168.1.135:9009/api/guests/import",{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body: JSON.stringify(guestsWithEvent)
-              })
-              
-              if (!res.ok) {
-                const errorText = await res.text()
-                setResult(`Lỗi server: ${res.status} - ${errorText}`)
-                return
-              }
-              
-              const data = await res.json()
-              console.log("Import response:", data)
-              
-              if (data.imported > 0 && data.failed === 0) {
-                setResult(`Thành công! Đã import ${data.imported} khách mời. Bỏ qua ${duplicates.length} khách mời trùng lặp.`)
-              } else if (data.imported > 0 && data.failed > 0) {
-                setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại. Bỏ qua ${duplicates.length} khách mời trùng lặp.`)
-              } else {
-                setResult(`Import thất bại: ${data.failed} khách không thể import.`)
-              }
-              
-              loadGuests()
-              
-              if (data.imported > 0) {
-                setTimeout(() => {
-                  setShowImportModal(false)
-                }, 2000)
-              }
-            }
-          )
-          return
-        }
-        
-        // Tiếp tục import nếu không có trùng lặp
-        await continueImport(newGuests)
       } else {
-        // CSV import
+        // CSV import - parse CSV first to get guest data
         const fileInput = document.getElementById('csvFile') as HTMLInputElement
-        if (!fileInput?.files?.[0]) {
+        if (!fileInput?.files?.[0] || !selectedCsvFile) {
           setResult("Vui lòng chọn file CSV")
           return
         }
-        if (!eventFilter) {
-          setResult("Vui lòng chọn sự kiện trước khi import")
+        
+        csvFile = fileInput.files[0]
+        
+        // Parse CSV content to get guest data
+        const csvContent = await csvFile.text()
+        const lines = csvContent.split('\n').filter(line => line.trim())
+        
+        if (lines.length < 2) {
+          setResult("File CSV không hợp lệ hoặc trống")
           return
         }
-        const formData = new FormData()
-        formData.append('file', fileInput.files[0])
-        formData.append('event_id', eventFilter) // Gửi event_id hiện tại
-        res = await fetch("http://192.168.1.135:9009/api/guests/import-csv",{
-          method:"POST",
-          body: formData
+        
+        const headers = lines[0].split(',').map(h => h.trim())
+        const csvData = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim())
+          const guest: any = {}
+          headers.forEach((header, index) => {
+            guest[header] = values[index] || ''
+          })
+          return guest
         })
+        
+        // Convert CSV data to Guest format
+        newGuests = csvData.map((guest: any) => ({
+          id: 0, // Temporary ID, will be assigned by backend
+          name: guest.name || '',
+          title: guest.title || '',
+          position: guest.position || guest.role || '',
+          company: guest.company || guest.organization || '',
+          tag: guest.tag || '',
+          email: guest.email || '',
+          phone: guest.phone || '',
+          event_id: parseInt(eventFilter),
+          checkin_status: 'not_arrived',
+          rsvp_status: 'pending',
+          created_at: new Date().toISOString()
+        }))
       }
+
+      // Check if import would exceed max guests limit
+      const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+      const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+      const totalAfterImport = currentGuestCount + newGuests.length
       
-      if (!res.ok) {
-        const errorText = await res.text()
-        setResult(`Lỗi server: ${res.status} - ${errorText}`)
+      if (currentEvent && totalAfterImport > currentEvent.max_guests) {
+        const remainingSlots = currentEvent.max_guests - currentGuestCount
+        setResult(`Không thể import: Sự kiện chỉ còn ${remainingSlots} chỗ trống nhưng bạn đang cố import ${newGuests.length} khách. Tổng sẽ là ${totalAfterImport} khách, vượt quá giới hạn ${currentEvent.max_guests} khách.`)
+        setIsImporting(false)
         return
       }
+
+      // Check for duplicates
+      const { duplicates, nonDuplicates } = findDuplicateGuestsForImport(newGuests, parseInt(eventFilter))
       
-      const data = await res.json()
-      console.log("Import response:", data)
-      
-      // Fallback cho CSV import hoặc khi không có dữ liệu JSON
-      if (data.imported > 0 && data.failed === 0) {
-        setResult(`Thành công! Đã import ${data.imported} khách mời.`)
-      } else if (data.imported > 0 && data.failed > 0) {
-        setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`)
-        if (data.errors && data.errors.length > 0) {
-          setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+      if (duplicates.length > 0) {
+        // Show duplicate modal and close import modal
+        setDuplicateData({
+          newGuests: duplicates.map(d => d.newGuest),
+          existingGuests: duplicates.map(d => d.existingGuest),
+          importType,
+          jsonData: importType === 'json' ? JSON.parse(text) : undefined,
+          csvFile
+        })
+        setShowDuplicateModal(true)
+        setShowImportModal(false) // Close import modal to avoid conflicts
+        setResult(`Phát hiện ${duplicates.length} khách mời trùng lặp. Vui lòng chọn cách xử lý.`)
+        setIsImporting(false) // Reset importing state
+        return
+      }
+
+      // No duplicates, proceed with normal import
+      if (importType === "json") {
+        const res = await fetch("/api/guests/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newGuests)
+        })
+        
+        if (!res.ok) {
+          const errorText = await res.text()
+          setResult(`Lỗi server: ${res.status} - ${errorText}`)
+          return
         }
+        
+        const data = await res.json()
+        console.log("Import response:", data)
+        
+        if (data.imported > 0 && data.failed === 0) {
+          setResult(`Thành công! Đã import ${data.imported} khách mời.`)
+          showToast(`Import thành công ${data.imported} khách mời!`, 'success')
+        } else if (data.imported > 0 && data.failed > 0) {
+          setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`)
+          if (data.errors && data.errors.length > 0) {
+            setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+          }
+          showToast(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại`, 'warning')
+        } else {
+          setResult(`Import thất bại: ${data.failed} khách không thể import.`)
+          if (data.errors && data.errors.length > 0) {
+            setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+          }
+          showToast('Import thất bại', 'error')
+        }
+        
       } else {
-        setResult(`Import thất bại: ${data.failed} khách không thể import.`)
-        if (data.errors && data.errors.length > 0) {
-          setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+        // CSV import without duplicates
+        const formData = new FormData()
+        formData.append('file', csvFile!)
+        formData.append('event_id', eventFilter)
+        
+        const res = await fetch("/api/guests/import-csv", {
+          method: "POST",
+          body: formData
+        })
+        
+        if (!res.ok) {
+          const errorText = await res.text()
+          setResult(`Lỗi server: ${res.status} - ${errorText}`)
+          return
+        }
+        
+        const data = await res.json()
+        console.log("Import response:", data)
+        
+        if (data.imported > 0 && data.failed === 0) {
+          setResult(`Thành công! Đã import ${data.imported} khách mời.`)
+          showToast(`Import thành công ${data.imported} khách mời!`, 'success')
+        } else if (data.imported > 0 && data.failed > 0) {
+          setResult(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại.`)
+          if (data.errors && data.errors.length > 0) {
+            setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+          }
+          showToast(`Import một phần: ${data.imported} thành công, ${data.failed} thất bại`, 'warning')
+        } else {
+          setResult(`Import thất bại: ${data.failed} khách không thể import.`)
+          if (data.errors && data.errors.length > 0) {
+            setResult(prev => prev + `\n\nLỗi chi tiết:\n${data.errors.join('\n')}`)
+          }
+          showToast('Import thất bại', 'error')
         }
       }
       
       // Reload guests after import
-      loadGuests()
+      await loadGuests()
       
       // Close modal after successful import
-      if (data.imported > 0) {
+      if (result.includes('Thành công')) {
         setTimeout(() => {
           setShowImportModal(false)
         }, 2000)
       }
-    }catch(e:any){
+      
+    } catch (e: any) {
       console.error("Import error:", e)
       setResult("Lỗi kết nối: " + e?.message)
+      showToast('Lỗi import dữ liệu', 'error')
+    } finally {
+      setIsImporting(false)
     }
   }
 
   // Filter and search guests
   const filteredGuests = useMemo(() => {
-    return guests.filter(guest => {
+    console.log("=== FILTERING GUESTS ===")
+    console.log("Total guests:", guests.length)
+    console.log("Event filter:", eventFilter)
+    console.log("Status filter:", statusFilter)
+    
+    const filtered = guests.filter(guest => {
       const matchesSearch = guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1325,10 +1547,25 @@ export default function GuestsPage(){
       const matchesTag = tagFilter === "all" || guest.tag === tagFilter
       const matchesOrganization = organizationFilter === "all" || guest.company === organizationFilter
       const matchesRole = roleFilter === "all" || guest.position === roleFilter
-      // Chỉ hiển thị khách của sự kiện được chọn (không có "Tất cả sự kiện")
-      const matchesEvent = guest.event_id?.toString() === eventFilter
+      // Hiển thị khách của sự kiện được chọn, hoặc tất cả khách nếu không chọn sự kiện
+      const matchesEvent = !eventFilter || eventFilter === "" || guest.event_id?.toString() === eventFilter
+      
+      console.log(`Guest ${guest.id} (${guest.name}):`, {
+        event_id: guest.event_id,
+        rsvp_status: guest.rsvp_status,
+        matchesEvent,
+        matchesStatus,
+        matchesSearch,
+        matchesTag,
+        matchesOrganization,
+        matchesRole
+      })
+      
       return matchesSearch && matchesStatus && matchesTag && matchesOrganization && matchesRole && matchesEvent
     })
+    
+    console.log("Filtered guests:", filtered.length)
+    return filtered
   }, [guests, searchTerm, statusFilter, tagFilter, organizationFilter, roleFilter, eventFilter])
 
   // Memoized form update functions
@@ -1450,15 +1687,29 @@ export default function GuestsPage(){
   const handleExportConfirm = async () => {
     let listToExport: Guest[] = []
     let filename = ''
+    const today = new Date().toISOString().split('T')[0]
+    
     if (exportScope === 'selected') {
       listToExport = filteredGuests.filter(guest => selectedGuests.has(guest.id))
-      filename = `khach_da_chon_${new Date().toISOString().split('T')[0]}`
     } else {
       listToExport = filteredGuests
-      const selectedEvent = events.find(e => e.id.toString() === eventFilter)
-      const eventName = selectedEvent ? selectedEvent.name : 'tat_ca_khach'
-      filename = `${eventName}_${new Date().toISOString().split('T')[0]}`
     }
+    
+    // Lấy tên sự kiện
+    const selectedEvent = events.find(e => e.id.toString() === eventFilter)
+    const eventName = selectedEvent ? selectedEvent.name : 'Tat_ca_su_kien'
+    
+    // Tạo tên file: Tên sự kiện + ngày (không thêm gì khác)
+    filename = `${eventName}_${today}`
+    
+    // Làm sạch tên file nhưng giữ lại ký tự tiếng Việt
+    filename = filename
+      .replace(/[<>:"/\\|?*]/g, '_') // Loại bỏ ký tự không hợp lệ cho tên file
+      .replace(/\s+/g, '_') // Thay thế khoảng trắng bằng dấu gạch dưới
+      .replace(/_+/g, '_') // Loại bỏ dấu gạch dưới liên tiếp
+      .replace(/^_|_$/g, '') // Loại bỏ dấu gạch dưới ở đầu và cuối
+    
+    console.log('Export filename:', filename)
     await exportGuests(listToExport, filename)
     setShowExportPopup(false)
   }
@@ -1547,8 +1798,17 @@ export default function GuestsPage(){
       const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
       XLSX.utils.book_append_sheet(wb, ws, 'Danh sách khách mời')
       // Dùng write -> array + tạo Blob + tải về để giảm khả năng bị chặn bởi trình duyệt
-      const wbArray = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true, compression: true })
-      const blob = new Blob([wbArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const wbArray = XLSX.write(wb, { 
+        bookType: 'xlsx', 
+        type: 'array', 
+        cellStyles: true, 
+        compression: true,
+        cellNF: true,
+        cellHTML: false
+      })
+      const blob = new Blob([wbArray], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8' 
+      })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -1645,24 +1905,58 @@ export default function GuestsPage(){
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
         <div className="grid grid-cols-2 sm:flex gap-2">
-          <button 
-            onClick={() => openGuestModal()}
-            className="group relative px-3 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-medium">Thêm khách</span>
-          </button>
-          <button 
-            onClick={() => setShowImportModal(true)}
-            className="group relative px-3 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 rounded-lg hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-green-500/20"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-medium">Import</span>
-          </button>
+          {(() => {
+            // Kiểm tra số lượng khách hiện tại trong sự kiện
+            const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+            const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+            const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+            
+            return (
+              <button 
+                onClick={() => openGuestModal()}
+                disabled={isMaxGuestsReached}
+                className={`group relative px-3 py-2 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm text-sm ${
+                  isMaxGuestsReached
+                    ? 'bg-gray-500/20 border-gray-500/30 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20'
+                }`}
+                title={isMaxGuestsReached ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` : ''}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Thêm khách'}
+                </span>
+              </button>
+            )
+          })()}
+          {(() => {
+            // Kiểm tra số lượng khách hiện tại trong sự kiện
+            const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+            const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+            const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+            
+            return (
+              <button 
+                onClick={() => setShowImportModal(true)}
+                disabled={isMaxGuestsReached}
+                className={`group relative px-3 py-2 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm text-sm ${
+                  isMaxGuestsReached
+                    ? 'bg-gray-500/20 border-gray-500/30 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 text-green-400 hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 hover:shadow-lg hover:shadow-green-500/20'
+                }`}
+                title={isMaxGuestsReached ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` : ''}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Import'}
+                </span>
+              </button>
+            )
+          })()}
           <button 
             onClick={exportAllGuests}
             className="group relative px-3 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-indigo-500/20"
@@ -1673,7 +1967,7 @@ export default function GuestsPage(){
             <span className="text-sm font-medium">Export</span>
           </button>
           <button 
-            onClick={loadGuests}
+            onClick={refreshGuests}
             className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1690,10 +1984,10 @@ export default function GuestsPage(){
         {/* Total Guests Card */}
         <div 
           onClick={() => setStatusFilter("all")}
-          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+          className={`guests-card-total group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
             statusFilter === "all" 
               ? "bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400/60 shadow-lg shadow-cyan-500/30" 
-              : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/20"
+              : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
           }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -1721,10 +2015,10 @@ export default function GuestsPage(){
         {/* Pending Card */}
         <div 
           onClick={() => setStatusFilter("pending")}
-          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+          className={`guests-card-pending group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
             statusFilter === "pending" 
               ? "bg-gradient-to-br from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400/60 shadow-lg shadow-yellow-500/30" 
-              : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-orange-500/20 hover:border-yellow-400/40 hover:shadow-lg hover:shadow-yellow-500/20"
+              : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
           }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -1749,10 +2043,10 @@ export default function GuestsPage(){
         {/* Accepted Card */}
         <div 
           onClick={() => setStatusFilter("accepted")}
-          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+          className={`guests-card-accepted group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
             statusFilter === "accepted" 
               ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border-2 border-green-400/60 shadow-lg shadow-green-500/30" 
-              : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 hover:shadow-lg hover:shadow-green-500/20"
+              : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
           }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -1777,10 +2071,10 @@ export default function GuestsPage(){
         {/* Declined Card */}
         <div 
           onClick={() => setStatusFilter("declined")}
-          className={`group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer ${
+          className={`guests-card-declined group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
             statusFilter === "declined" 
               ? "bg-gradient-to-br from-red-500/30 to-pink-500/30 border-2 border-red-400/60 shadow-lg shadow-red-500/30" 
-              : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20 hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 hover:shadow-lg hover:shadow-red-500/20"
+              : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"
           }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -2110,7 +2404,7 @@ export default function GuestsPage(){
               {guests.length === 0 ? "Chưa có khách mời nào" : "Không tìm thấy khách mời phù hợp"}
             </div>
             <div className="text-sm text-white/40">
-              {guests.length === 0 ? "Import danh sách khách để bắt đầu" : "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc"}
+              {guests.length === 0 ? "Thêm khách mời để bắt đầu" : "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc"}
             </div>
           </div>
         ) : (
@@ -2222,7 +2516,7 @@ export default function GuestsPage(){
                           <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                           </svg>
-                          <span className="hidden sm:inline font-medium">Copy Link</span>
+                          <span className="hidden sm:inline font-medium">Link</span>
                         </button>
                         
                         <button 
@@ -2246,6 +2540,22 @@ export default function GuestsPage(){
 
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
+              {/* Mobile Select All Button */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <CustomCheckbox
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                  />
+                  <span className="text-white font-medium text-sm">
+                    {selectAll ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  </span>
+                </div>
+                <span className="text-white/60 text-sm">
+                  {selectedGuests.size} / {filteredGuests.length} khách
+                </span>
+              </div>
+              
               {currentGuests.map((guest, index) => (
                 <div key={guest.id} className="bg-black/20 border border-white/10 rounded-xl p-4 hover:bg-black/30 transition-colors">
                     <div className="flex items-start justify-between mb-3">
@@ -2359,7 +2669,7 @@ export default function GuestsPage(){
                           <svg className="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                           </svg>
-                          <span>Copy Link Thiệp</span>
+                          <span>Chia sẻ thiệp mời</span>
                         </button>
                         
                         <button 
@@ -2467,170 +2777,208 @@ export default function GuestsPage(){
       {/* Import Modal */}
       {showImportModal && (
         <Portal>
-          <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-2 sm:p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowImportModal(false)}></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[95dvh] sm:max-h-[90dvh] overflow-y-auto scrollbar-glass">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span className="truncate">Import khách mời</span>
-              </h2>
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="text-gray-400 hover:text-white transition-colors p-1.5 sm:p-2 rounded-lg hover:bg-gray-800"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Import Type Selection */}
-            <div className="flex gap-4 sm:gap-6 mb-4 sm:mb-6">
-              <label className="flex items-center gap-2 text-white cursor-pointer text-sm sm:text-base">
-                <input 
-                  type="radio" 
-                  checked={importType === "json"} 
-                  onChange={() => setImportType("json")} 
-                  className="text-blue-500 w-4 h-4" 
-                />
-                <span>JSON</span>
-              </label>
-              <label className="flex items-center gap-2 text-white cursor-pointer text-sm sm:text-base">
-                <input 
-                  type="radio" 
-                  checked={importType === "csv"} 
-                  onChange={() => setImportType("csv")} 
-                  className="text-blue-500 w-4 h-4" 
-                />
-                <span>CSV File</span>
-              </label>
-            </div>
+          <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => {
+              setShowImportModal(false)
+              resetImportModal()
+            }}></div>
+            <div className="relative bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white">Import khách mời</h2>
+                <button onClick={() => {
+                  setShowImportModal(false)
+                  resetImportModal()
+                }} className="text-gray-400 hover:text-white">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Import Type Selection */}
+              <div className="flex gap-6 mb-6">
+                <label className="flex items-center gap-2 text-white cursor-pointer">
+                  <input type="radio" checked={importType === "json"} onChange={() => setImportType("json")} className="w-4 h-4" />
+                  <span>JSON</span>
+                </label>
+                <label className="flex items-center gap-2 text-white cursor-pointer">
+                  <input type="radio" checked={importType === "csv"} onChange={() => setImportType("csv")} className="w-4 h-4" />
+                  <span>CSV File</span>
+                </label>
+              </div>
 
-            {/* JSON Input */}
-            {importType === "json" && (
-              <div className="space-y-3 mb-4 sm:mb-6">
-                <p className="text-xs sm:text-sm text-white/60">Nhập JSON array của khách mời hoặc upload file JSON</p>
-                
-                {/* JSON Upload */}
-                <div className="mb-3 sm:mb-4">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      type="file" 
-                      id="jsonFile" 
-                      accept=".json" 
-                      onChange={handleJsonFileUpload}
-                      className="flex-1 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 text-white file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-purple-500 file:text-white hover:file:bg-purple-600 text-xs sm:text-sm" 
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const fileInput = document.getElementById('jsonFile') as HTMLInputElement
-                        if (fileInput) fileInput.value = ''
-                        setText('')
-                        setResult('')
-                      }}
-                      className="group relative px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg sm:rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 text-xs sm:text-sm"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      <span className="hidden sm:inline">Clear</span>
-                    </button>
+              {/* JSON Input */}
+              {importType === "json" && (
+                <div className="space-y-4 mb-6">
+                  <div className="flex gap-3 items-center">
+                    <div className="relative flex-shrink-0">
+                      <input 
+                        type="file" 
+                        id="jsonFile" 
+                        accept=".json" 
+                        onChange={handleJsonFileUpload} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <label 
+                        htmlFor="jsonFile"
+                        className="group relative py-2 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 cursor-pointer text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        <span>Chọn file</span>
+                      </label>
+                    </div>
+                    <div className="flex-1 bg-black/30 border border-white/20 rounded-lg p-3 min-h-[48px] flex items-center">
+                      {selectedJsonFile ? (
+                        <div className="flex items-center gap-2 text-white">
+                          <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-medium">{selectedJsonFile}</span>
+                        </div>
+                      ) : (
+                        <span className="text-white/50 text-sm">Chưa chọn file JSON</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                {/* JSON Textarea */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/80">Nội dung JSON:</label>
                   <textarea 
-                    className="w-full h-32 sm:h-40 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 text-white placeholder-white/50 font-mono text-xs sm:text-sm" 
+                    className="w-full h-40 bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 font-mono text-sm" 
                     value={text} 
                     onChange={e=>setText(e.target.value)}
-                    placeholder='[{"title":"Mr","name":"Tên khách","role":"CEO","organization":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
+                    placeholder='[{"title":"Mr","name":"Tên khách","position":"CEO","company":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
                   />
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* CSV Upload */}
-            {importType === "csv" && (
-              <div className="space-y-3 mb-4 sm:mb-6">
-                <p className="text-xs sm:text-sm text-white/60">Chọn file CSV với các cột: title, name, role, organization, tag, email, phone</p>
-                <input 
-                  type="file" 
-                  id="csvFile" 
-                  accept=".csv" 
-                  className="w-full bg-black/30 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 text-white file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 text-xs sm:text-sm" 
-                />
-                <div className="text-xs text-white/60">
-                  <p className="mb-2">Mẫu CSV:</p>
-                  <pre className="bg-black/40 p-2 sm:p-3 rounded-lg text-white/80 overflow-x-auto text-xs">title,name,role,organization,tag,email,phone
-Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000
-Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button 
-                className="group relative flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 font-medium flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20 text-sm" 
-                onClick={onImport}
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span className="truncate">Import {importType.toUpperCase()}</span>
-              </button>
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="group relative px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg sm:rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20 text-sm sm:text-base"
-              >
-                Hủy
-              </button>
-            </div>
-            
-            {result && (
-              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-black/30 border border-white/20 rounded-lg sm:rounded-xl max-h-40 sm:max-h-60 overflow-y-auto scrollbar-glass">
-                <div className="flex items-start gap-2">
-                  <div className="flex-shrink-0 mt-0.5">
-                    {result.includes('Thành công') && (
-                      <div className="w-4 h-4 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-400/30">
-                        <svg className="w-2.5 h-2.5 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              {/* CSV Upload */}
+              {importType === "csv" && (
+                <div className="space-y-4 mb-6">
+                  <div className="flex gap-3 items-center">
+                    <div className="relative flex-shrink-0">
+                      <input 
+                        type="file" 
+                        id="csvFile" 
+                        accept=".csv" 
+                        onChange={handleCsvFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <label 
+                        htmlFor="csvFile"
+                        className="group relative py-2 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 hover:shadow-lg hover:shadow-indigo-500/20 cursor-pointer text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
-                      </div>
-                    )}
-                    {(result.includes('Lỗi') || result.includes('thất bại') || result.includes('không hợp lệ')) && (
-                      <div className="w-4 h-4 bg-rose-500/20 rounded-full flex items-center justify-center border border-rose-400/30">
-                        <svg className="w-2.5 h-2.5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </div>
-                    )}
-                    {result.includes('Import một phần') && (
-                      <div className="w-4 h-4 bg-amber-500/20 rounded-full flex items-center justify-center border border-amber-400/30">
-                        <svg className="w-2.5 h-2.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M4.293 19.293a1 1 0 001.414 0L12 13l6.293 6.293a1 1 0 001.414-1.414l-7-7a1 1 0 00-1.414 0l-7 7a1 1 0 000 1.414z" />
-                        </svg>
-                      </div>
-                    )}
-                    {!result.includes('Thành công') && !result.includes('Lỗi') && !result.includes('thất bại') && !result.includes('không hợp lệ') && !result.includes('Import một phần') && (
-                      <div className="w-4 h-4 bg-cyan-500/20 rounded-full flex items-center justify-center border border-cyan-400/30">
-                        <svg className="w-2.5 h-2.5 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
-                        </svg>
-                      </div>
-                    )}
+                        <span>Chọn file</span>
+                      </label>
+                    </div>
+                    <div className="flex-1 bg-black/30 border border-white/20 rounded-lg p-3 min-h-[48px] flex items-center">
+                      {selectedCsvFile ? (
+                        <div className="flex items-center gap-2 text-white">
+                          <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-medium">{selectedCsvFile}</span>
+                        </div>
+                      ) : (
+                        <span className="text-white/50 text-sm">Chưa chọn file CSV</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <pre className="text-xs sm:text-sm text-white whitespace-pre-wrap break-words leading-relaxed font-mono">{result}</pre>
+                  <div className="text-xs text-white/60">
+                    <p className="mb-2">Mẫu CSV:</p>
+                    <pre className="bg-black/40 p-3 rounded-lg text-white/80 overflow-x-auto">title,name,position,company,tag,email,phone
+Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   </div>
                 </div>
+              )}
+
+              <div className="flex gap-3">
+                {(() => {
+                  // Kiểm tra số lượng khách hiện tại trong sự kiện
+                  const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+                  const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+                  
+                  // Tính số khách sẽ được import (ước tính từ text/file)
+                  let estimatedImportCount = 0
+                  if (importType === 'json' && text.trim()) {
+                    try {
+                      const jsonData = JSON.parse(text)
+                      estimatedImportCount = Array.isArray(jsonData) ? jsonData.length : 0
+                    } catch (e) {
+                      estimatedImportCount = 0
+                    }
+                  } else if (importType === 'csv') {
+                    // Ước tính từ số dòng trong CSV (trừ header)
+                    const lines = text.split('\n').filter(line => line.trim())
+                    estimatedImportCount = Math.max(0, lines.length - 1)
+                  }
+                  
+                  const totalAfterImport = currentGuestCount + estimatedImportCount
+                  const isMaxGuestsReached = currentEvent && totalAfterImport > currentEvent.max_guests
+                  const isAtMaxCapacity = currentEvent && currentGuestCount >= currentEvent.max_guests
+                  
+                  return (
+                    <button 
+                      onClick={onImport}
+                      disabled={isImporting || isAtMaxCapacity}
+                      className={`group relative flex-1 py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm ${
+                        isImporting || isAtMaxCapacity
+                          ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-not-allowed'
+                          : isMaxGuestsReached
+                            ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-400 hover:from-orange-500/30 hover:to-red-500/30 hover:border-orange-400/50 hover:shadow-lg hover:shadow-orange-500/20'
+                            : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20'
+                      }`}
+                      title={
+                        isAtMaxCapacity 
+                          ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` 
+                          : isMaxGuestsReached 
+                            ? `Cảnh báo: Import ${estimatedImportCount} khách sẽ vượt quá giới hạn ${currentEvent?.max_guests} khách (hiện tại: ${currentGuestCount}, sau import: ${totalAfterImport})`
+                            : ''
+                      }
+                    >
+                      {importType === 'json' ? (
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span>
+                        {isImporting 
+                          ? 'Đang import...' 
+                          : isAtMaxCapacity 
+                            ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})`
+                            : isMaxGuestsReached
+                              ? `Cảnh báo: ${estimatedImportCount} khách (${currentGuestCount}/${currentEvent?.max_guests})`
+                              : `Import ${importType.toUpperCase()}`
+                        }
+                      </span>
+                    </button>
+                  )
+                })()}
+                <button 
+                  onClick={() => {
+                    setShowImportModal(false)
+                    resetImportModal()
+                  }} 
+                  className="group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 hover:shadow-lg hover:shadow-gray-500/20"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Hủy</span>
+                </button>
               </div>
-            )}
+              
+              {result && (
+                <div className="mt-6 p-4 bg-black/30 border border-white/20 rounded-lg">
+                  <pre className="text-sm text-white whitespace-pre-wrap">{result}</pre>
+                </div>
+              )}
             </div>
           </div>
         </Portal>
@@ -2697,8 +3045,8 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
                 <input
                   type="text"
-                  value={guestForm.role}
-                  onChange={(e) => updateGuestForm('role', e.target.value)}
+                  value={guestForm.position}
+                  onChange={(e) => updateGuestForm('position', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="CEO, Manager, etc."
                 />
@@ -2707,8 +3055,8 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                 <label className="block text-sm font-medium text-white/80 mb-2">Tổ chức</label>
                 <input
                   type="text"
-                  value={guestForm.organization}
-                  onChange={(e) => updateGuestForm('organization', e.target.value)}
+                  value={guestForm.company}
+                  onChange={(e) => updateGuestForm('company', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="Tên công ty hoặc trường học"
                 />
@@ -2783,7 +3131,7 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
 
       {/* Toast Notification - Optimized for 370px width */}
       {showPopup && (
-        <div className={`fixed top-16 right-0 z-[9999] transform transition-all duration-300 ease-out ${
+        <div className={`fixed top-16 right-0 z-[10001] transform transition-all duration-300 ease-out ${
           popupVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
         }`}>
           <div 
@@ -2854,66 +3202,6 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
         </div>
       )}
 
-      {/* Copy Link Popup */}
-      <SystemModal
-        isOpen={showQRPopup}
-        onClose={() => setShowQRPopup(false)}
-        title={`Copy Link Thiệp - ${selectedGuest?.name || ''}`}
-        size="lg"
-      >
-        <div className="space-y-4">
-          {/* Copy Link Display */}
-          <div className="text-center">
-            <div className="w-full max-w-md mx-auto bg-exp-surface/50 border border-exp-border rounded-xl p-6 shadow-elevate">
-              <div className="mb-4">
-                <svg className="w-12 h-12 mx-auto text-exp-accent mb-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
-                </svg>
-                <h3 className="text-lg font-semibold text-white mb-2">Link Thiệp Mời</h3>
-                <p className="text-white/70 text-sm">Click nút bên dưới để copy link thiệp mời</p>
-              </div>
-              
-              {backupCode ? (
-                <div className="bg-exp-surface/30 border border-exp-border rounded-lg p-3 mb-4">
-                  <p className="text-xs text-white/50 mb-1">Token:</p>
-                  <p className="text-sm text-white font-mono break-all">{backupCode}</p>
-                </div>
-              ) : (
-                <div className="bg-exp-surface/30 border border-exp-border rounded-lg p-3 mb-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-exp-accent mx-auto mb-2"></div>
-                  <p className="text-sm text-white/70">Đang tạo token...</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Copy Link Button */}
-          <div className="text-center">
-            <button
-              onClick={copyInviteLink}
-              disabled={!backupCode}
-              className={`exp-button-primary inline-flex items-center gap-2 hover:transform hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ${
-                !backupCode ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
-              </svg>
-              {copySuccess ? 'Đã copy!' : 'Copy Link Thiệp'}
-            </button>
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <button
-              onClick={() => setShowQRPopup(false)}
-              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
-      </SystemModal>
 
       {/* Export Format Popup */}
       {showExportPopup && (
@@ -3007,19 +3295,20 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
                   <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
                   <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
                 </svg>
-                <span className="hidden sm:inline font-medium">Copy Link</span>
+                <span className="hidden sm:inline font-medium">Link</span>
               </button>
             </div>
           )}
           
-          {/* Hiển thị trực tiếp trang thiệp mời */}
+          {/* Hiển thị trang thiệp mời chính */}
           {inviteLink && (
             <div className="w-full h-[80vh] border border-white/20 rounded-xl overflow-hidden">
               <iframe
                 src={`${window.location.origin}/invite/${inviteLink.split('/').pop()}`}
                 className="w-full h-full"
                 title="Xem trước thiệp mời"
-                sandbox="allow-same-origin allow-scripts"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation allow-popups allow-modals"
+                allow="fullscreen"
               />
             </div>
           )}
@@ -3060,6 +3349,312 @@ Ms,Tên khách 2,Manager,Công ty XYZ,Tag2,email2@example.com,0900000001</pre>
           </div>
         </Portal>
       )}
+
+      {/* Duplicate Guest Modal */}
+      {showDuplicateModal && duplicateData && (
+        <Portal>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[10001] overflow-y-auto">
+            <div className="bg-gray-900 border border-white/10 rounded-xl max-w-4xl w-full max-h-[90vh] min-h-[60vh] overflow-hidden flex flex-col my-auto">
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-xl font-semibold text-white">
+                    Phát hiện khách mời trùng lặp
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowDuplicateModal(false)
+                      setDuplicateData(null)
+                      setSelectedDuplicates(new Set())
+                      setResult("Import đã bị hủy do phát hiện trùng lặp.")
+                      showToast("Import đã bị hủy", "info")
+                    }}
+                    className="text-white/60 hover:text-white/80 transition-colors p-1"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-white/70 text-sm">
+                  Đã phát hiện {duplicateData.newGuests.length} khách mời có thể trùng lặp với khách hiện có. 
+                  Vui lòng chọn cách xử lý cho từng khách.
+                </p>
+              </div>
+              
+              <div className="flex-1 p-6 overflow-y-auto">
+                <div className="space-y-4">
+                  {duplicateData.newGuests.map((newGuest, index) => {
+                    const existingGuest = duplicateData.existingGuests[index]
+                    const isSelected = selectedDuplicates.has(index)
+                    
+                    return (
+                      <div key={index} className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
+                        <div className="flex items-start gap-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedDuplicates)
+                              if (e.target.checked) {
+                                newSelected.add(index)
+                              } else {
+                                newSelected.delete(index)
+                              }
+                              setSelectedDuplicates(newSelected)
+                            }}
+                            className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                          />
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4 mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-white mb-1">Khách mới (từ file)</h4>
+                                <div className="text-sm text-white/80">
+                                  <div><span className="font-medium">Tên:</span> {newGuest.title} {newGuest.name}</div>
+                                  <div><span className="font-medium">Vai trò:</span> {newGuest.position || 'N/A'}</div>
+                                  <div><span className="font-medium">Tổ chức:</span> {newGuest.company || 'N/A'}</div>
+                                  <div><span className="font-medium">Tag:</span> {newGuest.tag || 'N/A'}</div>
+                                  {newGuest.email && <div><span className="font-medium">Email:</span> {newGuest.email}</div>}
+                                  {newGuest.phone && <div><span className="font-medium">SĐT:</span> {newGuest.phone}</div>}
+                                </div>
+                              </div>
+                              
+                              <div className="flex-1">
+                                <h4 className="font-medium text-white mb-1">Khách hiện có</h4>
+                                <div className="text-sm text-white/80">
+                                  <div><span className="font-medium">Tên:</span> {existingGuest.title} {existingGuest.name}</div>
+                                  <div><span className="font-medium">Vai trò:</span> {existingGuest.position || 'N/A'}</div>
+                                  <div><span className="font-medium">Tổ chức:</span> {existingGuest.company || 'N/A'}</div>
+                                  <div><span className="font-medium">Tag:</span> {existingGuest.tag || 'N/A'}</div>
+                                  {existingGuest.email && <div><span className="font-medium">Email:</span> {existingGuest.email}</div>}
+                                  {existingGuest.phone && <div><span className="font-medium">SĐT:</span> {existingGuest.phone}</div>}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {isSelected && (
+                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                                <p className="text-blue-300 text-sm">
+                                  <span className="font-medium">Hành động:</span> Hợp nhất - Thông tin khách hiện có sẽ được cập nhật bằng thông tin mới từ file.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              
+              <div className="p-6 border-t border-white/10 flex gap-3 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    if (!duplicateData) return
+                    
+                    // Hiển thị popup xác nhận cho "Giữ lại"
+                    const selectedCount = selectedDuplicates.size
+                    setDuplicateConfirmData({
+                      title: "Xác nhận Giữ lại",
+                      message: `Có ${selectedCount} khách hàng sẽ được giữ lại để import vào danh sách.`,
+                      onConfirm: () => {
+                        // Xử lý import với logic giữ lại những khách được chọn
+                        processImportWithDuplicates(
+                          duplicateData.newGuests,
+                          parseInt(eventFilter),
+                          selectedDuplicates, // Giữ lại những khách được chọn
+                          duplicateData,
+                          'keep' // Action type: keep (import vào danh sách)
+                        )
+                        
+                        // Đóng modal
+                        setShowDuplicateModal(false)
+                        setShowDuplicateConfirmModal(false)
+                        setDuplicateData(null)
+                        setSelectedDuplicates(new Set())
+                        setShowImportModal(false)
+                        setDuplicateConfirmData(null)
+                      },
+                      onCancel: () => {
+                        setShowDuplicateConfirmModal(false)
+                        setDuplicateConfirmData(null)
+                      }
+                    })
+                    setShowDuplicateConfirmModal(true)
+                  }}
+                  className="group relative flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 hover:shadow-lg hover:shadow-green-500/20"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Giữ lại</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (!duplicateData) return
+                    
+                    const selectedCount = selectedDuplicates.size
+                    const totalCount = duplicateData.newGuests.length
+                    const remainingCount = totalCount - selectedCount
+                    
+                    // Hiển thị popup xác nhận cho "Hợp nhất"
+                    setDuplicateConfirmData({
+                      title: "Xác nhận Hợp nhất",
+                      message: `Có ${selectedCount} khách hàng sẽ được hợp nhất và ${remainingCount} khách hàng còn lại sẽ được import vào danh sách.`,
+                      onConfirm: async () => {
+                        // Xử lý import với logic mới: hợp nhất + import còn lại
+                        await processImportWithDuplicates(
+                          duplicateData.newGuests,
+                          parseInt(eventFilter),
+                          selectedDuplicates,
+                          duplicateData,
+                          'merge_and_import' // Action type: merge + import còn lại
+                        )
+                        
+                        // Đóng modal
+                        setShowDuplicateModal(false)
+                        setShowDuplicateConfirmModal(false)
+                        setDuplicateData(null)
+                        setSelectedDuplicates(new Set())
+                        setShowImportModal(false)
+                        setDuplicateConfirmData(null)
+                      },
+                      onCancel: () => {
+                        setShowDuplicateConfirmModal(false)
+                        setDuplicateConfirmData(null)
+                      }
+                    })
+                    setShowDuplicateConfirmModal(true)
+                  }}
+                  className="group relative flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>Hợp nhất</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Duplicate Confirmation Modal */}
+      {showDuplicateConfirmModal && duplicateConfirmData && (
+        <Portal>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[10002]">
+            <div className="bg-gray-900 border border-white/20 rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  {duplicateConfirmData.title}
+                </h3>
+                <button
+                  onClick={duplicateConfirmData.onCancel}
+                  className="text-white/60 hover:text-white/80 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <p className="text-white/80 text-sm mb-6">
+                {duplicateConfirmData.message}
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={duplicateConfirmData.onCancel}
+                  className="group relative flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 hover:shadow-lg hover:shadow-gray-500/20"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Không</span>
+                </button>
+                <button
+                  onClick={duplicateConfirmData.onConfirm}
+                  className="group relative flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Đúng</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Copy Link Modal */}
+      {showCopyLinkModal && copyLinkData && (
+        <CopyLinkModal
+          isOpen={showCopyLinkModal}
+          onClose={() => {
+            setShowCopyLinkModal(false)
+            setCopyLinkData(null)
+          }}
+          inviteLink={copyLinkData.inviteLink}
+          qrCodeUrl={copyLinkData.qrCodeUrl}
+          eventName={copyLinkData.eventName}
+          showToast={showToast}
+        />
+      )}
+
+      {/* CSS cho Guests Cards với hiệu ứng hover RSVP */}
+      <style jsx>{`
+        /* Guests Cards với hiệu ứng hover RSVP */
+        .guests-card-total:hover {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
+          border-color: rgba(59, 130, 246, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4), 0 0 25px rgba(59, 130, 246, 0.2);
+        }
+        
+        .guests-card-pending:hover {
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4));
+          border-color: rgba(245, 158, 11, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4), 0 0 25px rgba(245, 158, 11, 0.2);
+        }
+        
+        .guests-card-accepted:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+          border-color: rgba(34, 197, 94, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(34, 197, 94, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
+        }
+        
+        .guests-card-declined:hover {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+          border-color: rgba(239, 68, 68, 0.7);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 35px rgba(239, 68, 68, 0.4), 0 0 25px rgba(239, 68, 68, 0.2);
+        }
+        
+        /* Hiệu ứng shimmer cho guests cards */
+        .guests-card-total::before,
+        .guests-card-pending::before,
+        .guests-card-accepted::before,
+        .guests-card-declined::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+          transition: left 0.6s ease;
+        }
+        
+        .guests-card-total:hover::before,
+        .guests-card-pending:hover::before,
+        .guests-card-accepted:hover::before,
+        .guests-card-declined:hover::before {
+          left: 100%;
+        }
+      `}</style>
     </div>
   )
 }

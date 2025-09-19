@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface DateTimePickerProps {
   type: 'date' | 'time'
@@ -20,6 +21,7 @@ export default function DateTimePicker({
   const [isOpen, setIsOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [position, setPosition] = useState<'top' | 'bottom'>('bottom')
+  const [inputRef, setInputRef] = useState<HTMLDivElement | null>(null)
 
   // Generate time options (every 15 minutes) with AM/PM
   const generateTimeOptions = () => {
@@ -80,12 +82,9 @@ export default function DateTimePicker({
 
   // Calculate position
   const calculatePosition = () => {
-    if (typeof window === 'undefined') return 'bottom'
+    if (typeof window === 'undefined' || !inputRef) return 'bottom'
     
-    const inputElement = document.querySelector(`.datetime-picker-${type}`)
-    if (!inputElement) return 'bottom'
-    
-    const rect = inputElement.getBoundingClientRect()
+    const rect = inputRef.getBoundingClientRect()
     const viewportHeight = window.innerHeight
     const spaceBelow = viewportHeight - rect.bottom
     const spaceAbove = rect.top
@@ -103,7 +102,8 @@ export default function DateTimePicker({
     const handleClickOutside = (event: MouseEvent) => {
       if (isOpen) {
         const target = event.target as HTMLElement
-        if (!target.closest(`.datetime-picker-${type}`)) {
+        // Check if click is outside both the input and the portal popup
+        if (!target.closest(`.datetime-picker-${type}`) && !target.closest('[data-time-picker-portal]')) {
           setIsOpen(false)
         }
       }
@@ -117,11 +117,11 @@ export default function DateTimePicker({
 
   // Update position when picker opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && inputRef) {
       const newPosition = calculatePosition()
       setPosition(newPosition)
     }
-  }, [isOpen])
+  }, [isOpen, inputRef])
 
   // Format display value
   const getDisplayValue = () => {
@@ -154,7 +154,7 @@ export default function DateTimePicker({
   }
 
   return (
-    <div className={`relative datetime-picker-${type} ${className}`}>
+    <div ref={setInputRef} className={`relative datetime-picker-${type} ${className}`}>
       {/* Input Field */}
       <input
         type="text"
@@ -266,10 +266,18 @@ export default function DateTimePicker({
       )}
       
       {/* Time Picker */}
-      {type === 'time' && isOpen && (
-        <div className={`absolute left-0 right-0 z-50 bg-black/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl ${
-          position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
-        }`}>
+      {type === 'time' && isOpen && createPortal(
+        <div 
+          data-time-picker-portal
+          className="fixed z-[9999] w-80 bg-black/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl"
+          style={{
+            top: position === 'top' 
+              ? `${inputRef?.getBoundingClientRect().top - 264}px`
+              : `${inputRef?.getBoundingClientRect().bottom + 8}px`,
+            left: `${inputRef?.getBoundingClientRect().left}px`
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="p-3 max-h-64 overflow-hidden">
             <div className="grid grid-cols-2 gap-3 h-full">
               {/* AM Column */}
@@ -281,7 +289,10 @@ export default function DateTimePicker({
                   {generateTimeOptions().amOptions.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => handleTimeSelect(option.value)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTimeSelect(option.value)
+                      }}
                       className={`w-full text-left px-2 py-1.5 text-xs rounded transition-all duration-200 ${
                         value === option.value
                           ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/50 text-cyan-300'
@@ -303,7 +314,10 @@ export default function DateTimePicker({
                   {generateTimeOptions().pmOptions.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => handleTimeSelect(option.value)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTimeSelect(option.value)
+                      }}
                       className={`w-full text-left px-2 py-1.5 text-xs rounded transition-all duration-200 ${
                         value === option.value
                           ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/50 text-cyan-300'
@@ -317,7 +331,8 @@ export default function DateTimePicker({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

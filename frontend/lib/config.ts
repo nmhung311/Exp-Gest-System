@@ -5,45 +5,54 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 // API Base URLs
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (isDevelopment ? '' : 'http://192.168.1.135:5008')
+  (isDevelopment ? 'http://192.168.1.135:5008' : 'http://192.168.1.135:5008')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  (isDevelopment ? 'http://192.168.1.135:9009' : 'http://192.168.1.135:9009')
+  (isDevelopment ? 'http://192.168.1.135:3000' : 'http://192.168.1.135:3000')
 
-// API Endpoints
+// API Endpoints - Tất cả sử dụng Next.js API routes
 export const API_ENDPOINTS = {
   // Events
-  EVENTS: `${API_BASE_URL}/api/events`,
+  EVENTS: `/api/events`,
   
-  // Guests
-  GUESTS: `${API_BASE_URL}/api/guests`,
-  GUEST_BY_ID: (id: string) => `${API_BASE_URL}/api/guests/${id}`,
-  GUEST_QR: (id: string) => `${API_BASE_URL}/api/guests/${id}/qr`,
-  GUEST_QR_IMAGE: (id: string) => `${API_BASE_URL}/api/guests/${id}/qr-image`,
-  GUEST_BULK_CHECKIN: `${API_BASE_URL}/api/guests/bulk-checkin`,
-  GUEST_BULK_CHECKOUT: `${API_BASE_URL}/api/guests/bulk-checkout`,
-  GUEST_BULK_DELETE: `${API_BASE_URL}/api/guests/bulk-delete`,
-  GUEST_IMPORT: `${API_BASE_URL}/api/guests/import`,
-  GUEST_IMPORT_CSV: `${API_BASE_URL}/api/guests/import-csv`,
-  GUESTS_CHECKED_IN: `${API_BASE_URL}/api/guests/checked-in`,
+  // Guests - Sử dụng Next.js API routes làm proxy
+  GUESTS: `/api/guests`,
+  GUEST_BY_ID: (id: string) => `/api/guests/${id}`,
+  GUEST_QR: (id: string) => `/api/guests/${id}/qr`,
+  GUEST_QR_IMAGE: (id: string) => `/api/guests/${id}/qr-image`,
+  GUEST_BULK_CHECKIN: `/api/guests/bulk-checkin`,
+  GUEST_BULK_CHECKOUT: `/api/guests/bulk-checkout`,
+  GUEST_BULK_DELETE: `/api/guests/bulk-delete`,
+  GUEST_IMPORT: `/api/guests/import`,
+  GUEST_IMPORT_CSV: `/api/guests/import-csv`,
+  GUESTS_CHECKED_IN: `/api/guests/checked-in`,
   
-  // Check-in
-  CHECKIN: `${API_BASE_URL}/api/checkin`,
-  CHECKIN_BY_ID: (id: string) => `${API_BASE_URL}/api/checkin/${id}`,
+  // Check-in - Sử dụng Next.js API routes làm proxy
+  CHECKIN: `/api/checkin`,
+  CHECKIN_BY_ID: (id: string) => `/api/checkin/${id}`,
   
-  // Auth - Gọi trực tiếp đến backend (không qua Next.js API routes)
+  // Auth - Sử dụng Next.js API routes làm proxy
   AUTH: {
-    LOGIN: `${API_BASE_URL}/api/auth/login`,
-    REGISTER: `${API_BASE_URL}/api/auth/register`,
-    USERS: `${API_BASE_URL}/api/auth/users`,
-    ME: `${API_BASE_URL}/api/auth/me`,
+    LOGIN: `/api/auth/login`,
+    REGISTER: `/api/auth/register`,
+    USERS: `/api/auth/users`,
+    ME: `/api/auth/me`,
   },
 } as const
 
 // Utility functions
 export const getApiUrl = (endpoint: string) => {
-  return `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
+  // Nếu endpoint bắt đầu với '/api/' thì đó là Next.js API route, không cần thêm API_BASE_URL
+  if (endpoint.startsWith('/api/')) {
+    return endpoint
+  }
+  // Nếu endpoint đã là full URL thì trả về nguyên vẹn
+  if (endpoint.startsWith('http')) {
+    return endpoint
+  }
+  // Các trường hợp khác - không sử dụng API_BASE_URL nữa
+  return endpoint
 }
 
 export const getFrontendUrl = (path: string) => {

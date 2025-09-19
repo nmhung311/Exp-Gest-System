@@ -14,6 +14,7 @@ from io import BytesIO
 from datetime import datetime
 import os
 import hashlib
+from batch_api import batch_bp
 
 
 def create_app() -> Flask:
@@ -38,10 +39,10 @@ def create_app() -> Flask:
         "http://192.168.1.135:9009"
     ]
     
-    # Disable CORS in Flask since Nginx handles it
-    # CORS(app, origins="*", supports_credentials=False, 
-    #      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    #      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    # Enable CORS for development
+    CORS(app, origins="*", supports_credentials=False, 
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     db.init_app(app)
 
     # Ensure tables and columns exist even when running via `python -m backend.app`
@@ -203,11 +204,24 @@ def create_app() -> Flask:
                 errors.append("Missing name")
                 continue
             try:
-                # Check if email already exists
+                # Set empty values to None to avoid UNIQUE constraint issues
+                if not email or email.strip() == '':
+                    email = None
+                if not phone or phone.strip() == '':
+                    phone = None
+                
+                # Check if email already exists (only if email is not None)
                 if email and Guest.query.filter_by(email=email).first():
                     failed += 1
                     errors.append(f"Email {email} already exists")
                     continue
+                
+                # Check if phone already exists (only if phone is not None)
+                if phone and Guest.query.filter_by(phone=phone).first():
+                    failed += 1
+                    errors.append(f"Phone {phone} already exists")
+                    continue
+                
                 g = Guest(
                     name=name,
                     title=title,
@@ -216,6 +230,8 @@ def create_app() -> Flask:
                     tag=tag,
                     email=email,
                     phone=phone,
+                    checkin_status="not_arrived",  # Default status for imported guests
+                    rsvp_status="pending",  # Default RSVP status for imported guests
                     event_id=event_id
                 )
                 db.session.add(g)
@@ -269,10 +285,22 @@ def create_app() -> Flask:
                     continue
                 
                 try:
-                    # Check if email already exists
+                    # Set empty values to None to avoid UNIQUE constraint issues
+                    if not email or email.strip() == '':
+                        email = None
+                    if not phone or phone.strip() == '':
+                        phone = None
+                    
+                    # Check if email already exists (only if email is not None)
                     if email and Guest.query.filter_by(email=email).first():
                         failed += 1
                         errors.append(f"Row {imported + failed + 1}: Email {email} already exists")
+                        continue
+                    
+                    # Check if phone already exists (only if phone is not None)
+                    if phone and Guest.query.filter_by(phone=phone).first():
+                        failed += 1
+                        errors.append(f"Row {imported + failed + 1}: Phone {phone} already exists")
                         continue
                     
                     g = Guest(
@@ -281,8 +309,10 @@ def create_app() -> Flask:
                         position=position if position else None,
                         company=company if company else None,
                         tag=tag if tag else None,
-                        email=email if email else None,
-                        phone=phone if phone else None,
+                        email=email,
+                        phone=phone,
+                        checkin_status="not_arrived",  # Default status for imported guests
+                        rsvp_status="pending",  # Default RSVP status for imported guests
                         event_id=int(form_event_id) if form_event_id and form_event_id.isdigit() else (int(event_id) if event_id and event_id.isdigit() else None)
                     )
                     db.session.add(g)
@@ -297,6 +327,18 @@ def create_app() -> Flask:
             
         except Exception as e:
             return {"message": f"Error processing CSV: {str(e)}"}, 400
+
+    @app.post("/api/guests/cleanup-empty-phones")
+    def cleanup_empty_phones():
+        try:
+            # Update all guests with empty phone to NULL
+            updated = Guest.query.filter_by(phone='').update({'phone': None})
+            db.session.commit()
+            print(f"Updated {updated} guests with empty phone to NULL")
+            return {"message": f"Updated {updated} guests with empty phone to NULL"}, 200
+        except Exception as e:
+            print(f"Error cleaning up empty phones: {e}")
+            return {"message": "Error cleaning up empty phones"}, 500
 
     @app.get("/api/guests")
     def get_guests():
@@ -364,6 +406,8 @@ def create_app() -> Flask:
             if phone and Guest.query.filter_by(phone=phone).first():
                 return {"message": "Phone number already exists"}, 409
             
+            checkin_status = data.get("checkin_status", "not_arrived")
+            print(f"Creating guest {name} with checkin_status: '{checkin_status}'")
             guest = Guest(
                 name=name,
                 title=data.get("title", "").strip() or None,
@@ -372,7 +416,7 @@ def create_app() -> Flask:
                 tag=data.get("tag", "").strip() or None,
                 email=email or None,
                 phone=data.get("phone", "").strip() or None,
-                checkin_status=data.get("checkin_status", "not_arrived"),
+                checkin_status=checkin_status,
                 rsvp_status=data.get("rsvp_status", "pending"),
                 event_id=data.get("event_id") if data.get("event_id") else None
             )
@@ -416,9 +460,14 @@ def create_app() -> Flask:
             guest.tag = data.get("tag", "").strip() or None
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
-            guest.checkin_status = data.get("checkin_status", "not_arrived")
+            new_checkin_status = data.get("checkin_status", "not_arrived")
+            print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to '{new_checkin_status}'")
+            guest.checkin_status = new_checkin_status
+            print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
             guest.rsvp_status = data.get("rsvp_status", "pending")
-            guest.event_id = data.get("event_id") if data.get("event_id") else None
+            # Only update event_id if it's provided in the request
+            if "event_id" in data:
+                guest.event_id = data.get("event_id") if data.get("event_id") else None
             
             print(f"Updating guest {guest.name}: rsvp_status = {guest.rsvp_status}, checkin_status = {guest.checkin_status}")
             
@@ -619,7 +668,9 @@ def create_app() -> Flask:
                 db.session.delete(checkin)
 
             # Update guest status
+            print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'not_arrived'")
             guest.checkin_status = "not_arrived"
+            print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
 
             db.session.commit()
 
@@ -671,8 +722,10 @@ def create_app() -> Flask:
                 # Ensure status consistency for guests list
                 guest_already = Guest.query.get(tok.guest_id)
                 if guest_already and guest_already.checkin_status != "arrived":
+                    print(f"Updating already checked-in guest {guest_already.id} ({guest_already.name}) checkin_status from '{guest_already.checkin_status}' to 'arrived'")
                     guest_already.checkin_status = "arrived"
                     db.session.commit()
+                    print(f"Already checked-in guest {guest_already.id} status updated to: '{guest_already.checkin_status}'")
                 return {"message": "already checked in", "checked_in_at": existing.time.isoformat()}, 409
                 
             ci = Checkin(guest_id=tok.guest_id, gate=gate, staff=staff)
@@ -681,9 +734,12 @@ def create_app() -> Flask:
             # Update guest status so Guests list reflects immediately
             guest = Guest.query.get(tok.guest_id)
             if guest:
+                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'arrived'")
                 guest.checkin_status = "arrived"
+                print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
 
             db.session.commit()
+            print(f"Database committed. Guest {guest.id} final status: '{guest.checkin_status}'")
 
             result = {"message": "ok", "guest": {"id": guest.id, "name": guest.name}, "time": ci.time.isoformat()}
             print(f"Checkin success: {result}")
@@ -945,29 +1001,63 @@ def create_app() -> Flask:
             if not guests:
                 return {"message": "No guests found"}, 404
             
-            # Create check-in records
+            # Create check-in records and update status
             checkin_count = 0
+            status_updated_count = 0
+            already_checked_in = []
+            
             for guest in guests:
+                print(f"Processing guest {guest.id} ({guest.name}) with checkin_status: '{guest.checkin_status}'")
                 # Check if already checked in
                 existing_checkin = Checkin.query.filter_by(guest_id=guest.id).first()
                 if not existing_checkin:
+                    # Create new check-in record
                     checkin = Checkin(
                         guest_id=guest.id,
                         time=datetime.now(pytz.timezone('Asia/Ho_Chi_Minh')),
-                        method="Bulk Check-in",
                         gate="Bulk",
                         staff="System"
                     )
                     db.session.add(checkin)
                     checkin_count += 1
+                    print(f"Created check-in record for guest {guest.id} ({guest.name})")
                     
-                    # Update guest checkin_status
+                    # Update guest checkin_status to "arrived"
+                    print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'arrived'")
                     guest.checkin_status = "arrived"
+                    status_updated_count += 1
+                    print(f"Updated guest {guest.id} ({guest.name}) status to arrived. Final status: '{guest.checkin_status}'")
+                else:
+                    # Guest already checked in
+                    print(f"Guest {guest.id} ({guest.name}) already checked in with status: '{guest.checkin_status}'")
+                    already_checked_in.append({
+                        "id": guest.id,
+                        "name": guest.name,
+                        "checkin_time": existing_checkin.time.isoformat()
+                    })
+                    print(f"Guest {guest.id} ({guest.name}) already checked in at {existing_checkin.time} with status: '{guest.checkin_status}'")
             
             db.session.commit()
             
-            print(f"Bulk check-in: {checkin_count} guests")
-            return {"message": f"Successfully checked in {checkin_count} guests", "count": checkin_count}, 200
+            print(f"Bulk check-in: {checkin_count} new check-ins, {status_updated_count} status updates, {len(already_checked_in)} already checked in")
+            print(f"Final status summary:")
+            for guest in guests:
+                print(f"  Guest {guest.id} ({guest.name}): checkin_status = '{guest.checkin_status}'")
+            
+            # Prepare response message
+            if len(already_checked_in) > 0:
+                message = f"Xử lý {len(guests)} khách: {checkin_count} check-in mới, {len(already_checked_in)} khách đã check-in trước đó"
+            else:
+                message = f"Check-in thành công {checkin_count} khách mới"
+            
+            return {
+                "message": message,
+                "count": checkin_count,
+                "status_updated": status_updated_count,
+                "total_processed": len(guests),
+                "already_checked_in": already_checked_in,
+                "already_checked_in_count": len(already_checked_in)
+            }, 200
             
         except Exception as e:
             print(f"Error in bulk check-in: {e}")
@@ -990,6 +1080,7 @@ def create_app() -> Flask:
             # Remove check-in records and update status
             checkout_count = 0
             for guest in guests:
+                print(f"Processing guest {guest.id} ({guest.name}) with checkin_status: '{guest.checkin_status}'")
                 # Remove check-in record
                 checkin = Checkin.query.filter_by(guest_id=guest.id).first()
                 if checkin:
@@ -997,11 +1088,16 @@ def create_app() -> Flask:
                     checkout_count += 1
                 
                 # Update guest checkin_status
+                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'not_arrived'")
                 guest.checkin_status = "not_arrived"
+                print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
             
             db.session.commit()
             
             print(f"Bulk check-out: {checkout_count} guests")
+            print(f"Final status summary:")
+            for guest in guests:
+                print(f"  Guest {guest.id} ({guest.name}): checkin_status = '{guest.checkin_status}'")
             return {"message": f"Successfully checked out {checkout_count} guests", "count": checkout_count}, 200
             
         except Exception as e:
@@ -1025,6 +1121,7 @@ def create_app() -> Flask:
             # Delete guests and their check-ins
             delete_count = 0
             for guest in guests:
+                print(f"Deleting guest {guest.id} ({guest.name}) with checkin_status: '{guest.checkin_status}'")
                 # Delete check-in records first
                 Checkin.query.filter_by(guest_id=guest.id).delete()
                 
@@ -1120,6 +1217,9 @@ def create_app() -> Flask:
             print(f"Error getting invite data: {e}")
             return {"error": f"Error getting invite data: {str(e)}"}, 500
 
+    # Register batch API blueprint
+    app.register_blueprint(batch_bp)
+    
     return app
 
 

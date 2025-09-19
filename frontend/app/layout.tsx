@@ -7,7 +7,6 @@ export const metadata = {
   title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",
   description: "EXP Technology — AI, Blockchain, Automation, Fintech and digital solutions. Together we stand.",
   author: "EXP Technology",
-  themeColor: "#0f172a",
   openGraph: {
     title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",
     description: "EXP Technology — AI, Blockchain, Automation, Fintech and digital solutions. Together we stand.",
@@ -18,6 +17,10 @@ export const metadata = {
     card: "summary_large_image",
     image: "/images/exp-logo.png",
   }
+}
+
+export const viewport = {
+  themeColor: "#0f172a",
 }
 
 export default function RootLayout({
