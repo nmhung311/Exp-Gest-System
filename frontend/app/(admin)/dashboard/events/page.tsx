@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import CustomDropdown from '../../components/CustomDropdown'
-import CustomCheckbox from '../../components/CustomCheckbox'
-import SimpleInvitePreview from '../../components/SimpleInvitePreview'
-import DateTimePicker from '../../components/DateTimePicker'
+import CustomDropdown from '../../../components/CustomDropdown'
+import CustomCheckbox from '../../../components/CustomCheckbox'
+import SimpleInvitePreview from '../../../components/SimpleInvitePreview'
+import DateTimePicker from '../../../components/DateTimePicker'
 
 import { api } from "@/lib/api"
 interface Event {

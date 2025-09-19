@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react'
 import { PreloadPaginationHook } from '@/lib/types/pagination'
 import { PreloadIndicator, PageStatusIndicator } from '@/components/loading/AdvancedSkeletonLoader'
-import { PreloadIndicators } from './PreloadIndicators'
-import { ProgressiveLoading } from '@/components/loading/ProgressiveLoading'
+import PreloadIndicators from './PreloadIndicators'
+import ProgressiveLoading from '@/components/loading/ProgressiveLoading'
 
 interface EnhancedPaginationProps {
   // Pagination state
@@ -81,7 +81,7 @@ export default function EnhancedPagination({
       pages.push(i)
     }
     
-    if (end < totalPages - 1) {
+    if (end < pagination.state.totalPages - 1) {
       pages.push(-1) // Ellipsis
     }
     

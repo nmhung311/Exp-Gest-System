@@ -26,6 +26,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const queryString = searchParams.toString()
+    const backendUrlWithQuery = queryString ? `${backendUrl}/api/checkin?${queryString}` : `${backendUrl}/api/checkin`
+    
+    const backendResponse = await fetch(backendUrlWithQuery, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text()
+      return new NextResponse(errorText, { status: backendResponse.status })
+    }
+
+    const data = await backendResponse.json()
+    return NextResponse.json(data)
+  } catch (error: any) {
+    console.error('Error proxying checkin GET request:', error)
+    return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()

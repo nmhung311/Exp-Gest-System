@@ -166,6 +166,7 @@ export interface Event {
   venue_map_url?: string
   dress_code?: string
   program_outline?: string
+  created_at?: string
   max_guests: number
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
 }

@@ -1,7 +1,7 @@
 // Guests API functions for preload pagination
 // Tối ưu API calls cho pagination
 
-import { api } from '@/lib/api'
+import { api, apiCall } from '@/lib/api'
 import { Guest } from '@/lib/types/guest'
 
 export interface GuestsApiResponse {
@@ -123,7 +123,7 @@ export async function getGuestsStats(eventFilter?: string): Promise<{
   checkedIn: number
 }> {
   try {
-    const response = await api.getGuestsStats()
+    const response = await apiCall('/api/guests/stats')
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -166,9 +166,15 @@ export async function exportGuests(
 ): Promise<void> {
   try {
     if (format === 'excel') {
-      await api.exportGuestsExcel(guests)
+      await apiCall('/api/guests/export-excel', {
+        method: 'POST',
+        body: JSON.stringify({ guests })
+      })
     } else {
-      await api.exportGuestsCSV(guests)
+      await apiCall('/api/guests/export-csv', {
+        method: 'POST',
+        body: JSON.stringify({ guests })
+      })
     }
   } catch (error) {
     console.error('Error exporting guests:', error)
@@ -182,7 +188,10 @@ export async function bulkUpdateGuests(
   updates: Partial<Guest>
 ): Promise<void> {
   try {
-    const response = await api.bulkUpdateGuests(guestIds, updates)
+    const response = await apiCall('/api/guests/bulk-update', {
+      method: 'PUT',
+      body: JSON.stringify({ guestIds, updates })
+    })
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

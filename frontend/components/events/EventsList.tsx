@@ -301,7 +301,7 @@ export default function EventsList({
                     />
                   </td>
                   <td className="px-4 py-3 text-white/60">
-                    {(pagination.paginationInfo.currentPage - 1) * pagination.state.itemsPerPage + index + 1}
+                    {(pagination.state.currentPage - 1) * pagination.state.itemsPerPage + index + 1}
                   </td>
                   <td className="px-4 py-3 text-white font-medium">{event.name}</td>
                   <td className="px-4 py-3 text-white/80 text-xs">

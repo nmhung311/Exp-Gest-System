@@ -36,9 +36,9 @@ interface InfiniteScrollPaginationProps<T = any> {
   
   // Render props
   renderItem: (item: T, index: number) => React.ReactNode
-  renderLoadMore?: () => React.ReactNode
-  renderEmpty?: () => React.ReactNode
-  renderError?: (error: string, retry: () => void) => React.ReactNode
+  renderLoadMore?: () => React.ReactElement
+  renderEmpty?: () => React.ReactElement
+  renderError?: (error: string, retry: () => void) => React.ReactElement
   
   // Callbacks
   onLoadMore?: (page: number) => void
@@ -72,7 +72,7 @@ export default function InfiniteScrollPagination<T = any>({
   onSuccess,
   onItemClick,
   dependencies = []
-}: InfiniteScrollPaginationProps<T>) {
+}: InfiniteScrollPaginationProps<T>): React.ReactElement {
   
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
   const [scrollPosition, setScrollPosition] = useState(0)
@@ -203,7 +203,7 @@ export default function InfiniteScrollPagination<T = any>({
   // Render empty state
   if (state.items.length === 0 && !state.isLoading) {
     if (renderEmpty) {
-      return renderEmpty()
+      return <>{renderEmpty()}</>
     }
     
     return (
@@ -224,7 +224,7 @@ export default function InfiniteScrollPagination<T = any>({
   // Render error state
   if (state.error && !state.isLoading) {
     if (renderError) {
-      return renderError(state.error, handleRetry)
+      return <>{renderError(state.error, handleRetry)}</>
     }
     
     return (

@@ -148,7 +148,7 @@ class MemoryManager {
     let totalCacheMemory = 0
     
     this.cacheManagers.forEach(cacheManager => {
-      const stats = cacheManager.getCacheStats()
+      const stats = cacheManager.getStats()
       totalCacheMemory += stats.memoryUsage
     })
     
@@ -243,7 +243,7 @@ class MemoryManager {
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
     
     this.cacheManagers.forEach(cacheManager => {
-      const stats = cacheManager.getCacheStats()
+      const stats = cacheManager.getStats()
       // This would need to be implemented in PaginationCacheManager
       // cacheManager.clearOldEntries(fiveMinutesAgo)
     })
@@ -252,8 +252,8 @@ class MemoryManager {
   // Reduce cache size
   private reduceCacheSize() {
     this.cacheManagers.forEach(cacheManager => {
-      const stats = cacheManager.getCacheStats()
-      const newMaxSize = Math.floor(stats.maxSize * 0.5)
+      const stats = cacheManager.getStats()
+      const newMaxSize = Math.floor(stats.size * 0.5)
       // This would need to be implemented in PaginationCacheManager
       // cacheManager.setMaxSize(newMaxSize)
     })

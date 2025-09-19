@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { PreloadPaginationHook } from '@/lib/types/pagination'
-import { PreloadPagination } from './PreloadPagination'
-import { InfiniteScrollPagination } from './InfiniteScrollPagination'
-import { MobilePagination } from './MobilePagination'
-import { EnhancedPagination } from './EnhancedPagination'
+import PreloadPagination from './PreloadPagination'
+import InfiniteScrollPagination from './InfiniteScrollPagination'
+import MobilePagination from './MobilePagination'
+import EnhancedPagination from './EnhancedPagination'
 
 interface ResponsivePaginationManagerProps<T = any> {
   // Pagination state
@@ -165,7 +165,14 @@ export default function ResponsivePaginationManager<T = any>({
   
   // Get infinite scroll props
   const getInfiniteScrollProps = () => ({
-    fetchData: pagination.actions.fetchData,
+    fetchData: async (page: number) => {
+      await pagination.actions.refreshPage(page)
+      return {
+        data: pagination.currentItems,
+        totalItems: pagination.state.totalItems,
+        totalPages: pagination.state.totalPages
+      }
+    },
     config: {
       itemsPerPage: pagination.state.itemsPerPage,
       preloadPages: 2,
@@ -182,12 +189,12 @@ export default function ResponsivePaginationManager<T = any>({
     showScrollToTop: true,
     className,
     renderItem,
-    renderLoadMore,
-    renderEmpty,
-    renderError,
+    renderLoadMore: renderLoadMore ? () => <>{renderLoadMore()}</> : undefined,
+    renderEmpty: renderEmpty ? () => <>{renderEmpty()}</> : undefined,
+    renderError: renderError ? (error: string, retry: () => void) => <>{renderError(error, retry)}</> : undefined,
     onLoadMore,
-    onError: pagination.actions.onError,
-    onSuccess: pagination.actions.onSuccess,
+    onError: pagination.actions.refreshAll,
+    onSuccess: pagination.actions.refreshAll,
     onItemClick,
     dependencies
   })

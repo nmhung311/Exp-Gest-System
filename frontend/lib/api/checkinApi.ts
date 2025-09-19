@@ -1,7 +1,7 @@
 // Check-in API functions for preload pagination
 // Tối ưu API calls cho check-in page
 
-import { api } from '@/lib/api'
+import { api, apiCall } from '@/lib/api'
 import { Guest } from '@/lib/types/guest'
 
 export interface CheckinApiResponse {
@@ -41,7 +41,7 @@ export async function fetchCheckedInGuestsPage({
       params.append('event_id', eventFilter)
     }
     
-    const response = await api.getCheckedInGuests(`?${params.toString()}`)
+    const response = await api.getGuestsCheckedIn()
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -103,7 +103,7 @@ export async function getCheckinStats(eventFilter?: string): Promise<{
   recentCheckins: Guest[]
 }> {
   try {
-    const response = await api.getCheckedInGuests()
+    const response = await api.getGuestsCheckedIn()
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -155,7 +155,7 @@ export async function checkinGuest(guestId: number, method: 'qr' | 'manual' = 'm
   checkinTime: string
 }> {
   try {
-    const response = await api.checkinGuest(guestId, { method })
+    const response = await api.checkinGuest({ guest_id: guestId, method })
     
     if (!response.ok) {
       const errorData = await response.json()
@@ -267,7 +267,7 @@ export async function getCheckinHistory(guestId: number): Promise<{
   }>
 }> {
   try {
-    const response = await api.getCheckinHistory(guestId)
+    const response = await apiCall(`/api/checkin?guest_id=${guestId}`)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -291,9 +291,15 @@ export async function exportCheckedInGuests(
 ): Promise<void> {
   try {
     if (format === 'excel') {
-      await api.exportGuestsExcel(guests)
+      await apiCall('/api/guests/export-excel', {
+        method: 'POST',
+        body: JSON.stringify({ guests })
+      })
     } else {
-      await api.exportGuestsCSV(guests)
+      await apiCall('/api/guests/export-csv', {
+        method: 'POST',
+        body: JSON.stringify({ guests })
+      })
     }
   } catch (error) {
     console.error('Error exporting checked-in guests:', error)
@@ -338,7 +344,7 @@ export async function getGuestQRCode(guestId: number): Promise<{
   inviteUrl: string
 }> {
   try {
-    const response = await api.getGuestQR(guestId)
+    const response = await api.getGuestQR(guestId.toString())
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

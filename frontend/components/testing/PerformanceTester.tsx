@@ -87,7 +87,7 @@ export default function PerformanceTester({
               duration,
               success: true,
               metrics: {
-                cacheHitRate: cache.getCacheStats().hitRate
+                cacheHitRate: cache.getStats().hitRate
               },
               timestamp: Date.now()
             }
@@ -124,7 +124,7 @@ export default function PerformanceTester({
               duration,
               success: firstEntry === undefined && lastEntry !== undefined,
               metrics: {
-                cacheSize: cache.getCacheStats().size
+                cacheSize: cache.getStats().size
               },
               timestamp: Date.now()
             }
@@ -351,7 +351,7 @@ export default function PerformanceTester({
             }
             
             // Get final stats
-            const cacheStats = cache.getCacheStats()
+            const cacheStats = cache.getStats()
             const memoryStats = memoryManager.getMemoryStats()
             
             const endTime = performance.now()

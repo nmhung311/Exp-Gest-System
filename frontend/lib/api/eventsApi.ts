@@ -1,7 +1,7 @@
 // Events API functions for preload pagination
 // Tối ưu API calls cho events page
 
-import { api } from '@/lib/api'
+import { api, apiCall } from '@/lib/api'
 import { Event } from '@/lib/types/guest'
 
 export interface EventsApiResponse {
@@ -38,7 +38,7 @@ export async function fetchEventsPage({
       date: dateFilter
     })
     
-    const response = await api.getEvents(`?${params.toString()}`)
+    const response = await api.getEvents()
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -170,7 +170,7 @@ export async function updateEvent(eventId: number, eventData: Partial<Event>): P
   message: string
 }> {
   try {
-    const response = await api.updateEvent(eventId, eventData)
+    const response = await api.updateEvent(eventId.toString(), eventData)
     
     if (!response.ok) {
       const errorData = await response.json()
@@ -196,7 +196,7 @@ export async function deleteEvent(eventId: number): Promise<{
   message: string
 }> {
   try {
-    const response = await api.deleteEvent(eventId)
+    const response = await api.deleteEvent(eventId.toString())
     
     if (!response.ok) {
       const errorData = await response.json()
@@ -218,7 +218,7 @@ export async function deleteEvent(eventId: number): Promise<{
 // Get event by ID
 export async function getEventById(eventId: number): Promise<Event> {
   try {
-    const response = await api.getEventById(eventId)
+    const response = await apiCall(`/api/events/${eventId}`)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -244,7 +244,7 @@ export async function getEventGuests(eventId: number): Promise<{
   }
 }> {
   try {
-    const response = await api.getEventGuests(eventId)
+    const response = await apiCall(`/api/guests?event_id=${eventId}`)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -275,7 +275,10 @@ export async function updateEventStatus(eventId: number, status: Event['status']
   message: string
 }> {
   try {
-    const response = await api.updateEventStatus(eventId, status)
+    const response = await apiCall(`/api/events/${eventId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    })
     
     if (!response.ok) {
       const errorData = await response.json()
@@ -302,9 +305,15 @@ export async function exportEvents(
 ): Promise<void> {
   try {
     if (format === 'excel') {
-      await api.exportEventsExcel(events)
+      await apiCall('/api/events/export-excel', {
+        method: 'POST',
+        body: JSON.stringify({ events })
+      })
     } else {
-      await api.exportEventsCSV(events)
+      await apiCall('/api/events/export-csv', {
+        method: 'POST',
+        body: JSON.stringify({ events })
+      })
     }
   } catch (error) {
     console.error('Error exporting events:', error)
@@ -334,7 +343,7 @@ export async function getEventsByDateRange(
   endDate: string
 ): Promise<Event[]> {
   try {
-    const response = await api.getEventsByDateRange(startDate, endDate)
+    const response = await apiCall(`/api/events?start_date=${startDate}&end_date=${endDate}`)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -355,7 +364,9 @@ export async function duplicateEvent(eventId: number): Promise<{
   message: string
 }> {
   try {
-    const response = await api.duplicateEvent(eventId)
+    const response = await apiCall(`/api/events/${eventId}/duplicate`, {
+      method: 'POST'
+    })
     
     if (!response.ok) {
       const errorData = await response.json()

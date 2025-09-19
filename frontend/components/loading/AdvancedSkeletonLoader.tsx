@@ -9,6 +9,7 @@ interface SkeletonProps {
   duration?: number
   delay?: number
   children?: React.ReactNode
+  style?: React.CSSProperties
 }
 
 // Base Skeleton Component
@@ -107,6 +108,7 @@ export const CardSkeleton: React.FC<{
   lines?: number
   className?: string
   variant?: SkeletonProps['variant']
+  delay?: number
 }> = ({ 
   showAvatar = true, 
   showActions = true, 

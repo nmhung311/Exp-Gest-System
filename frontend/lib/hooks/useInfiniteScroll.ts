@@ -97,6 +97,7 @@ export function useInfiniteScroll<T = any>({
     itemsPerPage: 10,
     preloadPages: 2,
     cacheSize: 20,
+    enableInfiniteScroll: true,
     enableBackgroundPreload: true,
     preloadDelay: 300,
     ...config
@@ -137,8 +138,8 @@ export function useInfiniteScroll<T = any>({
     if (cachedData) {
       setState(prev => ({
         ...prev,
-        items: page === 1 ? cachedData : [...prev.allItems, ...cachedData],
-        allItems: page === 1 ? cachedData : [...prev.allItems, ...cachedData],
+        items: page === 1 ? cachedData.data : [...prev.allItems, ...cachedData.data],
+        allItems: page === 1 ? cachedData.data : [...prev.allItems, ...cachedData.data],
         currentPage: page,
         loadedPages: new Set([...prev.loadedPages, page]),
         hasMore: page < prev.totalPages
@@ -225,7 +226,7 @@ export function useInfiniteScroll<T = any>({
         setState(prev => ({
           ...prev,
           currentPage: page,
-          items: cachedData
+          items: cachedData.data
         }))
         return
       }

@@ -7,7 +7,7 @@ import { fetchEventsPage, EventsApiParams } from '@/lib/api/eventsApi'
 import { Event } from '@/lib/types/guest'
 import { PreloadPaginationConfig } from '@/lib/types/pagination'
 
-interface EventsFilters {
+export interface EventsFilters {
   searchTerm: string
   statusFilter: 'all' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   dateFilter: 'all' | 'today' | 'week' | 'month' | 'year'

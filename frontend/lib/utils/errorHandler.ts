@@ -230,6 +230,7 @@ class ErrorHandler {
   // Get max retries for error
   private getMaxRetries(error: Error): number {
     const strategy = this.config.retryStrategies.find(s => s.condition({
+      id: Date.now().toString(),
       type: this.categorizeError(error),
       message: error.message,
       context: {} as ErrorContext,

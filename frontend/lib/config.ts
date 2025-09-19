@@ -9,7 +9,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  (isDevelopment ? 'http://192.168.1.135:3000' : 'http://192.168.1.135:3000')
+  (isDevelopment ? 'http://192.168.1.135:5008' : 'http://192.168.1.135:5008')
 
 // API Endpoints - Tất cả sử dụng Next.js API routes
 export const API_ENDPOINTS = {

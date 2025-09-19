@@ -100,7 +100,9 @@ export default function PaginationSettings({
       itemsPerPage: 10,
       preloadPages: 2,
       cacheSize: 8,
-      enableInfiniteScroll: false
+      enableInfiniteScroll: false,
+      enableBackgroundPreload: true,
+      preloadDelay: 1000
     }
     setSelectedPreset('')
     handleConfigChange(defaultConfig)

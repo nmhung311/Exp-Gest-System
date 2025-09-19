@@ -7,7 +7,7 @@ import { fetchCheckedInGuestsPage, CheckinApiParams } from '@/lib/api/checkinApi
 import { Guest } from '@/lib/types/guest'
 import { PreloadPaginationConfig } from '@/lib/types/pagination'
 
-interface CheckinFilters {
+export interface CheckinFilters {
   searchTerm: string
   statusFilter: 'all' | 'checked_in' | 'not_checked_in'
   eventFilter: string

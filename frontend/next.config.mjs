@@ -1,6 +1,8 @@
 export default /** @type {import('next').NextConfig} */ ({
   reactStrictMode: true,
   output: 'standalone',
+  trailingSlash: false,
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
     remotePatterns: [
       {
@@ -11,10 +13,18 @@ export default /** @type {import('next').NextConfig} */ ({
       },
       {
         protocol: 'http',
-        hostname: '27.72.246.67',
-        port: '9009',
+        hostname: '192.168.1.135',
+        port: '5008',
         pathname: '/api/**',
       },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/dashboard/:path*',
+        destination: '/:path*',
+      },
+    ]
   },
 });
