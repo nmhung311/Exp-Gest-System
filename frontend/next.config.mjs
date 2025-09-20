@@ -25,6 +25,10 @@ export default /** @type {import('next').NextConfig} */ ({
         source: '/dashboard/:path*',
         destination: '/:path*',
       },
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:5008/api/:path*',
+      },
     ]
   },
 });

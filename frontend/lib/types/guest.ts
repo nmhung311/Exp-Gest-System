@@ -5,8 +5,8 @@ export interface Guest {
   id: number
   name: string
   title?: string
-  position?: string
-  company?: string
+  role?: string
+  organization?: string
   tag?: string
   email?: string
   phone?: string
@@ -15,18 +15,20 @@ export interface Guest {
   created_at: string
   event_id?: number
   event_name?: string
+  event_content?: string
 }
 
 export interface GuestForm {
   name: string
   title: string
-  position: string
-  company: string
+  role: string
+  organization: string
   tag: string
   email: string
   phone: string
   rsvp_status: 'pending' | 'accepted' | 'declined'
   checkin_status: 'not_arrived' | 'arrived' | 'checked_in'
+  event_content: string
 }
 
 export interface GuestFilters {
@@ -92,7 +94,7 @@ export interface BulkOperationResult {
 // Search and filter types
 export interface GuestSearchParams {
   query: string
-  fields: ('name' | 'email' | 'phone' | 'position' | 'company' | 'tag')[]
+  fields: ('name' | 'email' | 'phone' | 'role' | 'organization' | 'tag')[]
   caseSensitive?: boolean
 }
 
@@ -176,8 +178,8 @@ export interface GuestFormErrors {
   name?: string
   email?: string
   phone?: string
-  position?: string
-  company?: string
+  role?: string
+  organization?: string
   tag?: string
 }
 
@@ -239,13 +241,14 @@ export interface GuestStatistics {
 export const DEFAULT_GUEST_FORM: GuestForm = {
   name: '',
   title: '',
-  position: '',
-  company: '',
+  role: '',
+  organization: '',
   tag: '',
   email: '',
   phone: '',
   rsvp_status: 'pending',
-  checkin_status: 'not_arrived'
+  checkin_status: 'not_arrived',
+  event_content: ''
 }
 
 export const DEFAULT_GUEST_FILTERS: GuestFilters = {

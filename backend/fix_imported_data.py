@@ -16,17 +16,17 @@ def fix_imported_guest_data():
     
     with app.app_context():
         try:
-            # Lấy guests có position hoặc company = "None"
+            # Lấy guests có position hoặc company = "None" hoặc None
             guests_with_none_position = Guest.query.filter(
-                Guest.position == "None"
+                (Guest.position == "None") | (Guest.position.is_(None)) | (Guest.position == "")
             ).all()
             
             guests_with_none_company = Guest.query.filter(
-                Guest.company == "None"
+                (Guest.company == "None") | (Guest.company.is_(None)) | (Guest.company == "")
             ).all()
             
-            print(f"Guests có position = 'None': {len(guests_with_none_position)}")
-            print(f"Guests có company = 'None': {len(guests_with_none_company)}")
+            print(f"Guests có position rỗng: {len(guests_with_none_position)}")
+            print(f"Guests có company rỗng: {len(guests_with_none_company)}")
             
             # Dữ liệu mapping dựa trên tag
             position_mapping = {

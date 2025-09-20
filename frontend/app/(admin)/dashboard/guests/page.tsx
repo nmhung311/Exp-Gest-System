@@ -10,8 +10,8 @@ interface Guest {
   id: number
   name: string
   title?: string
-  position?: string
-  company?: string
+  role?: string
+  organization?: string
   tag?: string
   email?: string
   phone?: string
@@ -20,6 +20,7 @@ interface Guest {
   created_at: string
   event_id?: number
   event_name?: string
+  event_content?: string
 }
 
 interface Event {
@@ -57,6 +58,8 @@ export default function GuestsPage(){
   const [result, setResult] = useState<string>("")
   const [importType, setImportType] = useState<"json" | "csv">("json")
   const [isImporting, setIsImporting] = useState(false)
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false)
+  const [backgroundProgress, setBackgroundProgress] = useState({ current: 0, total: 0 })
   const [selectedJsonFile, setSelectedJsonFile] = useState<string>("")
   const [selectedCsvFile, setSelectedCsvFile] = useState<string>("")
   const [guests, setGuests] = useState<Guest[]>([])
@@ -199,14 +202,15 @@ export default function GuestsPage(){
   const [guestForm, setGuestForm] = useState({
     name: "",
     title: "",
-    position: "",
-    company: "",
+    role: "",
+    organization: "",
     tag: "",
     email: "",
     phone: "",
     event_id: "",
     checkin_status: "not_arrived",
-    rsvp_status: "pending"
+    rsvp_status: "pending",
+    event_content: ""
   })
   const [currentPage, setCurrentPage] = useState(1)
   const guestsPerPage = 6
@@ -589,14 +593,15 @@ export default function GuestsPage(){
       setGuestForm({
         name: guest.name || "",
         title: guest.title || "",
-        position: guest.position || "",
-        company: guest.company || "",
+        role: guest.role || "",
+        organization: guest.organization || "",
         tag: guest.tag || "",
         email: guest.email || "",
         phone: guest.phone || "",
         event_id: guest.event_id?.toString() || "",
         checkin_status: guest.checkin_status, // Sử dụng trạng thái thực tế của khách
-        rsvp_status: guest.rsvp_status || "pending"
+        rsvp_status: guest.rsvp_status || "pending",
+        event_content: guest.event_content || ""
       })
     } else {
       setEditingGuest(null)
@@ -606,14 +611,15 @@ export default function GuestsPage(){
       setGuestForm({
         name: "",
         title: "",
-        position: "",
-        company: "",
+        role: "",
+        organization: "",
         tag: "",
         email: "",
         phone: "",
         event_id: defaultEventId,
         checkin_status: "not_arrived", // Mặc định chưa đến khi thêm mới
-        rsvp_status: "pending" // Mặc định chưa phản hồi khi thêm mới
+        rsvp_status: "pending", // Mặc định chưa phản hồi khi thêm mới
+        event_content: ""
       })
     }
     setShowGuestModal(true)
@@ -684,14 +690,15 @@ export default function GuestsPage(){
       const guestData = {
         name: guestForm.name,
         title: guestForm.title,
-        role: guestForm.position,  // Backend maps role to position
-        organization: guestForm.company,  // Backend maps organization to company
+        role: guestForm.role,
+        organization: guestForm.organization,
         tag: guestForm.tag,
         email: guestForm.email,
         phone: guestForm.phone,
         event_id: eventId,
         checkin_status: guestForm.checkin_status,
-        rsvp_status: guestForm.rsvp_status
+        rsvp_status: guestForm.rsvp_status,
+        event_content: guestForm.event_content
       }
       
       // Xử lý trùng lặp chỉ khi thêm khách mới (không phải edit)
@@ -705,7 +712,7 @@ export default function GuestsPage(){
           // Hiển thị popup confirmation thay vì browser confirm
           showConfirm(
             "Khách mời trùng lặp",
-            `Đã có khách mời "${existingDuplicate.name}" từ "${existingDuplicate.company || 'N/A'}" trong hệ thống.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới không?`,
+            `Đã có khách mời "${existingDuplicate.name}" từ "${existingDuplicate.organization || 'N/A'}" trong hệ thống.\n\nBạn có muốn thay thế thông tin khách cũ bằng thông tin mới không?`,
             async () => {
               // Xóa khách cũ trước khi thêm khách mới
               const deleteSuccess = await deleteGuestSilent(existingDuplicate.id)
@@ -1082,7 +1089,45 @@ export default function GuestsPage(){
     return { duplicates, nonDuplicates }
   }
 
-  // Function để xử lý import với logic mới
+  // Function để load các trang còn lại trong background
+  async function loadRemainingPagesInBackground(eventId: number, totalPages: number) {
+    try {
+      setIsBackgroundLoading(true)
+      setBackgroundProgress({ current: 0, total: totalPages - 1 })
+      
+      const pagesToLoad = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+      
+      for (let i = 0; i < pagesToLoad.length; i++) {
+        const page = pagesToLoad[i]
+        
+        try {
+          const response = await fetch(`/api/guests?page=${page}&itemsPerPage=6&eventFilter=${eventId}`)
+          if (response.ok) {
+            const pageData = await response.json()
+            // Cập nhật state với dữ liệu mới
+            setGuests(prev => [...prev, ...pageData.guests])
+          }
+          
+          // Cập nhật progress
+          setBackgroundProgress({ current: i + 1, total: pagesToLoad.length })
+          
+          // Delay nhỏ để không overload server
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (error) {
+          console.error(`Error loading page ${page}:`, error)
+          // Tiếp tục load trang tiếp theo
+          continue
+        }
+      }
+    } catch (error) {
+      console.error('Error in background loading:', error)
+    } finally {
+      setIsBackgroundLoading(false)
+      setBackgroundProgress({ current: 0, total: 0 })
+    }
+  }
+
+  // Function để xử lý import với logic mới - OPTIMIZED VERSION
   async function processImportWithDuplicates(
     newGuests: Guest[], 
     eventId: number, 
@@ -1095,6 +1140,28 @@ export default function GuestsPage(){
       let successCount = 0
       let errorCount = 0
       const errors: string[] = []
+
+      // Tối ưu hóa: Load trang đầu tiên ngay lập tức
+      if (actionType === 'merge_and_import') {
+        // Bước 1: Load trang đầu tiên để hiển thị ngay
+        try {
+          const firstPageResponse = await fetch(`/api/guests?page=1&itemsPerPage=6&eventFilter=${eventId}`)
+          if (firstPageResponse.ok) {
+            const firstPageData = await firstPageResponse.json()
+            setGuests(firstPageData.guests)
+            // Tắt popup import ngay sau khi load xong trang đầu
+            setShowDuplicateModal(false)
+            setShowDuplicateConfirmModal(false)
+            
+            // Bước 2: Chạy ngầm để load các trang còn lại
+            if (firstPageData.totalPages > 1) {
+              loadRemainingPagesInBackground(eventId, firstPageData.totalPages)
+            }
+          }
+        } catch (error) {
+          console.error('Error loading first page:', error)
+        }
+      }
 
       // 0. Kiểm tra giới hạn khách trước khi xử lý
       const currentEvent = events.find(e => e.id === eventId)
@@ -1133,6 +1200,8 @@ export default function GuestsPage(){
         try {
           const guestData = {
             ...guest,
+            position: guest.role,
+            company: guest.organization,
             event_id: eventId,
             checkin_status: 'not_arrived',
             rsvp_status: 'pending'
@@ -1164,6 +1233,8 @@ export default function GuestsPage(){
             try {
               const guestData = {
                 ...duplicate.newGuest,
+                position: duplicate.newGuest.role,
+                company: duplicate.newGuest.organization,
                 event_id: eventId,
                 checkin_status: 'not_arrived',
                 rsvp_status: 'pending'
@@ -1185,6 +1256,8 @@ export default function GuestsPage(){
             try {
               const updatedGuestData = {
                 ...duplicate.newGuest,
+                position: duplicate.newGuest.role,
+                company: duplicate.newGuest.organization,
                 id: duplicate.existingGuest.id, // Giữ ID của khách hiện có
                 event_id: eventId,
                 checkin_status: duplicate.existingGuest.checkin_status, // Giữ trạng thái check-in
@@ -1349,8 +1422,8 @@ export default function GuestsPage(){
           id: guest.id || 0, // Temporary ID, will be assigned by backend
           name: guest.name || '',
           title: guest.title || '',
-          position: guest.position || '',
-          company: guest.company || '',
+          role: guest.role || '',
+          organization: guest.organization || '',
           tag: guest.tag || '',
           email: guest.email || '',
           phone: guest.phone || '',
@@ -1394,8 +1467,8 @@ export default function GuestsPage(){
           id: 0, // Temporary ID, will be assigned by backend
           name: guest.name || '',
           title: guest.title || '',
-          position: guest.position || guest.role || '',
-          company: guest.company || guest.organization || '',
+          role: guest.role || '',
+          organization: guest.organization || '',
           tag: guest.tag || '',
           email: guest.email || '',
           phone: guest.phone || '',
@@ -1439,10 +1512,17 @@ export default function GuestsPage(){
 
       // No duplicates, proceed with normal import
       if (importType === "json") {
+        // Map role/organization to position/company for backend
+        const mappedGuests = newGuests.map(guest => ({
+          ...guest,
+          position: guest.role,
+          company: guest.organization
+        }))
+        
         const res = await fetch("/api/guests/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newGuests)
+          body: JSON.stringify(mappedGuests)
         })
         
         if (!res.ok) {
@@ -1538,15 +1618,15 @@ export default function GuestsPage(){
     const filtered = guests.filter(guest => {
       const matchesSearch = guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           guest.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           guest.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           guest.organization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.phone?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesStatus = statusFilter === "all" || guest.rsvp_status === statusFilter
       const matchesTag = tagFilter === "all" || guest.tag === tagFilter
-      const matchesOrganization = organizationFilter === "all" || guest.company === organizationFilter
-      const matchesRole = roleFilter === "all" || guest.position === roleFilter
+      const matchesOrganization = organizationFilter === "all" || guest.organization === organizationFilter
+      const matchesRole = roleFilter === "all" || guest.role === roleFilter
       // Hiển thị khách của sự kiện được chọn, hoặc tất cả khách nếu không chọn sự kiện
       const matchesEvent = !eventFilter || eventFilter === "" || guest.event_id?.toString() === eventFilter
       
@@ -1613,7 +1693,7 @@ export default function GuestsPage(){
   }, [guests])
 
   const organizationFilterOptions = useMemo(() => {
-    const uniqueOrgs = [...new Set(guests.map(guest => guest.company).filter(Boolean))]
+    const uniqueOrgs = [...new Set(guests.map(guest => guest.organization).filter(Boolean))]
     return [
       { value: "all", label: "Tất cả tổ chức" },
       ...uniqueOrgs.map(org => ({ value: org, label: org }))
@@ -1621,7 +1701,7 @@ export default function GuestsPage(){
   }, [guests])
 
   const roleFilterOptions = useMemo(() => {
-    const uniqueRoles = [...new Set(guests.map(guest => guest.position).filter(Boolean))]
+    const uniqueRoles = [...new Set(guests.map(guest => guest.role).filter(Boolean))]
     return [
       { value: "all", label: "Tất cả vai trò" },
       ...uniqueRoles.map(role => ({ value: role, label: role }))
@@ -1750,8 +1830,8 @@ export default function GuestsPage(){
       index + 1,
       guest.title || '',
       guest.name,
-      guest.position || '',
-      guest.company || '',
+      guest.role || '',
+      guest.organization || '',
       guest.tag || '',
       guest.email || '',
       guest.phone || '',
@@ -1833,8 +1913,8 @@ export default function GuestsPage(){
       index + 1,
       guest.title || '',
       guest.name,
-      guest.position || '',
-      guest.company || '',
+      guest.role || '',
+      guest.organization || '',
       guest.tag || '',
       guest.email || '',
       guest.phone || '',
@@ -1901,6 +1981,21 @@ export default function GuestsPage(){
 
   return (
     <div className="space-y-6 px-1.5">
+      {/* Background Loading Progress Indicator */}
+      {isBackgroundLoading && (
+        <div className="fixed top-4 right-4 z-50 bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+            <div className="text-sm text-white">
+              <div>Đang tải thêm dữ liệu...</div>
+              <div className="text-xs text-gray-400">
+                {backgroundProgress.current} / {backgroundProgress.total} trang
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
@@ -2447,8 +2542,8 @@ export default function GuestsPage(){
                         <div className="text-white/60 text-xs">{guest.email}</div>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-white/80">{guest.position || '-'}</td>
-                    <td className="px-4 py-4 text-white/80">{guest.company || '-'}</td>
+                    <td className="px-4 py-4 text-white/80">{guest.role || '-'}</td>
+                    <td className="px-4 py-4 text-white/80">{guest.organization || '-'}</td>
                     <td className="px-4 py-4">
                       {guest.tag ? (
                         <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
@@ -2603,10 +2698,10 @@ export default function GuestsPage(){
                       <span className="text-white/60">Danh xưng:</span> {guest.title || '-'}
                     </div>
                     <div>
-                      <span className="text-white/60">Vai trò:</span> {guest.position || '-'}
+                      <span className="text-white/60">Vai trò:</span> {guest.role || '-'}
                     </div>
                     <div>
-                      <span className="text-white/60">Tổ chức:</span> {guest.company || '-'}
+                      <span className="text-white/60">Tổ chức:</span> {guest.organization || '-'}
                     </div>
                     <div>
                       <span className="text-white/60">Tag:</span> {guest.tag || '-'}
@@ -2846,7 +2941,7 @@ export default function GuestsPage(){
                     className="w-full h-40 bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 font-mono text-sm" 
                     value={text} 
                     onChange={e=>setText(e.target.value)}
-                    placeholder='[{"title":"Mr","name":"Tên khách","position":"CEO","company":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
+                    placeholder='[{"title":"Mr","name":"Tên khách","role":"CEO","organization":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
                   />
                 </div>
               )}
@@ -2888,7 +2983,7 @@ export default function GuestsPage(){
                   </div>
                   <div className="text-xs text-white/60">
                     <p className="mb-2">Mẫu CSV:</p>
-                    <pre className="bg-black/40 p-3 rounded-lg text-white/80 overflow-x-auto">title,name,position,company,tag,email,phone
+                    <pre className="bg-black/40 p-3 rounded-lg text-white/80 overflow-x-auto">title,name,role,organization,tag,email,phone
 Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   </div>
                 </div>
@@ -3045,8 +3140,8 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                 <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
                 <input
                   type="text"
-                  value={guestForm.position}
-                  onChange={(e) => updateGuestForm('position', e.target.value)}
+                  value={guestForm.role}
+                  onChange={(e) => updateGuestForm('role', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="CEO, Manager, etc."
                 />
@@ -3055,8 +3150,8 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                 <label className="block text-sm font-medium text-white/80 mb-2">Tổ chức</label>
                 <input
                   type="text"
-                  value={guestForm.company}
-                  onChange={(e) => updateGuestForm('company', e.target.value)}
+                  value={guestForm.organization}
+                  onChange={(e) => updateGuestForm('organization', e.target.value)}
                   className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
                   placeholder="Tên công ty hoặc trường học"
                 />
@@ -3081,6 +3176,28 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   placeholder="0900000000"
                 />
               </div>
+            </div>
+
+            {/* Event Content */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-white/80 mb-2">Nội dung sự kiện</label>
+              <textarea
+                value={guestForm.event_content}
+                onChange={(e) => {
+                  updateGuestForm('event_content', e.target.value)
+                  // Auto resize textarea
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
+                onInput={(e) => {
+                  // Auto resize on input
+                  e.currentTarget.style.height = 'auto'
+                  e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
+                }}
+                className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200 resize-none min-h-[80px] overflow-hidden leading-relaxed"
+                placeholder="Nhập nội dung sự kiện cho khách mời này..."
+                rows={3}
+              />
             </div>
 
             {/* RSVP Status and Check-in Status */}
@@ -3411,8 +3528,8 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                                 <h4 className="font-medium text-white mb-1">Khách mới (từ file)</h4>
                                 <div className="text-sm text-white/80">
                                   <div><span className="font-medium">Tên:</span> {newGuest.title} {newGuest.name}</div>
-                                  <div><span className="font-medium">Vai trò:</span> {newGuest.position || 'N/A'}</div>
-                                  <div><span className="font-medium">Tổ chức:</span> {newGuest.company || 'N/A'}</div>
+                                  <div><span className="font-medium">Vai trò:</span> {newGuest.role || 'N/A'}</div>
+                                  <div><span className="font-medium">Tổ chức:</span> {newGuest.organization || 'N/A'}</div>
                                   <div><span className="font-medium">Tag:</span> {newGuest.tag || 'N/A'}</div>
                                   {newGuest.email && <div><span className="font-medium">Email:</span> {newGuest.email}</div>}
                                   {newGuest.phone && <div><span className="font-medium">SĐT:</span> {newGuest.phone}</div>}
@@ -3423,8 +3540,8 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                                 <h4 className="font-medium text-white mb-1">Khách hiện có</h4>
                                 <div className="text-sm text-white/80">
                                   <div><span className="font-medium">Tên:</span> {existingGuest.title} {existingGuest.name}</div>
-                                  <div><span className="font-medium">Vai trò:</span> {existingGuest.position || 'N/A'}</div>
-                                  <div><span className="font-medium">Tổ chức:</span> {existingGuest.company || 'N/A'}</div>
+                                  <div><span className="font-medium">Vai trò:</span> {existingGuest.role || 'N/A'}</div>
+                                  <div><span className="font-medium">Tổ chức:</span> {existingGuest.organization || 'N/A'}</div>
                                   <div><span className="font-medium">Tag:</span> {existingGuest.tag || 'N/A'}</div>
                                   {existingGuest.email && <div><span className="font-medium">Email:</span> {existingGuest.email}</div>}
                                   {existingGuest.phone && <div><span className="font-medium">SĐT:</span> {existingGuest.phone}</div>}

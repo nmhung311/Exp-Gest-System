@@ -32,6 +32,7 @@ interface GuestData {
   is_vip: boolean;
   rsvp_status: 'pending' | 'accepted' | 'declined';
   checkin_status: 'not_arrived' | 'checked_in' | 'checked_out' | 'arrived';
+  event_content?: string;
 }
 
 interface InviteData {
@@ -329,7 +330,8 @@ const InvitePage: React.FC = () => {
               group_tag: 'Hachitech',
               is_vip: false,
               rsvp_status: 'pending',
-              checkin_status: 'not_arrived'
+              checkin_status: 'not_arrived',
+              event_content: 'Kính gửi anh Bùi Hiếu,\n\nTrân trọng mời anh tham dự sự kiện kỷ niệm 15 năm thành lập công ty. Sự hiện diện của anh sẽ là niềm vinh dự lớn của chúng tôi.\n\nTrân trọng,\nBan tổ chức'
             },
             token: token
           }
@@ -609,20 +611,71 @@ const InvitePage: React.FC = () => {
           .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
           .header { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 40px; }
           .header-top { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-          .logo-container { width: 60px; height: 60px; margin-right: 15px; }
+          .logo-container { width: 45px; height: 45px; margin-right: 8px; }
           .logo-image { width: 100%; height: 100%; object-fit: contain; }
           .company-info { display: flex; flex-direction: column; align-items: flex-start; }
-          .company-name { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+          .company-name { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 5px; line-height: 1.1; }
           .company-slogan { font-size: 18px; color: #8B5CF6; margin-bottom: 5px; }
           .company-full { font-size: 16px; color: #94A3B8; }
-          .company-description { font-size: 14px; color: #94A3B8; text-align: center; margin-top: 10px; font-style: italic; }
+          .company-description { font-size: 12px; color: #94A3B8; text-align: center; margin-top: 10px; font-style: italic; }
+          .event-title-main { 
+            font-size: 32px; 
+            font-weight: 900; 
+            color: #ffffff; 
+            text-align: center; 
+            margin-top: 8px; 
+            margin-bottom: 6px;
+            text-shadow: 
+              0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              0 0 10px rgba(139, 92, 246, 0.8),
+              0 0 20px rgba(59, 130, 246, 0.6),
+              0 0 30px rgba(6, 182, 212, 0.4),
+              0 0 40px rgba(139, 92, 246, 0.2);
+            letter-spacing: 1px;
+            filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
+          }
+          .slogan-1 { 
+            font-size: 16px; 
+            color:rgb(201, 202, 204); 
+            text-align: center; 
+            margin-bottom: 16px; 
+            font-weight: 500;
+          }
+          .slogan-2 { 
+            font-size: 14px; 
+            color: #94A3B8; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            font-style: italic;
+          }
           .main-title { text-align: center; margin-bottom: 50px; }
           .event-title { font-size: 48px; font-weight: 700; color: #fff; margin-bottom: 10px; }
           .title-underline { width: 200px; height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); margin: 0 auto; border-radius: 2px; }
-          .invitation-card { background: rgba(255,255,255,0.05); backdrop-blur-sm; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; margin-bottom: 30px; }
+          .invitation-card { 
+            background: rgba(255,255,255,0.08); 
+            backdrop-filter: blur(8px); 
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 20px; 
+            padding: 40px; 
+            margin-bottom: 30px; 
+          }
           .greeting { font-size: 24px; color: #fff; margin-bottom: 20px; }
+          .greeting-section {
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            margin-top: -20px;
+            position: relative;
+            width: fit-content;
+            margin-left: 0;
+            margin-right: auto;
+            text-align: left;
+          }
           @media (max-width: 768px) {
             .greeting { font-size: 18px; }
+            .greeting-section::before { width: 4px; left: 12px; top: 10px; bottom: 10px; background: linear-gradient(180deg, #60A5FA, #A78BFA); box-shadow: 0 0 10px rgba(96, 165, 250, 0.6); }
           }
           .guest-info { font-size: 18px; color: #8B5CF6; margin-top: 8px; font-weight: 500; }
           .invitation-text { font-size: 18px; color: #94A3B8; margin-bottom: 20px; }
@@ -652,7 +705,14 @@ const InvitePage: React.FC = () => {
           .program-description { color: #fff; flex: 1; line-height: 1.2; }
           .additional-info { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
           .info-item { color: #94A3B8; margin-bottom: 8px; }
-            .rsvp-card { background: rgba(255,255,255,0.05); backdrop-blur-sm; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; text-align: center; }
+            .rsvp-card { 
+              background: rgba(255,255,255,0.08); 
+              backdrop-filter: blur(8px); 
+              border: 1px solid rgba(255,255,255,0.15); 
+              border-radius: 20px; 
+              padding: 30px; 
+              text-align: center; 
+            }
             .mobile-card.rsvp-card { padding: 25px; margin-bottom: 20px; }
           .rsvp-card-declined { 
             background: rgba(239, 68, 68, 0.1); 
@@ -1029,9 +1089,12 @@ const InvitePage: React.FC = () => {
             color: #ffffff;
           }
           @media (min-width: 769px) {
-            .logo-container { width: 120px; height: 120px; margin-right: 30px; }
-            .company-name { font-size: 36px; font-weight: 700; }
-            .company-description { font-size: 20px; }
+            .logo-container { width: 80px; height: 80px; margin-right: 20px; }
+            .company-name { font-size: 32px; font-weight: 700; }
+            .company-description { font-size: 16px; }
+            .event-title-main { font-size: 36px; }
+            .slogan-1 { font-size: 18px; }
+            .slogan-2 { font-size: 16px; }
             .header-top { margin-bottom: 15px; }
           }
           @media (max-width: 768px) {
@@ -1044,13 +1107,21 @@ const InvitePage: React.FC = () => {
             .guest-info { font-size: 16px; }
             .main-container { padding: 20px 15px; }
             
+            /* Mobile invitation message styling */
+            .invitation-message { 
+              color: #ffffff !important; 
+              font-size: 16px; 
+              line-height: 1.5;
+              text-align: left !important;
+            }
+            
             /* Mobile Card Layout */
             .invitation-card { display: none; }
             .mobile-cards { display: block; }
             .mobile-card { 
-              background: rgba(255,255,255,0.05); 
-              backdrop-blur-sm; 
-              border: 1px solid rgba(255,255,255,0.1); 
+              background: rgba(255,255,255,0.08); 
+              backdrop-filter: blur(8px); 
+              border: 1px solid rgba(255,255,255,0.15); 
               border-radius: 20px; 
               padding: 25px; 
               margin-bottom: 20px; 
@@ -1064,6 +1135,53 @@ const InvitePage: React.FC = () => {
               align-items: center; 
               gap: 10px;
               font-style: italic;
+            }
+            .greeting-section {
+              padding: 15px 25px; 
+              margin-bottom: 20px;
+              margin-top: -30px;
+              position: relative;
+              width: fit-content;
+              margin-left: 0;
+              margin-right: auto;
+              text-align: left;
+            }
+            .greeting-section::before {
+              content: '';
+              position: absolute;
+              left: 15px;
+              top: 8px;
+              bottom: 8px;
+              width: 4px;
+              background: linear-gradient(180deg,rgb(0, 115, 255),rgb(221, 28, 228));
+              border-radius: 2px;
+              box-shadow: 0 0 10px rgba(204, 222, 245, 0.6);
+            }
+            .greeting-title {
+              font-size: 16px; 
+              font-weight: 300; 
+              color: #fff; 
+              margin-bottom: 8px; 
+              display: flex; 
+              align-items: center; 
+              gap: 10px;
+              font-style: italic;
+              padding-left: 15px;
+            }
+            .guest-info-block {
+              padding-left: 15px;
+            }
+            .invitation-section {
+              background: rgba(255,255,255,0.08); 
+              backdrop-filter: blur(8px); 
+              border: 1px solid rgba(255,255,255,0.15); 
+              border-radius: 20px; 
+              padding: 20px; 
+              margin-bottom: 20px;
+              width: fit-content;
+              max-width: 100%;
+              margin-left: auto;
+              margin-right: auto;
             }
             .mobile-card-title svg { 
               width: 32px; 
@@ -1090,12 +1208,15 @@ const InvitePage: React.FC = () => {
             }
             .guest-card { text-align: center; }
             .guest-name { 
-              font-size: 20px; 
+              font-size: 30px; 
               color: #fff; 
               margin-bottom: 8px; 
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+            }
+            .guest-name.long-name { 
+              font-size: 25px; 
             }
             .guest-role { 
               font-size: 16px; 
@@ -1108,22 +1229,27 @@ const InvitePage: React.FC = () => {
             .role-bold {
               font-weight: 700;
             }
-            .guest-email, .guest-phone {
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              font-size: 16px;
-              color: #94A3B8;
-              margin-top: 8px;
+            .title-normal {
+              font-weight: 400;
+              font-size: 0.9em;
             }
-            .contact-icon {
-              width: 16px;
-              height: 16px;
-              color: #8B5CF6;
+            .title-normal.small-title {
+              font-size: 19px;
+            }
+            .name-bold {
+              font-weight: 700;
+              text-shadow: 
+                0.3px 0.3px 0 rgba(0, 0, 0, 0.3),
+                -0.3px -0.3px 0 rgba(0, 0, 0, 0.3),
+                0.3px -0.3px 0 rgba(0, 0, 0, 0.3),
+                -0.3px 0.3px 0 rgba(0, 0, 0, 0.3),
+                0 0 5px rgba(139, 92, 246, 0.4),
+                0 0 10px rgba(59, 130, 246, 0.3),
+                0 0 15px rgba(6, 182, 212, 0.2);
             }
             .invitation-message { 
               font-size: 16px; 
-              color: #94A3B8; 
+              color: #ffffff; 
               margin-top: 45px; 
               font-style: italic;
               line-height: 1.5;
@@ -1170,20 +1296,14 @@ const InvitePage: React.FC = () => {
           @media (min-width: 769px) {
             .mobile-cards { display: none; }
           }
-            .company-description { 
-              font-size: 14px; 
-              line-height: 1.4;
-              max-width: 280px;
+            .event-title-main {
+              font-size: 37px;
             }
-            .company-description::before {
-              content: "Từ Thái nguyên vươn xa 15 năm học tập và trải nghiệm";
-              white-space: normal;
+            .slogan-1 {
+              font-size: 14px;
             }
-            .company-description {
-              font-size: 0;
-            }
-            .company-description::before {
-              font-size: 18px;
+            .slogan-2 {
+              font-size: 12px;
             }
           }
         `}</style>
@@ -1196,17 +1316,14 @@ const InvitePage: React.FC = () => {
                 <img src="/company-logo.png" alt="EXP Technology Logo" className="logo-image" />
               </div>
               <div className="company-info">
-                <div className="company-name">Technology</div>
+                <div className="company-name">Technology Company</div>
               </div>
             </div>
-            <div className="company-description">Từ Thái nguyên vươn xa 15 năm học tập và trải nghiệm</div>
+            <div className="event-title-main">Lễ kỷ niệm 15 năm</div>
+            <div className="slogan-1">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
+            <div className="slogan-2">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
           </div>
 
-          {/* Main Title */}
-          <div className="main-title">
-            <h1 className="event-title">Lễ kỷ niệm 15 năm thành lập</h1>
-            <div className="title-underline"></div>
-          </div>
           
           {/* Invitation Card */}
           <div className="invitation-card">
@@ -1221,9 +1338,11 @@ const InvitePage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="invitation-text">
-              Trân trọng mời quý khách tham dự chương trình 15 năm thành lập 10/10/2010  -  10/10/2025
-            </div>
+            {inviteData.guest.event_content && (
+              <div className="invitation-text">
+                {inviteData.guest.event_content}
+              </div>
+            )}
 
             <div className="details-grid">
               {/* Time & Location Section */}
@@ -1318,15 +1437,14 @@ const InvitePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile Cards */}
-          <div className="mobile-cards">
-            {/* Card 1: Thông tin khách */}
-            <div className="mobile-card guest-card">
-              <div className="mobile-card-title">
-                Kính gửi:
-              </div>
-              <div className="guest-name">
-                {inviteData.guest.title ? <><span className="role-bold">{inviteData.guest.title}</span> </> : ''}{inviteData.guest.name}
+          {/* Card 1: Thông tin khách */}
+          <div className="greeting-section">
+            <div className="greeting-title">
+              Kính gửi:
+            </div>
+            <div className="guest-info-block">
+              <div className={`guest-name ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'long-name' : ''}`}>
+                {inviteData.guest.title ? <><span className={`title-normal ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'small-title' : ''}`}>{inviteData.guest.title}</span> </> : ''}<span className="name-bold">{inviteData.guest.name}</span>
               </div>
               {(inviteData.guest.role || inviteData.guest.organization) && (
                 <div className="guest-role">
@@ -1336,29 +1454,27 @@ const InvitePage: React.FC = () => {
                   }
                 </div>
               )}
-              {inviteData.guest.email && (
-                <div className="guest-email">
-                  <svg className="contact-icon" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                  </svg>
-                  {inviteData.guest.email}
-                </div>
-              )}
-              {inviteData.guest.phone && (
-                <div className="guest-phone">
-                  <svg className="contact-icon" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                  </svg>
-                  {inviteData.guest.phone}
-                </div>
-              )}
-                <div className="invitation-message">
-                  Trân trọng kính mời quý khách tham dự chương trình 15 năm thành lập <span className="date-range">10/10/2010 - 10/10/2025</span>
-                  <br />
-                  <span className="honor-message">Sự hiện diện của quý khách là niệm vinh dự của Công ty chúng tôi!</span>
-                </div>
             </div>
+          </div>
+          
+
+          {/* Card 2: Nội dung thiệp mời */}
+          <div className="invitation-section">
+            <div className="invitation-message">
+              {inviteData.guest.event_content ? (
+                <div style={{ whiteSpace: 'pre-line', textAlign: 'left' }}>
+                  {inviteData.guest.event_content}
+                </div>
+              ) : (
+                <div style={{ color: '#ffffff', fontStyle: 'italic', textAlign: 'left' }}>
+                  [Chưa có nội dung thiệp mời]
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="mobile-cards">
 
             {/* Card 2: Xác nhận tham dự (RSVP) - Di chuyển lên vị trí thứ 2 */}
             <div className={`mobile-card rsvp-card ${inviteData.guest.rsvp_status === 'declined' ? 'rsvp-card-declined' : ''}`}>
@@ -1612,3 +1728,4 @@ const InvitePage: React.FC = () => {
 }
 
 export default InvitePage
+

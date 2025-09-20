@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { usePreloadPagination } from './usePreloadPagination'
+import { useOptimizedImport } from './useOptimizedImport'
 import { fetchGuestsPage, GuestsApiParams } from '@/lib/api/guestsApi'
 import { Guest, GuestFilters } from '@/lib/types/guest'
 import { PreloadPaginationConfig } from '@/lib/types/pagination'
@@ -18,6 +19,12 @@ interface UseGuestsPaginationOptions {
   onError?: (error: Error, page: number) => void
   onSuccess?: (guests: Guest[], page: number) => void
   onFiltersChange?: (filters: GuestFilters) => void
+  
+  // Optimized Import callbacks
+  onImportStart?: () => void
+  onFirstPageLoaded?: (guests: Guest[]) => void
+  onImportComplete?: () => void
+  onImportError?: (error: Error) => void
 }
 
 export function useGuestsPagination({
@@ -25,7 +32,11 @@ export function useGuestsPagination({
   config = {},
   onError,
   onSuccess,
-  onFiltersChange
+  onFiltersChange,
+  onImportStart,
+  onFirstPageLoaded,
+  onImportComplete,
+  onImportError
 }: UseGuestsPaginationOptions) {
   
   // Create fetch function for pagination
@@ -63,6 +74,32 @@ export function useGuestsPagination({
     },
     onError,
     onSuccess
+  })
+
+  // Optimized import hook
+  const optimizedImport = useOptimizedImport({
+    eventFilter: filters.eventFilter,
+    filters: {
+      searchTerm: filters.searchTerm,
+      statusFilter: filters.statusFilter,
+      tagFilter: filters.tagFilter,
+      organizationFilter: filters.organizationFilter,
+      roleFilter: filters.roleFilter
+    },
+    itemsPerPage: 6,
+    onFirstPageLoaded: (guests) => {
+      onFirstPageLoaded?.(guests)
+      // Trigger refresh để cập nhật UI
+      pagination.actions.refreshAll()
+    },
+    onImportComplete: () => {
+      onImportComplete?.()
+      // Refresh để hiển thị tất cả dữ liệu
+      pagination.actions.refreshAll()
+    },
+    onError: (error) => {
+      onImportError?.(error)
+    }
   })
   
   // Enhanced actions specific to guests
@@ -109,8 +146,22 @@ export function useGuestsPagination({
       pagesToPreload.forEach(page => {
         pagination.actions.preloadPage(page)
       })
+    },
+
+    // Optimized import actions
+    startOptimizedImport: () => {
+      onImportStart?.()
+      optimizedImport.startOptimizedImport()
+    },
+    
+    cancelImport: () => {
+      optimizedImport.cancelImport()
+    },
+    
+    resetImport: () => {
+      optimizedImport.reset()
     }
-  }), [pagination, filters, onFiltersChange])
+  }), [pagination, filters, onFiltersChange, optimizedImport, onImportStart])
   
   // Computed values specific to guests
   const guestsComputed = useMemo(() => ({
@@ -151,8 +202,20 @@ export function useGuestsPagination({
       preloadedPages: pagination.state.preloadedPages.size,
       totalPages: pagination.state.totalPages,
       cacheHitRate: pagination.state.loadedPages.size / Math.max(1, pagination.state.totalPages)
+    },
+
+    // Optimized import status
+    importStatus: {
+      isImporting: optimizedImport.isImporting,
+      progress: optimizedImport.progress,
+      isComplete: optimizedImport.isComplete,
+      progressPercentage: optimizedImport.progressPercentage,
+      isLoadingFirstPage: optimizedImport.isLoadingFirstPage,
+      isBackgroundLoading: optimizedImport.isBackgroundLoading,
+      hasError: optimizedImport.hasError,
+      hasMorePages: optimizedImport.hasMorePages
     }
-  }), [pagination, guestsActions, filters])
+  }), [pagination, guestsActions, filters, optimizedImport])
   
   return guestsComputed
 }

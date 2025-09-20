@@ -11,7 +11,6 @@ import { api } from "@/lib/api"
 interface Event {
   id: number
   name: string
-  description: string
   date: string
   time: string
   venue_address?: string
@@ -46,7 +45,6 @@ export default function EventsPage() {
   // Form data
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     date: '',
     time: '',
     venue_address: '',
@@ -150,7 +148,6 @@ export default function EventsPage() {
       setEditingEvent(event)
       setFormData({
         name: event.name,
-        description: event.description,
         date: event.date,
         time: event.time,
         venue_address: event.venue_address || '',
@@ -166,7 +163,6 @@ export default function EventsPage() {
       setEditingEvent(null)
       setFormData({
         name: '',
-        description: '',
         date: '',
         time: '',
         venue_address: '',
@@ -187,7 +183,6 @@ export default function EventsPage() {
     setEditingEvent(null)
     setFormData({
       name: '',
-      description: '',
       date: '',
       time: '',
       venue_address: '',
@@ -307,7 +302,6 @@ export default function EventsPage() {
         // Update event to backend
         const res = await api.updateEvent(editingEvent.id.toString(), {
             name: formData.name.trim(),
-            description: formData.description?.trim() || '',
             date: formData.date,
             time: formData.time,
             venue_address: formData.venue_address?.trim() || '',
@@ -342,7 +336,6 @@ export default function EventsPage() {
         // Create new event in backend
         const res = await api.createEvent({
             name: formData.name.trim(),
-            description: formData.description?.trim() || '',
             date: formData.date,
             time: formData.time,
             venue_address: formData.venue_address?.trim() || '',
@@ -431,7 +424,6 @@ export default function EventsPage() {
   // Filter events
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (event.venue_address && event.venue_address.toLowerCase().includes(searchTerm.toLowerCase()))
     
     // For mobile: use selectedStatuses, for desktop: use statusFilter
@@ -903,9 +895,9 @@ export default function EventsPage() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-white/70 uppercase bg-black/40 border-b border-white/10">
               <tr>
-                <th className="px-6 py-4 w-1/4 font-semibold">Tên sự kiện</th>
-                <th className="px-6 py-4 w-1/6 font-semibold">Ngày & Giờ</th>
-                <th className="px-6 py-4 w-1/6 font-semibold">Địa điểm</th>
+                <th className="px-6 py-4 w-2/5 font-semibold">Tên sự kiện</th>
+                <th className="px-6 py-4 w-1/5 font-semibold">Ngày & Giờ</th>
+                <th className="px-6 py-4 w-1/5 font-semibold">Địa điểm</th>
                 <th className="px-6 py-4 w-16 font-semibold">Khách</th>
                 <th className="px-6 py-4 w-35 font-semibold">Trạng thái</th>
                 <th className="px-6 py-4 w-28 font-semibold">Thao tác</th>
@@ -914,17 +906,16 @@ export default function EventsPage() {
             <tbody>
               {paginatedEvents.map((event) => (
                 <tr key={event.id} className="bg-black/20 border-b border-white/10 hover:bg-black/30 transition-colors">
-                  <td className="px-6 py-4 w-1/4">
+                  <td className="px-6 py-4 w-2/5">
                     <div>
                       <h3 className="text-white font-medium text-sm">{event.name}</h3>
-                      <p className="text-white/60 text-xs mt-1 line-clamp-1">{event.description}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 w-1/6 text-white/80">
+                  <td className="px-6 py-4 w-1/5 text-white/80">
                     <div className="text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</div>
                     <div className="text-xs text-white/60">{event.time}</div>
                   </td>
-                  <td className="px-6 py-4 w-1/6 text-white/80 text-sm">{event.venue_address || 'Chưa có địa chỉ'}</td>
+                  <td className="px-6 py-4 w-1/5 text-white/80 text-sm">{event.venue_address || 'Chưa có địa chỉ'}</td>
                   <td className="px-6 py-4 w-16 text-white/80 text-sm text-center">{event.max_guests}</td>
                   <td className="px-6 py-4 w-35">
                     <span className={`table-status-badge-${event.status} text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit transition-all duration-300 cursor-pointer overflow-hidden relative`}>
@@ -991,7 +982,6 @@ export default function EventsPage() {
               <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                   <h3 className="text-white font-medium text-sm truncate">{event.name}</h3>
-                  <p className="text-white/60 text-sm mt-0.5 line-clamp-1">{event.description}</p>
                   </div>
                 <span className={`status-badge-${event.status} rounded-full border px-2 py-0.5 text-[11px] ml-2 flex-shrink-0 transition-all duration-300 cursor-pointer overflow-hidden relative`}>
                     {getStatusText(event.status)}
@@ -1088,16 +1078,18 @@ export default function EventsPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-              {/* Left Column - Basic Info */}
-              <div className="space-y-6">
-                <div className="bg-white/5 rounded-lg p-6">
-                  <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Thông tin cơ bản
-                  </h3>
+            {/* Main Layout Container - 2 Rows */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* All content in one grid container */}
+                {/* Column 1 - Thông tin cơ bản (4/12 columns) */}
+                <div className="lg:col-span-4">
+                  <div className="bg-white/5 rounded-lg p-6 h-full">
+                    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Thông tin cơ bản
+                    </h3>
                   <div className="space-y-4">
               <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">Tên sự kiện</label>
@@ -1114,32 +1106,12 @@ export default function EventsPage() {
                     e.currentTarget.style.height = 'auto'
                     e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
                   }}
-                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200 resize-none min-h-[60px] overflow-hidden"
+                  className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200 resize-none min-h-[60px] overflow-hidden leading-relaxed"
                   placeholder="Nhập tên sự kiện"
                   rows={1}
                 />
               </div>
 
-              <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Mô tả</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => {
-                    setFormData({ ...formData, description: e.target.value })
-                    // Auto resize textarea
-                    e.target.style.height = 'auto'
-                    e.target.style.height = e.target.scrollHeight + 'px'
-                  }}
-                  onInput={(e) => {
-                    // Auto resize on input
-                    e.currentTarget.style.height = 'auto'
-                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
-                  }}
-                        className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 resize-none text-sm transition-all duration-200 overflow-hidden min-h-[96px]"
-                  placeholder="Mục đích sự kiện, ghi chú nhanh..."
-                  rows={1}
-                />
-              </div>
 
                 <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">Thời gian sự kiện</label>
@@ -1170,16 +1142,16 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Middle Column - Location & Configuration */}
-              <div className="space-y-6">
-                <div className="bg-white/5 rounded-lg p-6">
-                  <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Địa điểm & Cấu hình
-                  </h3>
+                {/* Column 2 - Địa điểm cấu hình (4/12 columns) */}
+                <div className="lg:col-span-4">
+                  <div className="bg-white/5 rounded-lg p-6 h-full">
+                    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Địa điểm cấu hình
+                    </h3>
                   <div className="space-y-3">
               <div>
                       <label className="block text-white/80 text-sm font-medium mb-1">Địa chỉ chi tiết</label>
@@ -1235,15 +1207,15 @@ export default function EventsPage() {
               </div>
               </div>
 
-              {/* Right Column - Additional Settings */}
-              <div className="space-y-6">
-                <div className="bg-white/5 rounded-lg p-6">
-                  <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                    </svg>
-                    Cài đặt bổ sung
-                  </h3>
+                {/* Column 3 - Cài đặt bổ sung (4/12 columns, spans 2 rows) */}
+                <div className="lg:col-span-4 lg:row-span-2">
+                  <div className="bg-white/5 rounded-lg p-6 h-full">
+                    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                      Cài đặt bổ sung
+                    </h3>
                   <div className="space-y-3">
               {/* Dress Code */}
               <div>
@@ -1266,9 +1238,12 @@ export default function EventsPage() {
                   </div>
                 )}
                     </div>
-                  </div>
-              </div>
 
+                  </div>
+                </div>
+              </div>
+              {/* Bottom Row - Timeline Table (8/12 columns width) */}
+              <div className="lg:col-span-8">
                 <div className="bg-white/5 rounded-lg p-6 overflow-visible">
                   <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1276,70 +1251,72 @@ export default function EventsPage() {
                     </svg>
                     Timeline chương trình
                   </h3>
-                <div className="bg-black/20 border border-white/20 rounded-lg overflow-visible">
-                  <div className="overflow-x-auto overflow-y-visible scrollbar-thin">
-                    <table className="w-full min-w-[500px]">
-                    <thead className="bg-white/5">
-                      <tr>
-                          <th className="text-left text-white/70 text-sm font-medium px-3 py-2 w-32">Giờ</th>
-                          <th className="text-left text-white/70 text-sm font-medium px-3 py-2">Nội dung</th>
-                          <th className="px-1 py-1.5 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {programRows.map((row, idx) => (
-                        <tr key={idx} className="border-t border-white/10">
-                            <td className="px-3 py-2">
-                            <DateTimePicker
-                              type="time"
-                              value={row.time}
-                              onChange={(v) => {
-                                setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,time:v}:r))
-                              }}
-                              placeholder="Chọn giờ "
-                              className="w-full"
-                            />
-                          </td>
-                            <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={row.item}
-                              onChange={(e) => {
-                                const v = e.target.value
-                                setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,item:v}:r))
-                              }}
-                                className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
-                              placeholder="Khởi động chương trình, Ăn tối, Networking..."
-                            />
-                          </td>
-                            <td className="px-1 py-1 text-right">
-                            <button
-                              onClick={() => setProgramRows(prev => prev.filter((_,i)=>i!==idx))}
-                              className="remove-row-button p-1 transition-all duration-300 overflow-hidden"
-                              title="Xóa dòng"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
-                          </td>
+                  <div className="bg-black/20 border border-white/20 rounded-lg overflow-visible">
+                    <div className="overflow-x-auto overflow-y-visible scrollbar-thin">
+                      <table className="w-full min-w-[500px]">
+                      <thead className="bg-white/5">
+                        <tr>
+                            <th className="text-left text-white/70 text-sm font-medium px-3 py-2 w-32">Giờ</th>
+                            <th className="text-left text-white/70 text-sm font-medium px-3 py-2">Nội dung</th>
+                            <th className="px-1 py-1.5 w-8"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {programRows.map((row, idx) => (
+                          <tr key={idx} className="border-t border-white/10">
+                              <td className="px-3 py-2">
+                              <DateTimePicker
+                                type="time"
+                                value={row.time}
+                                onChange={(v) => {
+                                  setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,time:v}:r))
+                                }}
+                                placeholder="Chọn giờ "
+                                className="w-full"
+                              />
+                            </td>
+                              <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                value={row.item}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  setProgramRows(prev => prev.map((r,i)=> i===idx?{...r,item:v}:r))
+                                }}
+                                  className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200"
+                                placeholder="Khởi động chương trình, Ăn tối, Networking..."
+                              />
+                            </td>
+                              <td className="px-1 py-1 text-right">
+                              <button
+                                onClick={() => setProgramRows(prev => prev.filter((_,i)=>i!==idx))}
+                                className="remove-row-button p-1 transition-all duration-300 overflow-hidden"
+                                title="Xóa dòng"
+                              >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    </div>
+                    <div className="p-2 border-t border-white/10 flex justify-between items-center">
+                      <button
+                        onClick={() => setProgramRows(prev => [...prev, { time: '', item: '' }])}
+                        className="add-row-button px-3 py-2 text-sm rounded transition-all duration-300 overflow-hidden"
+                      >
+                        Thêm dòng
+                      </button>
+                      {programRows.length>0 && (
+                          <span className="text-white/40 text-sm">{programRows.length} mục</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-2 border-t border-white/10 flex justify-between items-center">
-                    <button
-                      onClick={() => setProgramRows(prev => [...prev, { time: '', item: '' }])}
-                      className="add-row-button px-3 py-2 text-sm rounded transition-all duration-300 overflow-hidden"
-                    >
-                      Thêm dòng
-                    </button>
-                    {programRows.length>0 && (
-                        <span className="text-white/40 text-sm">{programRows.length} mục</span>
-                    )}
-                  </div>
-                </div>
                 </div>
               </div>
+              {/* Empty space to align with the right column */}
+              <div className="lg:col-span-4"></div>
             </div>
 
             {/* Action Buttons - Sticky Footer */}
@@ -1489,13 +1466,6 @@ export default function EventsPage() {
                       </div>
                     </div>
                     
-                    {/* Description */}
-                    {event.description && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-3">Mô tả sự kiện</h3>
-                        <p className="text-white/80 leading-relaxed">{event.description}</p>
-                      </div>
-                    )}
                     
                     {/* Additional Details */}
                     {(event.venue_address || event.venue_map_url || event.program_outline || event.dress_code) && (
@@ -1536,6 +1506,7 @@ export default function EventsPage() {
                               <div className="text-white/80">{event.dress_code}</div>
                             </div>
                           )}
+
                         </div>
                       </div>
                     )}

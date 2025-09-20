@@ -199,6 +199,13 @@ def create_app() -> Flask:
             email = (row or {}).get("email")
             phone = (row or {}).get("phone")
             event_id = (row or {}).get("event_id")
+            
+            # Debug logging
+            print(f"Processing guest: {name}")
+            print(f"  Raw role: {repr((row or {}).get('role'))}")
+            print(f"  Raw organization: {repr((row or {}).get('organization'))}")
+            print(f"  Mapped position: {repr(position)}")
+            print(f"  Mapped company: {repr(company)}")
             if not name:
                 failed += 1
                 errors.append("Missing name")
@@ -345,7 +352,8 @@ def create_app() -> Flask:
         try:
             guests = Guest.query.all()
             print(f"Found {len(guests)} guests in database")
-            return {"guests": [guest.to_dict() for guest in guests]}, 200
+            from batch_api import serialize_guest
+            return {"guests": [serialize_guest(guest) for guest in guests]}, 200
         except Exception as e:
             print(f"Error getting guests: {e}")
             return {"error": str(e), "guests": []}, 500
@@ -418,6 +426,7 @@ def create_app() -> Flask:
                 phone=data.get("phone", "").strip() or None,
                 checkin_status=checkin_status,
                 rsvp_status=data.get("rsvp_status", "pending"),
+                event_content=data.get("event_content", "").strip() or None,
                 event_id=data.get("event_id") if data.get("event_id") else None
             )
             
@@ -460,6 +469,7 @@ def create_app() -> Flask:
             guest.tag = data.get("tag", "").strip() or None
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
+            guest.event_content = data.get("event_content", "").strip() or None
             new_checkin_status = data.get("checkin_status", "not_arrived")
             print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to '{new_checkin_status}'")
             guest.checkin_status = new_checkin_status
@@ -876,7 +886,6 @@ def create_app() -> Flask:
             # Create new event
             event = Event(
                 name=data["name"],
-                description=data.get("description", ""),
                 date=datetime.strptime(data["date"], "%Y-%m-%d").date() if data.get("date") else None,
                 time=datetime.strptime(data["time"], "%H:%M").time() if data.get("time") else None,
                 location=data.get("location", ""),
@@ -884,6 +893,7 @@ def create_app() -> Flask:
                 venue_map_url=data.get("venue_map_url", ""),
                 program_outline=data.get("program_outline"),
                 dress_code=data.get("dress_code", ""),
+                invitation_content=data.get("invitation_content", ""),
                 status=data.get("status", "upcoming"),
                 max_guests=data.get("max_guests", 100)
             )
@@ -894,6 +904,16 @@ def create_app() -> Flask:
             return jsonify(event.to_dict()), 201
         except Exception as e:
             db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/events/<int:event_id>", methods=["GET"])
+    def get_event(event_id):
+        """Lấy thông tin một sự kiện"""
+        try:
+            event = Event.query.get_or_404(event_id)
+            return jsonify(event.to_dict()), 200
+        except Exception as e:
+            print(f"Error getting event: {e}")
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/events/<int:event_id>", methods=["PUT"])
@@ -909,8 +929,6 @@ def create_app() -> Flask:
             # Update fields
             if "name" in data:
                 event.name = data["name"]
-            if "description" in data:
-                event.description = data["description"]
             if "date" in data:
                 date_val = data.get("date")
                 if date_val:
@@ -935,6 +953,8 @@ def create_app() -> Flask:
                 event.program_outline = data.get("program_outline")
             if "dress_code" in data:
                 event.dress_code = data.get("dress_code", "")
+            if "invitation_content" in data:
+                event.invitation_content = data.get("invitation_content", "")
             if "status" in data:
                 valid_statuses = ["upcoming", "ongoing", "completed", "cancelled"]
                 if data["status"] not in valid_statuses:
@@ -1207,7 +1227,8 @@ def create_app() -> Flask:
                     "group_tag": guest.tag or "",
                     "is_vip": guest.tag == "VIP" if guest.tag else False,
                     "rsvp_status": guest.rsvp_status or "pending",
-                    "checkin_status": guest.checkin_status or "not_arrived"
+                    "checkin_status": guest.checkin_status or "not_arrived",
+                    "event_content": guest.event_content or ""
                 }
             }
             

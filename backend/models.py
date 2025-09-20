@@ -19,7 +19,6 @@ class Event(db.Model):
     __tablename__ = "events"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.Text, nullable=True)
     date = db.Column(db.Date, nullable=False)
     time = db.Column(db.Time, nullable=True)
     location = db.Column(db.String(255), nullable=True)
@@ -27,6 +26,7 @@ class Event(db.Model):
     venue_map_url = db.Column(db.String(1024), nullable=True)
     program_outline = db.Column(db.Text, nullable=True)  # JSON string [[time, item], ...]
     dress_code = db.Column(db.String(255), nullable=True)
+    invitation_content = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default="upcoming")  # upcoming/ongoing/completed/cancelled
     max_guests = db.Column(db.Integer, default=100)
     created_at = db.Column(db.DateTime, default=get_hanoi_time)
@@ -35,7 +35,6 @@ class Event(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "description": self.description,
             "date": self.date.isoformat() if self.date else None,
             "time": self.time.isoformat() if self.time else None,
             "location": self.location,
@@ -43,6 +42,7 @@ class Event(db.Model):
             "venue_map_url": self.venue_map_url,
             "program_outline": self.program_outline,
             "dress_code": self.dress_code,
+            "invitation_content": self.invitation_content,
             "status": self.status,
             "max_guests": self.max_guests,
             "created_at": self.created_at.isoformat() if self.created_at else None
@@ -61,6 +61,7 @@ class Guest(db.Model):
     phone = db.Column(db.String(50), nullable=True, unique=True)
     rsvp_status = db.Column(db.String(20), default="pending")  # pending/accepted/declined
     checkin_status = db.Column(db.String(20), default="not_arrived")  # not_arrived/arrived
+    event_content = db.Column(db.Text, nullable=True)  # Nội dung sự kiện cho khách mời
     event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete="CASCADE"), nullable=True)
     created_at = db.Column(db.DateTime, default=get_hanoi_time)
     
@@ -72,13 +73,14 @@ class Guest(db.Model):
             "id": self.id,
             "name": self.name,
             "title": self.title,
-            "position": self.position,
-            "company": self.company,
+            "role": self.position,  # Map position to role
+            "organization": self.company,  # Map company to organization
             "tag": self.tag,
             "email": self.email,
             "phone": self.phone,
             "rsvp_status": self.rsvp_status,
             "checkin_status": self.checkin_status,
+            "event_content": self.event_content,
             "event_id": self.event_id,
             "event_name": self.event.name if self.event else None,
             "created_at": self.created_at.isoformat() if self.created_at else None

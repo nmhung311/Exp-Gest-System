@@ -163,13 +163,14 @@ def serialize_guest(guest: Guest) -> Dict[str, Any]:
         'id': guest.id,
         'name': guest.name,
         'title': guest.title,
-        'position': guest.position,
-        'company': guest.company,
+        'role': guest.position,  # Map position to role
+        'organization': guest.company,  # Map company to organization
         'tag': guest.tag,
         'email': guest.email,
         'phone': guest.phone,
         'rsvp_status': guest.rsvp_status,
         'checkin_status': guest.checkin_status,
+        'event_content': guest.event_content,
         'created_at': guest.created_at.isoformat() if guest.created_at else None,
         'event_id': guest.event_id,
         'event_name': guest.event.name if guest.event else None
