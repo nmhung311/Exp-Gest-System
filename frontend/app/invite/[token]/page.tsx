@@ -54,6 +54,7 @@ const InvitePage: React.FC = () => {
   const [qrLoading, setQrLoading] = useState(false)
   const [showChangeOption, setShowChangeOption] = useState(false)
   const [showCheckinSuccess, setShowCheckinSuccess] = useState(false)
+  const [isCardRevealed, setIsCardRevealed] = useState(false)
   
   // Function to update checkin status
   const updateCheckinStatus = (status: 'not_arrived' | 'checked_in' | 'checked_out' | 'arrived') => {
@@ -74,7 +75,13 @@ const InvitePage: React.FC = () => {
     
     try {
       // Lấy danh sách tất cả guests và tìm guest hiện tại
-      const response = await fetch('/api/guests')
+      const response = await fetch('/api/guests', {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         const guestData = data.guests?.find((g: any) => g.id === inviteData.guest.id)
@@ -84,23 +91,25 @@ const InvitePage: React.FC = () => {
           console.log('Guest ID:', inviteData.guest.id)
           console.log('Current checkin status:', guestData.checkin_status)
           console.log('RSVP status:', guestData.rsvp_status)
+          console.log('Event content:', guestData.event_content)
           
           // Cập nhật trạng thái từ server
           console.log('Previous checkin status:', inviteData.guest.checkin_status)
           console.log('New checkin status:', guestData.checkin_status)
           
-          if (inviteData.guest.checkin_status !== guestData.checkin_status) {
-            console.log('Updating checkin status...')
-            setInviteData(prev => prev ? {
-              ...prev,
-              guest: {
-                ...prev.guest,
-                checkin_status: guestData.checkin_status
-              }
-            } : null)
-          } else {
-            console.log('Checkin status unchanged')
-          }
+          // Cập nhật tất cả data từ server để đảm bảo fresh data
+          setInviteData(prev => prev ? {
+            ...prev,
+            guest: {
+              ...prev.guest,
+              checkin_status: guestData.checkin_status,
+              rsvp_status: guestData.rsvp_status,
+              // Chỉ cập nhật event_content nếu có giá trị mới, không ghi đè bằng null
+              event_content: guestData.event_content && guestData.event_content.trim() !== '' 
+                ? guestData.event_content 
+                : prev.guest.event_content
+            }
+          } : null)
         }
       }
     } catch (error) {
@@ -115,8 +124,8 @@ const InvitePage: React.FC = () => {
     // Kiểm tra ngay lập tức
     checkCheckinStatus()
     
-    // Kiểm tra định kỳ mỗi 5 giây
-    const interval = setInterval(checkCheckinStatus, 5000)
+    // Kiểm tra định kỳ mỗi 30 giây để tránh gọi quá nhiều
+    const interval = setInterval(checkCheckinStatus, 30000)
     
     return () => clearInterval(interval)
   }, [inviteData?.guest.id])
@@ -132,8 +141,11 @@ const InvitePage: React.FC = () => {
 
     const handleVisibilityChange = () => {
       if (!document.hidden && inviteData) {
-        console.log('=== PAGE VISIBLE - CHECKING CHECKIN STATUS ===')
-        checkCheckinStatus()
+        console.log('=== PAGE VISIBLE - FORCE REFRESH DATA ===')
+        // Force refresh data khi user quay lại trang
+        setTimeout(() => {
+          checkCheckinStatus()
+        }, 500)
       }
     }
 
@@ -242,6 +254,7 @@ const InvitePage: React.FC = () => {
       try {
         // Sử dụng token trực tiếp thay vì JSON data
         const token = inviteData?.token || 'DEMO-TOKEN'
+        
         const qrString = token
         const qrUrl = await QRCode.toDataURL(qrString, {
           width: 200,
@@ -268,6 +281,38 @@ const InvitePage: React.FC = () => {
     }
   }, [inviteData])
 
+  // Effect để xử lý scroll animation cho card thời gian địa điểm
+  useEffect(() => {
+    const handleScroll = () => {
+      const timeLocationCard = document.querySelector('.time-location-card')
+      if (!timeLocationCard || isCardRevealed) return
+
+      const rect = timeLocationCard.getBoundingClientRect()
+      const windowHeight = window.innerHeight
+      
+      // Kích hoạt animation khi card xuất hiện trong viewport (từ 80% viewport height)
+      if (rect.top < windowHeight * 0.8 && rect.bottom > 0) {
+        setIsCardRevealed(true)
+        timeLocationCard.classList.add('scroll-reveal')
+        
+        // Remove animation class sau khi hoàn thành để tránh lặp lại
+        setTimeout(() => {
+          timeLocationCard.classList.remove('scroll-reveal')
+        }, 800)
+      }
+    }
+
+    // Thêm scroll listener
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    
+    // Kiểm tra ngay lập tức nếu card đã trong viewport
+    handleScroll()
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [isCardRevealed])
+
   // Load invite data
   useEffect(() => {
     const loadInviteData = async () => {
@@ -277,24 +322,27 @@ const InvitePage: React.FC = () => {
         // Try to load from API first
         console.log('=== LOADING INVITE DATA ===')
         console.log('Token:', token)
-        const response = await fetch(`/api/invite/${token}`)
+        const response = await fetch(`/api/invite/${token}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
         
         console.log('API Response status:', response.status)
         console.log('API Response ok:', response.ok)
         
         if (response.ok) {
           const data = await response.json()
-          console.log('API Response data:', data)
-          console.log('Guest RSVP Status:', data.guest?.rsvp_status)
-          console.log('Guest Checkin Status:', data.guest?.checkin_status)
           setInviteData(data)
           
-          // Kiểm tra trạng thái checkin ngay sau khi load data
-          setTimeout(() => {
-            if (data.guest?.id) {
-              checkCheckinStatus()
-            }
-          }, 1000)
+          // Không gọi checkCheckinStatus ngay sau khi load để tránh ghi đè data
+          // setTimeout(() => {
+          //   if (data.guest?.id) {
+          //     checkCheckinStatus()
+          //   }
+          // }, 1000)
         } else {
           console.log('API failed, using demo data')
           console.log('Response status:', response.status)
@@ -402,6 +450,12 @@ const InvitePage: React.FC = () => {
     console.log('=== HANDLE ACCEPT ===')
     console.log('Guest data:', inviteData.guest)
     
+    // Thêm class expanding để tăng chiều cao card
+    const rsvpCard = document.querySelector('.rsvp-card')
+    if (rsvpCard) {
+      rsvpCard.classList.add('expanding')
+    }
+    
     // Delay 300ms trước khi thực hiện
     await new Promise(resolve => setTimeout(resolve, 300))
     
@@ -438,6 +492,20 @@ const InvitePage: React.FC = () => {
         await showQRCode()
         console.log('RSVP status updated successfully!')
         
+        // Tự động focus card RSVP ra giữa màn hình trên mobile
+        if (window.innerWidth <= 768) {
+          setTimeout(() => {
+            const rsvpCard = document.querySelector('.rsvp-card')
+            if (rsvpCard) {
+              rsvpCard.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          }, 15)
+        }
+        
         // Notify parent window about RSVP update
         if (window.parent !== window) {
           window.parent.postMessage({
@@ -460,6 +528,12 @@ const InvitePage: React.FC = () => {
     
     console.log('=== HANDLE DECLINE ===')
     console.log('Guest data:', inviteData.guest)
+    
+    // Thêm class expanding để tăng chiều cao card
+    const rsvpCard = document.querySelector('.rsvp-card')
+    if (rsvpCard) {
+      rsvpCard.classList.add('expanding')
+    }
     
     // Delay 300ms trước khi thực hiện
     await new Promise(resolve => setTimeout(resolve, 300))
@@ -495,6 +569,20 @@ const InvitePage: React.FC = () => {
         console.log('Response data:', responseData)
         setInviteData(prev => prev ? { ...prev, guest: { ...prev.guest, rsvp_status: 'declined' } } : null)
         console.log('RSVP status updated successfully!')
+        
+        // Tự động focus card RSVP ra giữa màn hình trên mobile
+        if (window.innerWidth <= 768) {
+          setTimeout(() => {
+            const rsvpCard = document.querySelector('.rsvp-card')
+            if (rsvpCard) {
+              rsvpCard.scrollIntoView({ 
+                behavior: 'auto', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          }, 200)
+        }
         
         // Notify parent window about RSVP update
         if (window.parent !== window) {
@@ -686,9 +774,9 @@ const InvitePage: React.FC = () => {
           .detail-section h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 20px; display: flex; align-items: center; }
           .detail-section h3 svg { width: 32px; height: 32px; margin-right: 16px; color: #3B82F6; }
           .detail-item { display: flex; align-items: center; margin-bottom: 15px; justify-content: flex-start; }
-          .detail-icon { width: 32px; height: 32px; margin-right: 16px; color: #fff; }
-          .address-detail-icon { width: 32px !important; height: 32px !important; margin-right: 16px !important; color: #fff !important; }
-          .detail-text { color: #fff; font-size: 16px; }
+          .detail-icon { width: 20px; height: 20px; margin-right: 16px; color: #fff; text-align: left; }
+          .address-detail-icon { width: 20px !important; height: 20px !important; margin-right: 16px !important; color: #fff !important; text-align: left; }
+          .detail-text { color: #fff; font-size: 16px; text-align: left; }
           .map-link { 
             color: #fff; 
             text-decoration: none; 
@@ -710,26 +798,46 @@ const InvitePage: React.FC = () => {
               backdrop-filter: blur(8px); 
               border: 1px solid rgba(255,255,255,0.15); 
               border-radius: 20px; 
-              padding: 30px; 
+              padding: 12px; 
               text-align: center; 
+              transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+              overflow: hidden;
+              height: auto;
             }
-            .mobile-card.rsvp-card { padding: 25px; margin-bottom: 20px; }
+            .rsvp-card.expanding {
+              height: auto;
+              padding: 20px;
+              transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            }
+            .mobile-card.rsvp-card { padding: 10px; margin-bottom: 20px; }
           .rsvp-card-declined { 
             background: rgba(239, 68, 68, 0.1); 
             border: 1px solid rgba(239, 68, 68, 0.3); 
           }
-          .rsvp-title { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 15px; }
+          .rsvp-title { 
+            font-size: 20px; 
+            font-weight: 600; 
+            color: #fff; 
+            margin-bottom: 8px; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          }
           .rsvp-title.accepted { color: #22c55e; }
           .rsvp-title.declined { color: #ef4444; }
-          .rsvp-question { font-size: 18px; color: #94A3B8; margin-bottom: 25px; }
-          .rsvp-buttons { display: flex; gap: 20px; justify-content: center; margin-bottom: 15px; }
+          .rsvp-question { font-size: 18px; color: #94A3B8; margin-bottom: 15px; }
+          .rsvp-buttons { 
+            display: flex; 
+            gap: 20px; 
+            justify-content: center; 
+            margin-bottom: 8px; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          }
           .rsvp-button { 
-            padding: 15px 30px; 
+            padding: 12px 24px; 
             border-radius: 12px; 
             font-weight: 600; 
             font-size: 16px; 
             cursor: pointer; 
-            transition: all 0.3s ease; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
             display: flex; 
             align-items: center; 
             gap: 8px; 
@@ -737,7 +845,7 @@ const InvitePage: React.FC = () => {
             backdrop-filter: blur(8px);
             position: relative;
             overflow: hidden;
-            min-width: 200px;
+            min-width: 180px;
             justify-content: center;
           }
           .rsvp-button::before {
@@ -756,7 +864,7 @@ const InvitePage: React.FC = () => {
           .rsvp-accept { 
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2)); 
             border: 1px solid rgba(34, 197, 94, 0.3); 
-            color: #22c55e; 
+            color: #ffffff; 
           }
           .rsvp-accept:hover { 
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4)); 
@@ -772,9 +880,9 @@ const InvitePage: React.FC = () => {
             color: #ffffff;
           }
           .rsvp-decline { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(236, 72, 153, 0.2)); 
-            border: 1px solid rgba(239, 68, 68, 0.3); 
-            color: #ef4444; 
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2)); 
+            border: 1px solid rgba(107, 114, 128, 0.3); 
+            color:rgb(151, 154, 160); 
           }
           .rsvp-decline:hover { 
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(236, 72, 153, 0.4)); 
@@ -810,6 +918,16 @@ const InvitePage: React.FC = () => {
             padding: 0; 
             background: transparent; 
             text-align: center;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            opacity: 0;
+            transform: translateY(20px);
+            max-height: 0;
+            overflow: hidden;
+          }
+          .rsvp-card.expanding .qr-section {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 500px;
           }
           .checkin-success { 
             display: flex; 
@@ -897,16 +1015,48 @@ const InvitePage: React.FC = () => {
               box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
             }
           }
+          
+          @keyframes cardReveal {
+            0% {
+              opacity: 0.7;
+              transform: translateY(20px) scale(0.95);
+              filter: blur(2px);
+            }
+            50% {
+              opacity: 0.9;
+              transform: translateY(-4px) scale(1.01);
+              filter: blur(0.5px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+              filter: blur(0px);
+            }
+          }
           .qr-title { 
             font-size: 20px; 
             font-weight: 600; 
             color: #fff; 
             margin-bottom: 10px; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          .rsvp-card.expanding .qr-title {
+            opacity: 1;
+            transform: translateY(0);
           }
           .qr-description { 
             color: #94A3B8; 
             margin-bottom: 15px; 
             font-size: 14px;
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          .rsvp-card.expanding .qr-description {
+            opacity: 1;
+            transform: translateY(0);
           }
           .qr-loading { 
             display: flex; 
@@ -917,12 +1067,26 @@ const InvitePage: React.FC = () => {
           .qr-image-container { 
             display: flex; 
             justify-content: center; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          .rsvp-card.expanding .qr-image-container {
+            opacity: 1;
+            transform: translateY(0);
           }
           .qr-image { 
             width: 200px; 
             height: 200px; 
             border: 2px solid rgba(255,255,255,0.1); 
             border-radius: 12px; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          .rsvp-card.expanding .qr-image {
+            opacity: 1;
+            transform: scale(1);
           }
           .qr-error { 
             color: #ef4444; 
@@ -945,7 +1109,7 @@ const InvitePage: React.FC = () => {
             padding: 12px 24px;
             background: rgba(59, 130, 246, 0.2);
             border: 1px solid rgba(59, 130, 246, 0.3);
-            color: #3B82F6;
+            color: #ffffff;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 500;
@@ -1051,9 +1215,9 @@ const InvitePage: React.FC = () => {
           }
           .cancel-change-button {
             padding: 12px 24px;
-            background: rgba(107, 114, 128, 0.2);
-            border: 1px solid rgba(107, 114, 128, 0.3);
-            color: #6B7280;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(122, 124, 126, 0.3);
+            color:rgb(216, 216, 216);
             border-radius: 8px;
             font-size: 14px;
             font-weight: 500;
@@ -1125,16 +1289,19 @@ const InvitePage: React.FC = () => {
               border-radius: 20px; 
               padding: 25px; 
               margin-bottom: 20px; 
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
             .mobile-card-title { 
               font-size: 20px; 
-              font-weight: 300; 
+              font-weight: 600; 
               color: #fff; 
               margin-bottom: 20px; 
               display: flex; 
               align-items: center; 
               gap: 10px;
-              font-style: italic;
+              font-style: normal;
+              text-align: left;
+              justify-content: flex-start;
             }
             .greeting-section {
               padding: 15px 25px; 
@@ -1182,11 +1349,22 @@ const InvitePage: React.FC = () => {
               max-width: 100%;
               margin-left: auto;
               margin-right: auto;
+              display: inline-block;
             }
             .mobile-card-title svg { 
-              width: 32px; 
-              height: 32px; 
+              width: 24px; 
+              height: 24px; 
               color: #3B82F6; 
+            }
+            .time-location-card .mobile-card-title svg { 
+              width: 25px !important; 
+              height: 25px !important; 
+              color: #3B82F6 !important; 
+            }
+            .mobile-card.time-location-card .mobile-card-title svg { 
+              width: 25px !important; 
+              height: 25px !important; 
+              color: #3B82F6 !important; 
             }
             .address-detail-icon { 
               width: 56px !important; 
@@ -1205,6 +1383,7 @@ const InvitePage: React.FC = () => {
             }
             .detail-item { 
               justify-content: flex-start !important; 
+              text-align: left;
             }
             .guest-card { text-align: center; }
             .guest-name { 
@@ -1250,7 +1429,8 @@ const InvitePage: React.FC = () => {
             .invitation-message { 
               font-size: 16px; 
               color: #ffffff; 
-              margin-top: 45px; 
+              margin-top: 0; 
+              margin-bottom: 0;
               font-style: italic;
               line-height: 1.5;
               text-align: left;
@@ -1267,13 +1447,72 @@ const InvitePage: React.FC = () => {
               margin-top: 8px;
               display: block;
             }
+            .time-location-card { 
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              transform: translateY(0) scale(1);
+              opacity: 1;
+            }
+            .time-location-card:hover {
+              transform: translateY(-8px) scale(1.02);
+              box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 0 30px rgba(59, 130, 246, 0.2);
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(12px);
+            }
+            .time-location-card.scroll-reveal {
+              animation: cardReveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            }
+            .program-card:hover {
+              transform: translateY(-8px) scale(1.02);
+              box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 0 30px rgba(59, 130, 246, 0.2);
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(12px);
+            }
+            .rsvp-card:hover {
+              transform: translateY(-8px) scale(1.02);
+              box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 0 30px rgba(59, 130, 246, 0.2);
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(12px);
+            }
+            .invitation-card:hover {
+              transform: translateY(-8px) scale(1.02);
+              box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 0 30px rgba(59, 130, 246, 0.2);
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(12px);
+            }
             .time-location-card .detail-item { margin-bottom: 15px; }
+            .time-location-card .detail-icon { width: 20px !important; height: 20px !important; }
+            .time-location-card .address-detail-icon { width: 20px !important; height: 20px !important; }
+            .time-location-card svg { width: 20px !important; height: 20px !important; }
+            .time-location-card .detail-item svg { width: 20px !important; height: 20px !important; }
+            .time-location-card svg path { width: 20px !important; height: 20px !important; }
+            .time-location-card .detail-item svg path { width: 20px !important; height: 20px !important; }
+            .time-location-card svg { width: 20px !important; height: 20px !important; max-width: 20px !important; max-height: 20px !important; }
+            .time-location-card .address-detail-icon { display: block !important; width: 40px !important; height: 40px !important; }
+            .time-location-card .address-detail-icon svg { width: 40px !important; height: 40px !important; }
+            .time-location-card .address-detail-icon svg path { width: 40px !important; height: 40px !important; }
+            .mobile-card.time-location-card .address-detail-icon svg { width: 40px !important; height: 40px !important; max-width: 40px !important; max-height: 40px !important; }
+            .mobile-card.time-location-card .address-detail-icon svg path { width: 40px !important; height: 40px !important; }
+            .mobile-card.time-location-card .detail-item .address-detail-icon { transform: scale(2) translateX(1px) !important; }
+            .mobile-card.time-location-card .detail-item .address-detail-icon svg { transform: scale(2) !important; }
             .program-card .program-item { 
-              margin-bottom: 12px; 
+              margin-bottom: 11px; 
               display: flex; 
               align-items: baseline; 
-              gap: 15px;
+              gap: 8px;
               padding-left: 0; /* Căn sát lề trái của card */
+              justify-content: flex-start;
             }
             .program-card .program-time { 
               font-weight: 700; 
@@ -1281,7 +1520,7 @@ const InvitePage: React.FC = () => {
               width: 70px; 
               flex-shrink: 0;
               line-height: 1.2;
-              text-align: right;
+              text-align: left;
               font-size: 16px;
             }
             .program-card .program-description { 
@@ -1290,7 +1529,25 @@ const InvitePage: React.FC = () => {
               line-height: 1.2;
               font-size: 16px;
               font-style: italic;
+              margin-left: 0;
+              padding-left: 0;
+              transform: translateY(-1px);
             }
+            .address-detail-icon + .detail-text {
+              transform: translateX(8px);
+            }
+            .map-link {
+              transform: translateX(-1px);
+            }
+          }
+          
+          /* Override cho icon tiêu đề card thời gian địa điểm */
+          .mobile-card.time-location-card .mobile-card-title svg { 
+            width: 25px !important; 
+            height: 25px !important; 
+            color: #3B82F6 !important; 
+            max-width: 25px !important;
+            max-height: 25px !important;
           }
           
           @media (min-width: 769px) {
@@ -1460,17 +1717,15 @@ const InvitePage: React.FC = () => {
 
           {/* Card 2: Nội dung thiệp mời */}
           <div className="invitation-section">
-            <div className="invitation-message">
-              {inviteData.guest.event_content ? (
-                <div style={{ whiteSpace: 'pre-line', textAlign: 'left' }}>
-                  {inviteData.guest.event_content}
-                </div>
-              ) : (
-                <div style={{ color: '#ffffff', fontStyle: 'italic', textAlign: 'left' }}>
-                  [Chưa có nội dung thiệp mời]
-                </div>
-              )}
-            </div>
+            {inviteData.guest.event_content ? (
+              <div className="invitation-message" style={{ whiteSpace: 'pre-line', textAlign: 'left', margin: 0 }}>
+                {inviteData.guest.event_content}
+              </div>
+            ) : (
+              <div className="invitation-message" style={{ color: '#ffffff', fontStyle: 'italic', textAlign: 'left', margin: 0 }}>
+                [Chưa có nội dung thiệp mời]
+              </div>
+            )}
           </div>
 
           {/* Mobile Cards */}
@@ -1490,9 +1745,6 @@ const InvitePage: React.FC = () => {
               })() && (
                 <>
                   <h2 className="rsvp-title">Xác nhận tham dự</h2>
-                  <p className="rsvp-question">
-                    Vui lòng cho chúng tôi biết bạn có thể tham dự sự kiện không?
-                  </p>
                   <div className="rsvp-buttons">
                     <button className="rsvp-button rsvp-accept" onClick={() => handleAccept()}>
                       <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
@@ -1639,9 +1891,9 @@ const InvitePage: React.FC = () => {
             <div className="mobile-card time-location-card">
               <div className="mobile-card-title">
                 <svg fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
                 </svg>
-                Thời gian & Địa điểm
+                Thông tin sự kiện
               </div>
               <div className="detail-item">
                 <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">

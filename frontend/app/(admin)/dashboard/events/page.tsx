@@ -16,7 +16,6 @@ interface Event {
   venue_address?: string
   venue_map_url?: string
   program_outline?: string
-  dress_code?: string
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   max_guests: number
   created_at: string
@@ -50,14 +49,12 @@ export default function EventsPage() {
     venue_address: '',
     venue_map_url: '',
     program_outline: '',
-    dress_code: '',
     max_guests: 100,
     status: 'upcoming' as 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   })
 
   type ProgramRow = { time: string; item: string }
   const [programRows, setProgramRows] = useState<ProgramRow[]>([])
-  const [useDressCode, setUseDressCode] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
 
   function parseProgramOutline(src: string | undefined | null): ProgramRow[] {
@@ -153,12 +150,10 @@ export default function EventsPage() {
         venue_address: event.venue_address || '',
         venue_map_url: event.venue_map_url || '',
         program_outline: event.program_outline || '',
-        dress_code: event.dress_code || '',
         max_guests: event.max_guests,
         status: event.status
       })
       setProgramRows(parseProgramOutline(event.program_outline))
-      setUseDressCode(!!event.dress_code)
     } else {
       setEditingEvent(null)
       setFormData({
@@ -168,12 +163,10 @@ export default function EventsPage() {
         venue_address: '',
         venue_map_url: '',
         program_outline: '',
-        dress_code: '',
         max_guests: 100,
         status: 'upcoming'
       })
       setProgramRows([])
-      setUseDressCode(false)
     }
     setShowEventModal(true)
   }
@@ -188,12 +181,10 @@ export default function EventsPage() {
       venue_address: '',
       venue_map_url: '',
       program_outline: '',
-      dress_code: '',
       max_guests: 100,
       status: 'upcoming'
     })
-    setProgramRows([])
-    setUseDressCode(false)
+      setProgramRows([])
   }
 
   const openPreviewModal = () => {
@@ -307,7 +298,7 @@ export default function EventsPage() {
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
             program_outline: program_outline_payload,
-            dress_code: useDressCode ? formData.dress_code?.trim() || '' : '',
+            program_outline: program_outline_payload,
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())
         })
@@ -341,7 +332,7 @@ export default function EventsPage() {
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
             program_outline: program_outline_payload,
-            dress_code: useDressCode ? formData.dress_code?.trim() || '' : '',
+            program_outline: program_outline_payload,
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())
         })
@@ -895,7 +886,7 @@ export default function EventsPage() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-white/70 uppercase bg-black/40 border-b border-white/10">
               <tr>
-                <th className="px-6 py-4 w-2/5 font-semibold">Tên sự kiện</th>
+                <th className="px-6 py-4 w-1/3 font-semibold">Tên sự kiện</th>
                 <th className="px-6 py-4 w-1/5 font-semibold">Ngày & Giờ</th>
                 <th className="px-6 py-4 w-1/5 font-semibold">Địa điểm</th>
                 <th className="px-6 py-4 w-16 font-semibold">Khách</th>
@@ -906,7 +897,7 @@ export default function EventsPage() {
             <tbody>
               {paginatedEvents.map((event) => (
                 <tr key={event.id} className="bg-black/20 border-b border-white/10 hover:bg-black/30 transition-colors">
-                  <td className="px-6 py-4 w-2/5">
+                  <td className="px-6 py-4 w-1/3">
                     <div>
                       <h3 className="text-white font-medium text-sm">{event.name}</h3>
                     </div>
@@ -1217,28 +1208,6 @@ export default function EventsPage() {
                       Cài đặt bổ sung
                     </h3>
                   <div className="space-y-3">
-              {/* Dress Code */}
-              <div>
-                      <div className="mb-2">
-                        <CustomCheckbox
-                      checked={useDressCode}
-                          onChange={setUseDressCode}
-                          label="Đề nghị trang phục"
-                    />
-                </div>
-                {useDressCode && (
-                        <div>
-                    <input
-                      type="text"
-                      value={formData.dress_code}
-                      onChange={(e) => setFormData({ ...formData, dress_code: e.target.value })}
-                            className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm"
-                            placeholder="Ví dụ: Trang phục lịch sự, Áo dài truyền thống..."
-                    />
-                  </div>
-                )}
-                    </div>
-
                   </div>
                 </div>
               </div>
@@ -1468,7 +1437,7 @@ export default function EventsPage() {
                     
                     
                     {/* Additional Details */}
-                    {(event.venue_address || event.venue_map_url || event.program_outline || event.dress_code) && (
+                    {(event.venue_address || event.venue_map_url || event.program_outline) && (
                       <div>
                         <h3 className="text-lg font-semibold text-white mb-3">Thông tin chi tiết</h3>
                         <div className="space-y-3">
@@ -1497,13 +1466,6 @@ export default function EventsPage() {
                             <div>
                               <div className="text-white/60 text-sm mb-1">Chương trình</div>
                               <div className="text-white/80 whitespace-pre-line">{event.program_outline}</div>
-                            </div>
-                          )}
-                          
-                          {event.dress_code && (
-                            <div>
-                              <div className="text-white/60 text-sm mb-1">Trang phục</div>
-                              <div className="text-white/80">{event.dress_code}</div>
                             </div>
                           )}
 

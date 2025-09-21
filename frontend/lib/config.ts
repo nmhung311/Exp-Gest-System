@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 // API Base URLs
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (isDevelopment ? 'http://192.168.1.135:5008' : 'http://192.168.1.135:5008')
+  (isDevelopment ? 'http://localhost:5008' : 'http://192.168.1.135:5008')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||

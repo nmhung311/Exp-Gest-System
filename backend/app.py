@@ -448,7 +448,6 @@ def create_app() -> Flask:
                 return {"message": "Guest not found"}, 404
             
             data = request.get_json(silent=True) or {}
-            print(f"Update guest data received: {data}")
             name = data.get("name", "").strip()
             
             if not name:

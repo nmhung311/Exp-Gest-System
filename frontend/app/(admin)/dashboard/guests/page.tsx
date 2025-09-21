@@ -3180,21 +3180,52 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
 
             {/* Event Content */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white/80 mb-2">Nội dung sự kiện</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-white/80">Nội dung sự kiện</label>
+                <span className={`text-xs ${Array.from(guestForm.event_content).length > 230 ? 'text-red-400' : 'text-white/60'}`}>
+                  {Array.from(guestForm.event_content).length}/230
+                </span>
+              </div>
               <textarea
                 value={guestForm.event_content}
                 onChange={(e) => {
-                  updateGuestForm('event_content', e.target.value)
-                  // Auto resize textarea
-                  e.target.style.height = 'auto'
-                  e.target.style.height = e.target.scrollHeight + 'px'
+                  const value = e.target.value
+                  // Sử dụng Array.from để đếm ký tự UTF-8 chính xác
+                  const charCount = Array.from(value).length
+                  
+                  if (charCount <= 230) {
+                    updateGuestForm('event_content', value)
+                    // Auto resize textarea
+                    e.target.style.height = 'auto'
+                    e.target.style.height = e.target.scrollHeight + 'px'
+                  }
+                  // Nếu vượt quá giới hạn, không cập nhật giá trị (giữ nguyên nội dung cũ)
+                }}
+                onKeyDown={(e) => {
+                  // Ngăn chặn nhập thêm ký tự khi đã đạt giới hạn
+                  const currentValue = guestForm.event_content
+                  const charCount = Array.from(currentValue).length
+                  
+                  // Cho phép các phím điều khiển (Backspace, Delete, Arrow keys, etc.)
+                  const allowedKeys = [
+                    'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                    'Home', 'End', 'Tab', 'Enter', 'Control', 'Meta', 'Alt'
+                  ]
+                  
+                  if (charCount >= 230 && !allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault()
+                  }
                 }}
                 onInput={(e) => {
                   // Auto resize on input
                   e.currentTarget.style.height = 'auto'
                   e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'
                 }}
-                className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400/50 text-sm transition-all duration-200 resize-none min-h-[80px] overflow-hidden leading-relaxed"
+                className={`w-full px-4 py-3 bg-black/30 border rounded-lg text-white placeholder-white/50 focus:outline-none text-sm transition-all duration-200 resize-none min-h-[80px] overflow-hidden leading-relaxed ${
+                  Array.from(guestForm.event_content).length > 230 
+                    ? 'border-red-400/50 focus:border-red-400/50' 
+                    : 'border-white/20 focus:border-blue-400/50'
+                }`}
                 placeholder="Nhập nội dung sự kiện cho khách mời này..."
                 rows={3}
               />
