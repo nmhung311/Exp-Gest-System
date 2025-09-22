@@ -20,7 +20,7 @@ COPY . .
 RUN mkdir -p instance
 
 # Expose port
-EXPOSE 9009
+EXPOSE 5001
 
 # Start the application
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-w", "2", "app:app", "--bind", "0.0.0.0:5001", "--timeout", "120"]

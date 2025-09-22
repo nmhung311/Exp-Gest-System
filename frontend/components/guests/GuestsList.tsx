@@ -141,14 +141,14 @@ export default function GuestsList({
       </div>
       
       <div className="space-y-2">
-        {guest.position && (
+        {guest.role && (
           <div className="text-white/80 text-xs">
-            <span className="text-white/60">Vai trò:</span> {guest.position}
+            <span className="text-white/60">Vai trò:</span> {guest.role}
           </div>
         )}
-        {guest.company && (
+        {guest.organization && (
           <div className="text-white/80 text-xs">
-            <span className="text-white/60">Tổ chức:</span> {guest.company}
+            <span className="text-white/60">Tổ chức:</span> {guest.organization}
           </div>
         )}
         {guest.tag && (
@@ -248,8 +248,8 @@ export default function GuestsList({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-white/80">{guest.position || ''}</td>
-                <td className="px-4 py-3 text-white/80">{guest.company || ''}</td>
+                <td className="px-4 py-3 text-white/80">{guest.role || ''}</td>
+                <td className="px-4 py-3 text-white/80">{guest.organization || ''}</td>
                 <td className="px-4 py-3 text-white/80">{guest.tag || ''}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-1 rounded-full ${

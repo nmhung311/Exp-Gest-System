@@ -193,8 +193,8 @@ def create_app() -> Flask:
         for row in data:
             name = (row or {}).get("name")
             title = (row or {}).get("title")
-            position = (row or {}).get("role")  # Map role to position
-            company = (row or {}).get("organization")  # Map organization to company
+            role = (row or {}).get("role")
+            organization = (row or {}).get("organization")
             tag = (row or {}).get("tag")
             email = (row or {}).get("email")
             phone = (row or {}).get("phone")
@@ -204,8 +204,8 @@ def create_app() -> Flask:
             print(f"Processing guest: {name}")
             print(f"  Raw role: {repr((row or {}).get('role'))}")
             print(f"  Raw organization: {repr((row or {}).get('organization'))}")
-            print(f"  Mapped position: {repr(position)}")
-            print(f"  Mapped company: {repr(company)}")
+            print(f"  Mapped role: {repr(role)}")
+            print(f"  Mapped organization: {repr(organization)}")
             if not name:
                 failed += 1
                 errors.append("Missing name")
@@ -232,8 +232,8 @@ def create_app() -> Flask:
                 g = Guest(
                     name=name,
                     title=title,
-                    position=position,
-                    company=company,
+                    role=role,
+                    organization=organization,
                     tag=tag,
                     email=email,
                     phone=phone,
@@ -463,8 +463,8 @@ def create_app() -> Flask:
             # Update guest fields
             guest.name = name
             guest.title = data.get("title", "").strip() or None
-            guest.position = data.get("role", "").strip() or None  # Map role to position
-            guest.company = data.get("organization", "").strip() or None  # Map organization to company
+            guest.role = data.get("role", "").strip() or None
+            guest.organization = data.get("organization", "").strip() or None
             guest.tag = data.get("tag", "").strip() or None
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
@@ -1221,8 +1221,8 @@ def create_app() -> Flask:
                     "name": guest.name,
                     "email": guest.email,
                     "title": guest.title or "Ông/Bà",
-                    "role": guest.position or "Khách mời",
-                    "organization": guest.company or "",
+                    "role": guest.role or "Khách mời",
+                    "organization": guest.organization or "",
                     "group_tag": guest.tag or "",
                     "is_vip": guest.tag == "VIP" if guest.tag else False,
                     "rsvp_status": guest.rsvp_status or "pending",

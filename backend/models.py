@@ -54,8 +54,8 @@ class Guest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     title = db.Column(db.String(20), nullable=True)  # Mr, Ms, Dr, etc.
-    position = db.Column(db.String(255), nullable=True)  # CEO, Manager, etc.
-    company = db.Column(db.String(255), nullable=True)
+    role = db.Column(db.String(255), nullable=True)  # CEO, Manager, etc.
+    organization = db.Column(db.String(255), nullable=True)
     tag = db.Column(db.String(50), nullable=True)  # VIP, Regular, etc.
     email = db.Column(db.String(255), nullable=True, unique=True)
     phone = db.Column(db.String(50), nullable=True, unique=True)
@@ -73,8 +73,8 @@ class Guest(db.Model):
             "id": self.id,
             "name": self.name,
             "title": self.title,
-            "role": self.position,  # Map position to role
-            "organization": self.company,  # Map company to organization
+            "role": self.role,
+            "organization": self.organization,
             "tag": self.tag,
             "email": self.email,
             "phone": self.phone,

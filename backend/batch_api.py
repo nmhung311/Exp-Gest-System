@@ -58,7 +58,7 @@ def build_guests_query(filters: Dict[str, Any]):
                 Guest.name.ilike(search_term),
                 Guest.email.ilike(search_term),
                 Guest.phone.ilike(search_term),
-                Guest.position.ilike(search_term),
+                Guest.role.ilike(search_term),
                 Guest.company.ilike(search_term),
                 Guest.tag.ilike(search_term)
             )
@@ -74,11 +74,11 @@ def build_guests_query(filters: Dict[str, Any]):
     
     # Organization filter
     if filters.get('organization') and filters['organization'] != 'all':
-        query = query.filter(Guest.company == filters['organization'])
+        query = query.filter(Guest.organization == filters['organization'])
     
     # Role filter
     if filters.get('role') and filters['role'] != 'all':
-        query = query.filter(Guest.position == filters['role'])
+        query = query.filter(Guest.role == filters['role'])
     
     return query
 
@@ -137,7 +137,7 @@ def build_checkin_query(filters: Dict[str, Any]):
                 Guest.name.ilike(search_term),
                 Guest.email.ilike(search_term),
                 Guest.phone.ilike(search_term),
-                Guest.position.ilike(search_term),
+                Guest.role.ilike(search_term),
                 Guest.company.ilike(search_term),
                 Guest.tag.ilike(search_term)
             )
@@ -163,8 +163,8 @@ def serialize_guest(guest: Guest) -> Dict[str, Any]:
         'id': guest.id,
         'name': guest.name,
         'title': guest.title,
-        'role': guest.position,  # Map position to role
-        'organization': guest.company,  # Map company to organization
+        'role': guest.role,
+        'organization': guest.organization,
         'tag': guest.tag,
         'email': guest.email,
         'phone': guest.phone,

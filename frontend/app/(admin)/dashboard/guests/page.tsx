@@ -1512,17 +1512,11 @@ export default function GuestsPage(){
 
       // No duplicates, proceed with normal import
       if (importType === "json") {
-        // Map role/organization to position/company for backend
-        const mappedGuests = newGuests.map(guest => ({
-          ...guest,
-          position: guest.role,
-          company: guest.organization
-        }))
-        
+        // Send guests directly without mapping
         const res = await fetch("/api/guests/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(mappedGuests)
+          body: JSON.stringify(newGuests)
         })
         
         if (!res.ok) {

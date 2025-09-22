@@ -199,7 +199,7 @@ const ReusableInvitePage: React.FC<ReusableInvitePageProps> = ({
           {/* Invitation Card */}
           <div className="invitation-card">
             <div className="greeting">
-              Xin chào {guestData.title} {guestData.name},
+              Kính gửi {guestData.title} {guestData.name},
             </div>
             <div className="invitation-text">
               {eventData.description}

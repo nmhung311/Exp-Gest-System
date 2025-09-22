@@ -298,7 +298,6 @@ export default function EventsPage() {
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
             program_outline: program_outline_payload,
-            program_outline: program_outline_payload,
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())
         })
@@ -331,7 +330,6 @@ export default function EventsPage() {
             time: formData.time,
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
-            program_outline: program_outline_payload,
             program_outline: program_outline_payload,
             status: formData.status,
             max_guests: parseInt(formData.max_guests.toString())

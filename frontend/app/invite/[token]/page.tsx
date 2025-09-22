@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
 import BackgroundGlow from '../../_components/BackgroundGlow'
@@ -55,6 +55,9 @@ const InvitePage: React.FC = () => {
   const [showChangeOption, setShowChangeOption] = useState(false)
   const [showCheckinSuccess, setShowCheckinSuccess] = useState(false)
   const [isCardRevealed, setIsCardRevealed] = useState(false)
+  
+  // Ref for desktop RSVP card focus
+  const desktopRsvpCardRef = useRef<HTMLDivElement>(null)
   
   // Function to update checkin status
   const updateCheckinStatus = (status: 'not_arrived' | 'checked_in' | 'checked_out' | 'arrived') => {
@@ -248,7 +251,7 @@ const InvitePage: React.FC = () => {
     return timeString
   }
 
-  // Generate QR code
+  // Generate QR code (legacy - for fallback)
   useEffect(() => {
     const generateQRCode = async () => {
       try {
@@ -280,6 +283,46 @@ const InvitePage: React.FC = () => {
       setProgramRows(parseProgramOutline(inviteData.event.program_outline))
     }
   }, [inviteData])
+
+  // Effect để tự động tạo QR code khi guest đã accepted
+  useEffect(() => {
+    const autoGenerateQR = async () => {
+      if (inviteData?.guest?.rsvp_status === 'accepted' && 
+          inviteData?.guest?.checkin_status !== 'arrived' && 
+          inviteData?.guest?.checkin_status !== 'checked_in' &&
+          !qrImageUrl) {
+        
+        console.log('=== AUTO GENERATING QR CODE ON STATE CHANGE ===')
+        console.log('Guest ID:', inviteData.guest.id)
+        console.log('RSVP status:', inviteData.guest.rsvp_status)
+        console.log('Checkin status:', inviteData.guest.checkin_status)
+        console.log('Current QR URL:', qrImageUrl)
+        
+        try {
+          const tokenResponse = await fetch(`/api/guests/${inviteData.guest.id}/qr`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          
+          if (tokenResponse.ok) {
+            const qrUrl = `/api/guests/${inviteData.guest.id}/qr-image?t=${Date.now()}`
+            setQrImageUrl(qrUrl)
+            console.log('QR code generated successfully on state change:', qrUrl)
+          } else {
+            console.error('Failed to generate QR token on state change')
+          }
+        } catch (error) {
+          console.error('Error generating QR code on state change:', error)
+        }
+      }
+    }
+
+    // Delay để đảm bảo state đã được cập nhật
+    const timer = setTimeout(autoGenerateQR, 100)
+    return () => clearTimeout(timer)
+  }, [inviteData?.guest?.rsvp_status, inviteData?.guest?.checkin_status, inviteData?.guest?.id, qrImageUrl])
 
   // Effect để xử lý scroll animation cho card thời gian địa điểm
   useEffect(() => {
@@ -337,12 +380,36 @@ const InvitePage: React.FC = () => {
           const data = await response.json()
           setInviteData(data)
           
-          // Không gọi checkCheckinStatus ngay sau khi load để tránh ghi đè data
-          // setTimeout(() => {
-          //   if (data.guest?.id) {
-          //     checkCheckinStatus()
-          //   }
-          // }, 1000)
+          // Tự động tạo QR code nếu guest đã accepted và chưa checkin
+          if (data.guest?.rsvp_status === 'accepted' && 
+              data.guest?.checkin_status !== 'arrived' && 
+              data.guest?.checkin_status !== 'checked_in') {
+            console.log('=== AUTO GENERATING QR CODE ===')
+            console.log('Guest RSVP status:', data.guest.rsvp_status)
+            console.log('Guest checkin status:', data.guest.checkin_status)
+            
+            // Delay để đảm bảo state đã được set
+            setTimeout(async () => {
+              try {
+                const tokenResponse = await fetch(`/api/guests/${data.guest.id}/qr`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  }
+                })
+                
+                if (tokenResponse.ok) {
+                  const qrUrl = `/api/guests/${data.guest.id}/qr-image?t=${Date.now()}`
+                  setQrImageUrl(qrUrl)
+                  console.log('QR code generated successfully:', qrUrl)
+                } else {
+                  console.error('Failed to generate QR token')
+                }
+              } catch (error) {
+                console.error('Error generating QR code:', error)
+              }
+            }, 500)
+          }
         } else {
           console.log('API failed, using demo data')
           console.log('Response status:', response.status)
@@ -384,6 +451,33 @@ const InvitePage: React.FC = () => {
             token: token
           }
           setInviteData(demoData)
+          
+          // Tự động tạo QR code cho demo data nếu đã accepted
+          if (demoData.guest?.rsvp_status === 'accepted' && 
+              demoData.guest?.checkin_status !== 'arrived' && 
+              demoData.guest?.checkin_status !== 'checked_in') {
+            console.log('=== AUTO GENERATING QR CODE FOR DEMO ===')
+            setTimeout(async () => {
+              try {
+                const tokenResponse = await fetch(`/api/guests/${demoData.guest.id}/qr`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  }
+                })
+                
+                if (tokenResponse.ok) {
+                  const qrUrl = `/api/guests/${demoData.guest.id}/qr-image?t=${Date.now()}`
+                  setQrImageUrl(qrUrl)
+                  console.log('Demo QR code generated successfully:', qrUrl)
+                } else {
+                  console.error('Failed to generate demo QR token')
+                }
+              } catch (error) {
+                console.error('Error generating demo QR code:', error)
+              }
+            }, 500)
+          }
         }
       } catch (err) {
         console.error('Error loading invite data:', err)
@@ -467,6 +561,7 @@ const InvitePage: React.FC = () => {
       role: inviteData.guest.role,
       organization: inviteData.guest.organization,
       rsvp_status: 'accepted',
+      event_content: inviteData.guest.event_content || '',
       event_id: inviteData.event.id
     }
     
@@ -492,9 +587,10 @@ const InvitePage: React.FC = () => {
         await showQRCode()
         console.log('RSVP status updated successfully!')
         
-        // Tự động focus card RSVP ra giữa màn hình trên mobile
-        if (window.innerWidth <= 768) {
+        // Tự động focus card RSVP ra giữa màn hình
           setTimeout(() => {
+          if (window.innerWidth <= 768) {
+            // Mobile: focus mobile RSVP card
             const rsvpCard = document.querySelector('.rsvp-card')
             if (rsvpCard) {
               rsvpCard.scrollIntoView({ 
@@ -503,8 +599,17 @@ const InvitePage: React.FC = () => {
                 inline: 'center'
               })
             }
-          }, 15)
-        }
+          } else {
+            // Desktop: focus desktop RSVP card
+            if (desktopRsvpCardRef.current) {
+              desktopRsvpCardRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          }
+        }, 15)
         
         // Notify parent window about RSVP update
         if (window.parent !== window) {
@@ -546,6 +651,7 @@ const InvitePage: React.FC = () => {
       role: inviteData.guest.role,
       organization: inviteData.guest.organization,
       rsvp_status: 'declined',
+      event_content: inviteData.guest.event_content || '',
       event_id: inviteData.event.id
     }
     
@@ -570,9 +676,10 @@ const InvitePage: React.FC = () => {
         setInviteData(prev => prev ? { ...prev, guest: { ...prev.guest, rsvp_status: 'declined' } } : null)
         console.log('RSVP status updated successfully!')
         
-        // Tự động focus card RSVP ra giữa màn hình trên mobile
-        if (window.innerWidth <= 768) {
+        // Tự động focus card RSVP ra giữa màn hình
           setTimeout(() => {
+          if (window.innerWidth <= 768) {
+            // Mobile: focus mobile RSVP card
             const rsvpCard = document.querySelector('.rsvp-card')
             if (rsvpCard) {
               rsvpCard.scrollIntoView({ 
@@ -581,8 +688,17 @@ const InvitePage: React.FC = () => {
                 inline: 'center'
               })
             }
-          }, 200)
-        }
+          } else {
+            // Desktop: focus desktop RSVP card
+            if (desktopRsvpCardRef.current) {
+              desktopRsvpCardRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          }
+        }, 200)
         
         // Notify parent window about RSVP update
         if (window.parent !== window) {
@@ -634,6 +750,31 @@ const InvitePage: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 300))
     
     setShowChangeOption(true)
+    
+    // Focus vào RSVP card sau khi hiển thị change option
+    setTimeout(() => {
+      if (window.innerWidth <= 768) {
+        // Mobile: focus mobile RSVP card
+        const rsvpCard = document.querySelector('.rsvp-card')
+        if (rsvpCard) {
+          rsvpCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          })
+        }
+      } else {
+        // Desktop: focus desktop RSVP card
+        if (desktopRsvpCardRef.current) {
+          desktopRsvpCardRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          })
+        }
+      }
+    }, 100)
+    
     // Không reset qrImageUrl để giữ QR code khi ấn "Không"
   }
 
@@ -656,7 +797,8 @@ const InvitePage: React.FC = () => {
           title: inviteData.guest.title,
           role: inviteData.guest.role,
           organization: inviteData.guest.organization,
-          rsvp_status: 'pending'
+          rsvp_status: 'pending',
+          event_content: inviteData.guest.event_content || ''
         }),
       })
 
@@ -664,6 +806,30 @@ const InvitePage: React.FC = () => {
         setInviteData(prev => prev ? { ...prev, guest: { ...prev.guest, rsvp_status: 'pending' } } : null)
         setShowChangeOption(false)
         setQrImageUrl('')
+        
+        // Focus vào RSVP card sau khi reset
+        setTimeout(() => {
+          if (window.innerWidth <= 768) {
+            // Mobile: focus mobile RSVP card
+            const rsvpCard = document.querySelector('.rsvp-card')
+            if (rsvpCard) {
+              rsvpCard.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          } else {
+            // Desktop: focus desktop RSVP card
+            if (desktopRsvpCardRef.current) {
+              desktopRsvpCardRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              })
+            }
+          }
+        }, 100)
       } else {
         const errorText = await response.text()
         console.error('Failed to reset RSVP status:', errorText)
@@ -682,6 +848,31 @@ const InvitePage: React.FC = () => {
     console.log('rsvp_status:', inviteData?.guest.rsvp_status)
     
     setShowChangeOption(false)
+    
+    // Focus vào RSVP card sau khi cancel
+    setTimeout(() => {
+      if (window.innerWidth <= 768) {
+        // Mobile: focus mobile RSVP card
+        const rsvpCard = document.querySelector('.rsvp-card')
+        if (rsvpCard) {
+          rsvpCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          })
+        }
+      } else {
+        // Desktop: focus desktop RSVP card
+        if (desktopRsvpCardRef.current) {
+          desktopRsvpCardRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          })
+        }
+      }
+    }, 100)
+    
     // Không reset qrImageUrl để giữ QR code hiển thị
   }
 
@@ -704,10 +895,10 @@ const InvitePage: React.FC = () => {
           .company-info { display: flex; flex-direction: column; align-items: flex-start; }
           .company-name { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 5px; line-height: 1.1; }
           .company-slogan { font-size: 18px; color: #8B5CF6; margin-bottom: 5px; }
-          .company-full { font-size: 16px; color: #94A3B8; }
+          .company-full { font-size: 20px; color: #94A3B8; }
           .company-description { font-size: 12px; color: #94A3B8; text-align: center; margin-top: 10px; font-style: italic; }
-          .event-title-main { 
-            font-size: 32px; 
+          .event-title-main-desktop { 
+            font-size: 64px; 
             font-weight: 900; 
             color: #ffffff; 
             text-align: center; 
@@ -724,33 +915,119 @@ const InvitePage: React.FC = () => {
               0 0 40px rgba(139, 92, 246, 0.2);
             letter-spacing: 1px;
             filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
+            display: block;
           }
-          .slogan-1 { 
-            font-size: 16px; 
+          .event-title-main-mobile { 
+            font-size: 28px; 
+            font-weight: 900; 
+            color: #ffffff; 
+            text-align: center; 
+            margin-top: 8px; 
+            margin-bottom: 6px;
+            text-shadow: 
+              0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              0 0 10px rgba(139, 92, 246, 0.8),
+              0 0 20px rgba(59, 130, 246, 0.6),
+              0 0 30px rgba(6, 182, 212, 0.4),
+              0 0 40px rgba(139, 92, 246, 0.2);
+            letter-spacing: 1px;
+            filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
+            display: none;
+          }
+          .slogan-1-desktop { 
+            font-size: 24px; 
             color:rgb(201, 202, 204); 
             text-align: center; 
             margin-bottom: 16px; 
             font-weight: 500;
+            display: block;
           }
-          .slogan-2 { 
+          .slogan-1-mobile { 
             font-size: 14px; 
+            color:rgb(201, 202, 204); 
+            text-align: center; 
+            margin-bottom: 16px; 
+            font-weight: 500;
+            display: none;
+          }
+          .slogan-2-desktop { 
+            font-size: 20px; 
             color: #94A3B8; 
             text-align: center; 
             margin-bottom: 20px; 
             font-style: italic;
+            display: block;
+          }
+          .slogan-2-mobile { 
+            font-size: 12px; 
+            color: #94A3B8; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            font-style: italic;
+            display: none;
           }
           .main-title { text-align: center; margin-bottom: 50px; }
           .event-title { font-size: 48px; font-weight: 700; color: #fff; margin-bottom: 10px; }
           .title-underline { width: 200px; height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); margin: 0 auto; border-radius: 2px; }
-          .invitation-card { 
+          .invitation-card-desktop { 
             background: rgba(255,255,255,0.08); 
             backdrop-filter: blur(8px); 
             border: 1px solid rgba(255,255,255,0.15); 
             border-radius: 20px; 
-            padding: 40px; 
-            margin-bottom: 30px; 
+            padding: 30px; 
+            margin-bottom: 40px; 
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            width: calc(70% + 50px);
+            max-width: 1000px;
+            text-align: center;
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          }
+          .invitation-card-mobile { 
+            background: rgba(255,255,255,0.08); 
+            backdrop-filter: blur(8px); 
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 20px; 
+            padding: 25px; 
+            margin-bottom: 20px; 
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: none;
           }
           .greeting { font-size: 24px; color: #fff; margin-bottom: 20px; }
+          .guest-name-highlight {
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 
+              0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              0 0 10px rgba(139, 92, 246, 0.8),
+              0 0 20px rgba(59, 130, 246, 0.6),
+              0 0 30px rgba(6, 182, 212, 0.4),
+              0 0 40px rgba(139, 92, 246, 0.2);
+            letter-spacing: 1px;
+            filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
+            display: inline-block;
+            transition: all 0.3s ease;
+          }
+          .guest-name-highlight:hover {
+            text-shadow: 
+              0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+              -0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+              0 0 15px rgba(139, 92, 246, 1),
+              0 0 25px rgba(59, 130, 246, 0.8),
+              0 0 35px rgba(6, 182, 212, 0.6),
+              0 0 45px rgba(139, 92, 246, 0.4);
+            filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.7));
+            transform: scale(1.05);
+          }
           .greeting-section {
             padding: 15px 25px;
             margin-bottom: 20px;
@@ -761,38 +1038,400 @@ const InvitePage: React.FC = () => {
             margin-right: auto;
             text-align: left;
           }
-          @media (max-width: 768px) {
-            .greeting { font-size: 18px; }
-            .greeting-section::before { width: 4px; left: 12px; top: 10px; bottom: 10px; background: linear-gradient(180deg, #60A5FA, #A78BFA); box-shadow: 0 0 10px rgba(96, 165, 250, 0.6); }
+          .greeting-section::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            background: linear-gradient(180deg, #60A5FA, #A78BFA);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
           }
-          .guest-info { font-size: 18px; color: #8B5CF6; margin-top: 8px; font-weight: 500; }
-          .invitation-text { font-size: 18px; color: #94A3B8; margin-bottom: 20px; }
-          .program-info { text-align: center; margin-bottom: 40px; }
-          .program-title { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 10px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-          .program-description { font-size: 18px; color: #94A3B8; font-style: italic; margin-top: 10px; }
-          .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
-          .detail-section h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 20px; display: flex; align-items: center; }
-          .detail-section h3 svg { width: 32px; height: 32px; margin-right: 16px; color: #3B82F6; }
-          .detail-item { display: flex; align-items: center; margin-bottom: 15px; justify-content: flex-start; }
-          .detail-icon { width: 20px; height: 20px; margin-right: 16px; color: #fff; text-align: left; }
-          .address-detail-icon { width: 20px !important; height: 20px !important; margin-right: 16px !important; color: #fff !important; text-align: left; }
-          .detail-text { color: #fff; font-size: 16px; text-align: left; }
-          .map-link { 
+          @media (max-width: 460px) {
+            /* Mobile-only styles - completely isolated */
+            .greeting { font-size: 18px; }
+            .greeting-title { font-size: 16px !important; }
+            .guest-name { font-size: 24px !important; }
+            .guest-name.long-name { font-size: 10px !important; }
+            .guest-info { font-size: 12px !important; }
+            .guest-role { font-size: 10px !important; }
+            .greeting-section { margin-top: -40px !important; }
+            .greeting-section::before { width: 4px; left: 12px; top: 10px; bottom: 10px; background: linear-gradient(180deg, #60A5FA, #A78BFA); box-shadow: 0 0 10px rgba(96, 165, 250, 0.6); }
+            
+            .details-grid { grid-template-columns: 1fr; gap: 20px; }
+            .rsvp-buttons { flex-direction: column; gap: 15px; }
+            .rsvp-button { 
+              padding: 12px 24px; 
+              font-size: 14px !important; 
+              border-radius: 12px; 
+              font-weight: 600; 
+              cursor: pointer; 
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+              display: flex; 
+              align-items: center; 
+              gap: 8px; 
+              border: none;
+              backdrop-filter: blur(8px);
+              position: relative;
+              overflow: hidden;
+              min-width: 180px;
+              justify-content: center;
+              text-align: center;
+            }
+            .event-title { font-size: 36px; }
+            .event-title-main-desktop { display: none; }
+            .event-title-main-mobile { display: block; }
+            .slogan-1-desktop { display: none; }
+            .slogan-1-mobile { display: block; }
+            .slogan-2-desktop { display: none; }
+            .slogan-2-mobile { display: block; }
+            .desktop-qr-section { display: none; }
+            .guest-card-desktop { display: none; }
+            .desktop-rsvp-section { display: none; }
+            .program-title { font-size: 24px; }
+            .program-description { font-size: 16px; }
+            
+            /* Mobile program timeline styling */
+            .program-item { 
+              display: grid !important; 
+              grid-template-columns: 60px 1fr !important; 
+              align-items: center !important; 
+              margin-bottom: 12px !important; 
+              gap: 12px !important; 
+              justify-content: start !important; 
+              margin-left: 10px !important; 
+            }
+            .program-time { 
+              font-weight: 700 !important; 
+              color: #fff !important; 
+              line-height: 1.2 !important; 
+              font-size: 14px !important; 
+              text-align: left !important; 
+            }
+            .program-description { 
+              color: #fff !important; 
+              line-height: 1.2 !important; 
+              font-size: 16px !important; 
+              text-align: left !important; 
+            }
+            .guest-info { font-size: 15px !important; }
+            /* Giảm kích thước mobile guest card */
+            .greeting-title { font-size: 16px !important; }
+            .guest-name { font-size: 24px !important; }
+            .guest-name.long-name { font-size: 10px !important; }
+            .title-normal.small-title { font-size: 8px; }
+            .title-normal { font-size: 18px !important; }
+            .name-bold { font-size: 24px !important; font-weight: 700 !important; }
+            .name-bold.long-name { font-size: 10px !important; font-weight: 700 !important; }
+            .guest-role { font-size: 15px !important; }
+            .main-container { padding: 20px 15px; }
+            
+            .invitation-section { 
+              display: block !important; 
+              margin-bottom: 20px !important; 
+            }
+            
+            /* Mobile invitation message styling */
+            .invitation-message { 
+              color: #ffffff !important; 
+              font-size: 16px; 
+              line-height: 1.5;
+              text-align: left !important;
+              background: rgba(255,255,255,0.08) !important;
+              backdrop-filter: blur(8px) !important;
+              border: 1px solid rgba(255,255,255,0.15) !important;
+              border-radius: 20px !important;
+              padding: 25px !important;
+              margin-bottom: 20px !important;
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+            }
+            
+            /* Mobile Card Layout */
+            .invitation-card-desktop { display: none; }
+            .invitation-card-mobile { display: block; }
+            .mobile-cards { display: block; }
+            .mobile-card { 
+              background: rgba(255,255,255,0.08); 
+              backdrop-filter: blur(8px); 
+              border: 1px solid rgba(255,255,255,0.15); 
+              border-radius: 20px; 
+              padding: 25px; 
+              margin-bottom: 20px; 
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            }
+            .mobile-card-title { 
+            font-size: 20px; 
+              font-weight: 600; 
             color: #fff; 
-            text-decoration: none; 
+              margin-bottom: 20px; 
+            display: flex; 
+            align-items: center; 
+              gap: 12px;
+            }
+            .mobile-card-content { 
+              color: #E2E8F0; 
+              line-height: 1.6; 
+              font-size: 16px;
+            }
+            .mobile-card-content p { 
+              margin: 0 0 12px 0; 
+              color: #E2E8F0; 
+            }
+            .mobile-card-content p:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content strong { 
+            color: #fff; 
+              font-weight: 600; 
+            }
+            .mobile-card-content em { 
+              color: #94A3B8; 
+              font-style: italic; 
+            }
+            .mobile-card-content ul { 
+              margin: 0; 
+              padding-left: 20px; 
+              color: #E2E8F0; 
+            }
+            .mobile-card-content li { 
+            margin-bottom: 8px; 
+              color: #E2E8F0; 
+            }
+            .mobile-card-content li:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content a { 
+              color: #60A5FA; 
+              text-decoration: none; 
+              border-bottom: 1px solid transparent; 
             transition: all 0.3s ease;
-            border-bottom: 1px solid transparent;
+          }
+            .mobile-card-content a:hover { 
+              color: #93C5FD; 
+              border-bottom-color: #93C5FD; 
+            }
+            .mobile-card-content h1, 
+            .mobile-card-content h2, 
+            .mobile-card-content h3, 
+            .mobile-card-content h4, 
+            .mobile-card-content h5, 
+            .mobile-card-content h6 { 
+              color: #fff; 
+              margin: 0 0 12px 0; 
+              font-weight: 600; 
+            }
+            .mobile-card-content h1:last-child, 
+            .mobile-card-content h2:last-child, 
+            .mobile-card-content h3:last-child, 
+            .mobile-card-content h4:last-child, 
+            .mobile-card-content h5:last-child, 
+            .mobile-card-content h6:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content blockquote { 
+              margin: 0 0 12px 0; 
+              padding: 12px 16px; 
+              background: rgba(255,255,255,0.05); 
+              border-left: 3px solid #60A5FA; 
+              color: #E2E8F0; 
+              font-style: italic; 
+            }
+            .mobile-card-content blockquote:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content code { 
+              background: rgba(255,255,255,0.1); 
+              padding: 2px 6px; 
+              border-radius: 4px; 
+              font-family: 'Courier New', monospace; 
+              color: #FBBF24; 
+              font-size: 14px; 
+            }
+            .mobile-card-content pre { 
+              background: rgba(0,0,0,0.3); 
+              padding: 12px; 
+              border-radius: 8px; 
+              overflow-x: auto; 
+              margin: 0 0 12px 0; 
+            }
+            .mobile-card-content pre:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content pre code { 
+              background: none; 
+              padding: 0; 
+              color: #E2E8F0; 
+            }
+            .mobile-card-content hr { 
+            border: none; 
+              height: 1px; 
+              background: rgba(255,255,255,0.2); 
+              margin: 16px 0; 
+            }
+            .mobile-card-content table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 0 0 12px 0; 
+            }
+            .mobile-card-content table:last-child { 
+              margin-bottom: 0; 
+            }
+            .mobile-card-content th, 
+            .mobile-card-content td { 
+              padding: 8px 12px; 
+              text-align: left; 
+              border-bottom: 1px solid rgba(255,255,255,0.1); 
+              color: #E2E8F0; 
+            }
+            .mobile-card-content th { 
+              background: rgba(255,255,255,0.05); 
+            color: #fff; 
+              font-weight: 600; 
+            }
+            .mobile-card-content img { 
+              max-width: 100%; 
+              height: auto; 
+              border-radius: 8px; 
+              margin: 8px 0; 
+            }
+            .mobile-card-content .detail-text { 
+              color: #E2E8F0; 
+              font-size: 16px; 
+              line-height: 1.5; 
+            }
+            .mobile-card-content .rsvp-question { 
+              color: #fff; 
+              font-size: 16px; 
+              font-weight: 600; 
+              margin-bottom: 16px; 
+            }
+            .mobile-card-content .rsvp-status-text { 
+              color: #94A3B8; 
+              font-size: 12px; 
+              margin-top: 10px; 
+              line-height: 1.5; 
+            }
+            .mobile-card-content .checkin-success-text { 
+              color: #22c55e; 
+              font-size: 16px; 
+              font-weight: 600; 
+              margin-top: 10px; 
+            }
+            .mobile-card-content .qr-title { 
+              color: #fff; 
+              font-size: 16px; 
+              font-weight: 600; 
+              margin-bottom: 12px; 
+            }
+            .mobile-card-content .change-option-title { 
+              color: #fff; 
+              font-size: 16px; 
+              font-weight: 600; 
+              margin-bottom: 12px; 
+            }
+            .mobile-card.time-location-card .mobile-card-title { 
+              text-align: left !important; 
+              justify-content: flex-start !important; 
+              margin-left: 10px !important; 
+              border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; 
+              padding-bottom: 15px !important; 
+              margin-bottom: 20px !important; 
+              font-weight: 700 !important; 
+            }
+            .mobile-card.program-card .mobile-card-title { 
+              text-align: left !important; 
+              justify-content: flex-start !important; 
+              margin-left: 10px !important; 
+              border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; 
+              padding-bottom: 15px !important; 
+              margin-bottom: 20px !important; 
+              font-weight: 700 !important; 
+            }
+            .mobile-card.program-card { 
+              padding-left: 28px !important; 
+            }
+            .detail-item { 
+              display: grid !important; 
+              grid-template-columns: 40px 1fr !important; 
+              align-items: center !important; 
+              margin-bottom: 15px !important; 
+              gap: 12px !important; 
+              justify-content: start !important; 
+            }
+            .detail-icon { 
+              width: 20px !important; 
+              height: 20px !important; 
+              color: #fff !important; 
+              text-align: center !important; 
+              justify-self: center !important; 
+            }
+            .address-detail-icon { 
+              width: 20px !important; 
+              height: 20px !important; 
+              color: #fff !important; 
+              text-align: center !important; 
+              justify-self: center !important; 
+            }
+            .detail-text { 
+              color: #fff !important; 
+              font-size: 16px !important; 
+              text-align: left !important; 
+              line-height: 1.4 !important; 
+            }
+            .map-link { 
+              color: #fff !important; 
+              text-decoration: none !important; 
+              border-bottom: none !important; 
+              transition: all 0.3s ease !important; 
           }
           .map-link:hover { 
-            color: #60A5FA; 
-            border-bottom-color: #60A5FA;
-            transform: translateY(-1px);
+              color: #60A5FA !important; 
+              border-bottom: none !important; 
+              transform: translateY(-1px) !important; 
+            }
+            .rsvp-question { 
+              color: #fff !important; 
+              font-size: 16px !important; 
+              font-weight: 600 !important; 
+              margin-bottom: 16px !important; 
+            }
+            .rsvp-status-text { 
+              color: #94A3B8 !important; 
+              font-size: 12px !important; 
+              margin-top: 10px !important; 
+              line-height: 1.5 !important; 
+            }
+            .checkin-success-text { 
+              color: #22c55e !important; 
+              font-size: 16px !important; 
+              font-weight: 600 !important; 
+              margin-top: 10px !important; 
+            }
+            .qr-title { 
+              color: #fff !important; 
+              font-size: 16px !important; 
+              font-weight: 600 !important; 
+              margin-bottom: 12px !important; 
+            }
+            .change-option-title { 
+              color: #fff !important; 
+              font-size: 16px !important; 
+              font-weight: 600 !important; 
+              margin-bottom: 12px !important; 
+            }
+            .mobile-card.time-location-card .mobile-card-title svg { 
+              width: 25px !important; 
+              height: 25px !important; 
+              color: #3B82F6 !important; 
+              max-width: 25px !important;
+              max-height: 25px !important;
+            }
           }
-          .program-item { display: flex; margin-bottom: 12px; align-items: baseline; }
-          .program-time { font-weight: 700; color: #fff; width: 80px; flex-shrink: 0; line-height: 1.2; }
-          .program-description { color: #fff; flex: 1; line-height: 1.2; }
-          .additional-info { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-          .info-item { color: #94A3B8; margin-bottom: 8px; }
+          /* Override cho icon tiêu đề card thời gian địa điểm */
+          /* Override cho icon tiêu đề card thời gian địa điểm */
+          /* Override cho icon tiêu đề card thời gian địa điểm */
             .rsvp-card { 
               background: rgba(255,255,255,0.08); 
               backdrop-filter: blur(8px); 
@@ -801,15 +1440,37 @@ const InvitePage: React.FC = () => {
               padding: 12px; 
               text-align: center; 
               transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-              overflow: hidden;
+              overflow: visible;
               height: auto;
+              min-height: 200px;
             }
             .rsvp-card.expanding {
-              height: auto;
+              height: auto !important;
               padding: 20px;
-              transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
+              min-height: 400px;
+              transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+              overflow: visible !important;
             }
-            .mobile-card.rsvp-card { padding: 10px; margin-bottom: 20px; }
+            .mobile-card.rsvp-card { 
+              padding: 10px; 
+              margin-bottom: 20px; 
+              min-height: 200px;
+              overflow: visible;
+            }
+            .mobile-card.rsvp-card.expanding {
+              min-height: auto !important;
+              max-height: none !important;
+              padding: 20px !important;
+              height: auto !important;
+              transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+              overflow: visible !important;
+            }
+            .mobile-card.rsvp-card.expanding .change-option-section {
+              opacity: 1 !important;
+              transform: translateY(0) !important;
+              max-height: none !important;
+              transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+            }
           .rsvp-card-declined { 
             background: rgba(239, 68, 68, 0.1); 
             border: 1px solid rgba(239, 68, 68, 0.3); 
@@ -823,30 +1484,13 @@ const InvitePage: React.FC = () => {
           }
           .rsvp-title.accepted { color: #22c55e; }
           .rsvp-title.declined { color: #ef4444; }
-          .rsvp-question { font-size: 18px; color: #94A3B8; margin-bottom: 15px; }
+            .rsvp-question { font-size: 12px; color: #94A3B8; margin-bottom: 15px; }
           .rsvp-buttons { 
             display: flex; 
             gap: 20px; 
             justify-content: center; 
             margin-bottom: 8px; 
             transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-          }
-          .rsvp-button { 
-            padding: 12px 24px; 
-            border-radius: 12px; 
-            font-weight: 600; 
-            font-size: 16px; 
-            cursor: pointer; 
-            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            border: none;
-            backdrop-filter: blur(8px);
-            position: relative;
-            overflow: hidden;
-            min-width: 180px;
-            justify-content: center;
           }
           .rsvp-button::before {
             content: '';
@@ -909,7 +1553,7 @@ const InvitePage: React.FC = () => {
           }
           .rsvp-status-text { 
             color: #94A3B8; 
-            font-size: 16px; 
+              font-size: 16px; 
             margin-top: 10px; 
             line-height: 1.5; 
           }
@@ -918,11 +1562,14 @@ const InvitePage: React.FC = () => {
             padding: 0; 
             background: transparent; 
             text-align: center;
-            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-            opacity: 0;
-            transform: translateY(20px);
-            max-height: 0;
-            overflow: hidden;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 500px;
+            overflow: visible;
+          }
+          .desktop-qr-section {
+            display: block;
           }
           .rsvp-card.expanding .qr-section {
             opacity: 1;
@@ -953,7 +1600,7 @@ const InvitePage: React.FC = () => {
           }
           .checkin-success-text { 
             color: #22c55e; 
-            font-size: 18px; 
+            font-size: 16px; 
             font-weight: 600; 
             text-align: center;
             animation: checkinTextFade 0.6s ease-out 0.5s both;
@@ -1034,13 +1681,13 @@ const InvitePage: React.FC = () => {
             }
           }
           .qr-title { 
-            font-size: 20px; 
+            font-size: 16px; 
             font-weight: 600; 
             color: #fff; 
             margin-bottom: 10px; 
-            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-            opacity: 0;
-            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 1;
+            transform: translateY(0);
           }
           .rsvp-card.expanding .qr-title {
             opacity: 1;
@@ -1050,9 +1697,9 @@ const InvitePage: React.FC = () => {
             color: #94A3B8; 
             margin-bottom: 15px; 
             font-size: 14px;
-            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-            opacity: 0;
-            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 1;
+            transform: translateY(0);
           }
           .rsvp-card.expanding .qr-description {
             opacity: 1;
@@ -1067,9 +1714,9 @@ const InvitePage: React.FC = () => {
           .qr-image-container { 
             display: flex; 
             justify-content: center; 
-            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-            opacity: 0;
-            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 1;
+            transform: translateY(0);
           }
           .rsvp-card.expanding .qr-image-container {
             opacity: 1;
@@ -1080,9 +1727,9 @@ const InvitePage: React.FC = () => {
             height: 200px; 
             border: 2px solid rgba(255,255,255,0.1); 
             border-radius: 12px; 
-            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s;
-            opacity: 0;
-            transform: scale(0.8);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 1;
+            transform: scale(1);
           }
           .rsvp-card.expanding .qr-image {
             opacity: 1;
@@ -1111,7 +1758,7 @@ const InvitePage: React.FC = () => {
             border: 1px solid rgba(59, 130, 246, 0.3);
             color: #ffffff;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1157,9 +1804,20 @@ const InvitePage: React.FC = () => {
             background: rgba(255,255,255,0.03);
             border-radius: 12px;
             text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            max-height: 0;
+            overflow: hidden;
+          }
+            .rsvp-card.expanding .change-option-section {
+              opacity: 1;
+              transform: translateY(0);
+              max-height: none !important;
+              transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           }
           .change-option-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             color: #fff;
             margin-bottom: 10px;
@@ -1180,7 +1838,7 @@ const InvitePage: React.FC = () => {
             border: 1px solid rgba(34, 197, 94, 0.3);
             color: #22c55e;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1219,7 +1877,7 @@ const InvitePage: React.FC = () => {
             border: 1px solid rgba(122, 124, 126, 0.3);
             color:rgb(216, 216, 216);
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1252,80 +1910,235 @@ const InvitePage: React.FC = () => {
             background: rgba(107, 114, 128, 0.5);
             color: #ffffff;
           }
-          @media (min-width: 769px) {
+          @media (min-width: 1200px) {
             .logo-container { width: 80px; height: 80px; margin-right: 20px; }
             .company-name { font-size: 32px; font-weight: 700; }
-            .company-description { font-size: 16px; }
-            .event-title-main { font-size: 36px; }
-            .slogan-1 { font-size: 18px; }
-            .slogan-2 { font-size: 16px; }
+            .company-description { font-size: 20px; }
+            .event-title-main-desktop { display: block; }
+            .event-title-main-mobile { display: none; }
+            .slogan-1-desktop { display: block; }
+            .slogan-1-mobile { display: none; }
+            .slogan-2-desktop { display: block; }
+            .slogan-2-mobile { display: none; }
             .header-top { margin-bottom: 15px; }
-          }
-          @media (max-width: 768px) {
-            .details-grid { grid-template-columns: 1fr; gap: 20px; }
-            .rsvp-buttons { flex-direction: column; gap: 15px; }
-            .rsvp-button { padding: 12px 24px; font-size: 14px; }
-            .event-title { font-size: 36px; }
-            .program-title { font-size: 24px; }
-            .program-description { font-size: 16px; }
-            .guest-info { font-size: 16px; }
-            .main-container { padding: 20px 15px; }
+            .guest-card-desktop .guest-info-table {
+              display: table;
+              width: 100%;
+              table-layout: fixed;
+              margin-left: 30px;
+            }
+            .guest-card-desktop .guest-info-row {
+              display: table-row;
+            }
+            .guest-card-desktop .greeting-title,
+            .guest-card-desktop .guest-name-desktop,
+            .guest-card-desktop .guest-info {
+              display: table-cell;
+              text-align: left;
+              vertical-align: top;
+              padding: 4px 0;
+            }
+            .guest-card-desktop .guest-info {
+              font-size: 20px; 
+              color: #94A3B8;
+              margin-top: 8px;
+              font-weight: 400;
+              line-height: 1.4;
+              text-align: left;
+              margin-left: 0;
+            }
+            .mobile-cards { display: none; }
+            .invitation-card-desktop { display: block; }
+            .invitation-card-mobile { display: none; }
+            .desktop-rsvp-section { display: flex; }
             
-            /* Mobile invitation message styling */
-            .invitation-message { 
-              color: #ffffff !important; 
-              font-size: 16px; 
-              line-height: 1.5;
-              text-align: left !important;
+            /* Desktop Tables Layout */
+            .desktop-tables-container {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 20px;
             }
             
-            /* Mobile Card Layout */
-            .invitation-card { display: none; }
-            .mobile-cards { display: block; }
-            .mobile-card { 
-              background: rgba(255,255,255,0.08); 
-              backdrop-filter: blur(8px); 
-              border: 1px solid rgba(255,255,255,0.15); 
-              border-radius: 20px; 
-              padding: 25px; 
-              margin-bottom: 20px; 
+            .desktop-table {
+              background: transparent;
+              border: none;
+              border-radius: 0;
+              padding: 0;
+              width: 100%;
+              max-width: none;
+              text-align: left;
+            }
+            
+            .desktop-table-title {
+              font-size: 20px;
+              font-weight: 600;
+              color: #fff;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              border-bottom: 1px solid rgba(255,255,255,0.2);
+              padding-bottom: 15px;
+            }
+            
+            .desktop-table-icon {
+              width: 20px;
+              height: 20px;
+              color: #94A3B8;
+            }
+            
+            .desktop-table-content {
+              display: flex;
+              flex-direction: column;
+              gap: 15px;
+            }
+            
+            .desktop-table-row {
+              display: grid;
+              grid-template-columns: 40px 1fr;
+              gap: 12px;
+              align-items: center;
+            }
+            
+            .desktop-table-icon-cell {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            
+            .desktop-table-row-icon {
+              width: 18px;
+              height: 18px;
+              color: #94A3B8;
+            }
+            
+            .desktop-table-content-cell {
+              text-align: left;
+            }
+            
+            .desktop-table-text {
+              font-size: 16px;
+              color: #E2E8F0;
+              line-height: 1.4;
+            }
+            
+            .desktop-map-link {
+              color: #fff !important;
+              text-decoration: none !important;
+              border-bottom: none !important;
+            }
+            
+            .desktop-map-link:hover {
+              color: #3B82F6 !important;
+              border-bottom: none !important;
+            }
+            
+            /* Program Table Specific */
+            .desktop-program-table .desktop-table-row {
+              grid-template-columns: 60px 1fr;
+            }
+            
+            .desktop-table-time-cell {
+              text-align: left;
+            }
+            
+            .desktop-table-time {
+              font-size: 16px;
+              font-weight: 600;
+              color: #ffffff;
+              background: rgba(255, 255, 255, 0.1);
+              padding: 4px 8px;
+              border-radius: 6px;
+              display: inline-block;
+            }
+            
+            /* Responsive for smaller screens */
+            @media (max-width: 1400px) {
+              .desktop-tables-container {
+                flex-direction: column;
+                gap: 20px;
+              }
+            }
+            
+            /* Desktop Timeline Card */
+            .desktop-timeline-section {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 40px;
+            }
+            
+            .desktop-timeline-card {
+              background: rgba(255,255,255,0.08);
+              backdrop-filter: blur(8px);
+              border: 1px solid rgba(255,255,255,0.15);
+              border-radius: 20px;
+              padding: 30px;
+              width: calc(70% + 50px);
+              max-width: 1000px;
+              text-align: center;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
-            .mobile-card-title { 
-              font-size: 20px; 
-              font-weight: 600; 
-              color: #fff; 
-              margin-bottom: 20px; 
-              display: flex; 
-              align-items: center; 
-              gap: 10px;
-              font-style: normal;
-              text-align: left;
-              justify-content: flex-start;
-            }
-            .greeting-section {
-              padding: 15px 25px; 
+            
+            .desktop-timeline-title {
+              font-size: 20px;
+              font-weight: 600;
+              color: #fff;
               margin-bottom: 20px;
-              margin-top: -30px;
-              position: relative;
-              width: fit-content;
-              margin-left: 0;
-              margin-right: auto;
+              display: flex;
+              align-items: center;
+              justify-content: flex-start;
+              gap: 8px;
+              border-bottom: 1px solid rgba(255,255,255,0.2);
+              padding-bottom: 15px;
+            }
+            
+            .desktop-timeline-icon {
+              width: 20px;
+              height: 20px;
+              color: #94A3B8;
+            }
+            
+            .desktop-timeline-content {
+              display: flex;
+              flex-direction: column;
+              gap: 15px;
+            }
+            
+            .desktop-timeline-row {
+              display: grid;
+              grid-template-columns: 80px 1fr;
+              gap: 15px;
+              align-items: center;
               text-align: left;
             }
-            .greeting-section::before {
-              content: '';
-              position: absolute;
-              left: 15px;
-              top: 8px;
-              bottom: 8px;
-              width: 4px;
-              background: linear-gradient(180deg,rgb(0, 115, 255),rgb(221, 28, 228));
-              border-radius: 2px;
-              box-shadow: 0 0 10px rgba(204, 222, 245, 0.6);
+            
+            .desktop-timeline-time-cell {
+              text-align: left;
             }
+            
+            .desktop-timeline-time {
+              font-size: 16px;
+              font-weight: 600;
+              color: #ffffff;
+              background: rgba(255, 255, 255, 0.1);
+              padding: 6px 12px;
+              border-radius: 8px;
+              display: inline-block;
+            }
+            
+            .desktop-timeline-content-cell {
+              text-align: left;
+            }
+            
+            .desktop-timeline-text {
+              font-size: 16px;
+              color: #E2E8F0;
+              line-height: 1.4;
+            }
+            
+            /* Desktop-specific styles */
             .greeting-title {
-              font-size: 16px; 
+              font-size: 24px; 
               font-weight: 300; 
               color: #fff; 
               margin-bottom: 8px; 
@@ -1335,85 +2148,37 @@ const InvitePage: React.FC = () => {
               font-style: italic;
               padding-left: 15px;
             }
-            .guest-info-block {
-              padding-left: 15px;
-            }
-            .invitation-section {
-              background: rgba(255,255,255,0.08); 
-              backdrop-filter: blur(8px); 
-              border: 1px solid rgba(255,255,255,0.15); 
-              border-radius: 20px; 
-              padding: 20px; 
-              margin-bottom: 20px;
-              width: fit-content;
-              max-width: 100%;
-              margin-left: auto;
-              margin-right: auto;
-              display: inline-block;
-            }
-            .mobile-card-title svg { 
-              width: 24px; 
-              height: 24px; 
-              color: #3B82F6; 
-            }
-            .time-location-card .mobile-card-title svg { 
-              width: 25px !important; 
-              height: 25px !important; 
-              color: #3B82F6 !important; 
-            }
-            .mobile-card.time-location-card .mobile-card-title svg { 
-              width: 25px !important; 
-              height: 25px !important; 
-              color: #3B82F6 !important; 
-            }
-            .address-detail-icon { 
-              width: 56px !important; 
-              height: 56px !important; 
-              margin-right: 16px !important; 
-              color: #fff !important; 
-            }
-            .detail-icon { 
-              width: 25px !important; 
-              height: 25px !important; 
-              margin-right: 16px !important; 
-              color: #fff !important; 
-            }
-            .map-link { 
-              color: #fff !important; 
-            }
-            .detail-item { 
-              justify-content: flex-start !important; 
-              text-align: left;
-            }
-            .guest-card { text-align: center; }
-            .guest-name { 
-              font-size: 30px; 
+            .guest-name-desktop { 
+              font-size: 40px; 
               color: #fff; 
               margin-bottom: 8px; 
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-            }
-            .guest-name.long-name { 
-              font-size: 25px; 
-            }
-            .guest-role { 
-              font-size: 16px; 
-              color: #fff; 
-              font-weight: 500; 
-              word-wrap: break-word;
-              line-height: 1.4;
-              text-align: left;
-            }
-            .role-bold {
               font-weight: 700;
+              text-shadow: 
+                0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+                -0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+                0.5px -0.5px 0 rgba(0, 0, 0, 0.6),
+                -0.5px 0.5px 0 rgba(0, 0, 0, 0.6),
+                0 0 10px rgba(139, 92, 246, 0.8),
+                0 0 20px rgba(59, 130, 246, 0.6),
+                0 0 30px rgba(6, 182, 212, 0.4),
+                0 0 40px rgba(139, 92, 246, 0.2);
+              letter-spacing: 1px;
+              filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
+              display: inline-block;
+              transition: all 0.3s ease;
+            }
+            .guest-name-desktop.long-name { 
+              font-size: 32px; 
             }
             .title-normal {
               font-weight: 400;
-              font-size: 0.9em;
+              font-size: 1.2em;
             }
             .title-normal.small-title {
-              font-size: 19px;
+              font-size: 28px;
             }
             .name-bold {
               font-weight: 700;
@@ -1426,120 +2191,435 @@ const InvitePage: React.FC = () => {
                 0 0 10px rgba(59, 130, 246, 0.3),
                 0 0 15px rgba(6, 182, 212, 0.2);
             }
-            .invitation-message { 
+            .guest-card-desktop { 
+              background: transparent; 
+              backdrop-filter: none; 
+              border: none; 
+              border-radius: 0; 
+              padding: 25px; 
+              margin-bottom: 20px; 
+              margin-top: -30px;
+              margin-left: auto;
+              margin-right: auto;
+              width: calc(70% + 50px);
+              max-width: 1000px;
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              text-align: center;
+              display: block;
+            }
+            .guest-card-desktop:hover {
+              transform: none;
+              box-shadow: none;
+              background: transparent;
+              backdrop-filter: none;
+            }
+            
+            /* Desktop-only styles - completely isolated */
+            .program-info { text-align: center; margin-bottom: 40px; }
+            .program-title { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 10px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+            .program-description { 
               font-size: 16px; 
+              color: #94A3B8; 
+              font-style: italic; 
+              margin-top: 10px; 
+            }
+            .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
+            .detail-section h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 20px; display: flex; align-items: center; }
+            .detail-section h3 svg { width: 32px; height: 32px; margin-right: 16px; color: #3B82F6; }
+            .detail-item { display: flex; align-items: center; margin-bottom: 15px; justify-content: flex-start; }
+            .detail-icon { width: 20px; height: 20px; margin-right: 16px; color: #fff; text-align: left; }
+            .address-detail-icon { width: 20px !important; height: 20px !important; margin-right: 16px !important; color: #fff !important; text-align: left; }
+            .detail-text { color: #fff; font-size: 16px; text-align: left; }
+            .map-link { 
+              color: #fff; 
+              text-decoration: none; 
+              transition: all 0.3s ease;
+              border-bottom: 1px solid transparent;
+            }
+            .map-link:hover { 
+              color: #60A5FA; 
+              border-bottom-color: #60A5FA;
+              transform: translateY(-1px);
+            }
+            /* Desktop program timeline styling */
+            .program-item { 
+              display: flex; 
+              margin-bottom: 12px; 
+              align-items: baseline; 
+            }
+            .program-time { 
+              font-weight: 700; 
+              color: #fff; 
+              width: 80px; 
+              flex-shrink: 0; 
+              line-height: 1.2; 
+            }
+            .program-description { 
+              color: #fff; 
+              flex: 1; 
+              line-height: 1.2; 
+              font-size: 16px; 
+            }
+            .additional-info { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+            .info-item { color: #94A3B8; margin-bottom: 8px; }
+            
+            /* Desktop invitation section styling */
+            .invitation-section {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 40px;
+              margin-top: -20px;
+            }
+            
+            /* Desktop invitation message styling */
+            .invitation-message { 
+              font-size: 20px; 
               color: #ffffff; 
               margin-top: 0; 
               margin-bottom: 0;
               font-style: italic;
               line-height: 1.5;
               text-align: left;
-            }
-            .date-range {
-              color: #94A3B8;
-              font-weight: 700;
-              font-style: italic;
-            }
-            .honor-message {
-              color: #94A3B8;
-              font-weight: 500;
-              font-style: italic;
-              margin-top: 8px;
-              display: block;
-            }
-            .time-location-card { 
+              background: rgba(255,255,255,0.08);
+              backdrop-filter: blur(8px);
+              border: 1px solid rgba(255,255,255,0.15);
+              border-radius: 20px;
+              padding: 25px;
+              margin-bottom: 40px;
+              margin-left: auto;
+              margin-right: auto;
+              width: calc(70% + 50px);
+              max-width: 1000px;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-              transform: translateY(0) scale(1);
-              opacity: 1;
             }
-            .time-location-card:hover {
-              transform: translateY(-8px) scale(1.02);
-              box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 0 30px rgba(59, 130, 246, 0.2);
-              background: rgba(255, 255, 255, 0.12);
-              backdrop-filter: blur(12px);
+            
+            /* Desktop RSVP Card styling */
+            .desktop-rsvp-section {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 40px;
             }
-            .time-location-card.scroll-reveal {
-              animation: cardReveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            
+            .desktop-rsvp-card {
+              background: rgba(255,255,255,0.08);
+              backdrop-filter: blur(8px);
+              border: 1px solid rgba(255,255,255,0.15);
+              border-radius: 20px;
+              padding: 30px;
+              width: calc(70% + 50px);
+              max-width: 1000px;
+              text-align: center;
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              scroll-margin-top: 100px;
             }
-            .program-card:hover {
-              transform: translateY(-8px) scale(1.02);
-              box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 0 30px rgba(59, 130, 246, 0.2);
-              background: rgba(255, 255, 255, 0.12);
-              backdrop-filter: blur(12px);
+            
+            .desktop-rsvp-card:focus {
+              outline: none;
+              border-color: rgba(34, 197, 94, 0.5);
+              box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), 0 8px 25px rgba(0, 0, 0, 0.3);
+              transform: scale(1.02);
             }
-            .rsvp-card:hover {
-              transform: translateY(-8px) scale(1.02);
-              box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 0 30px rgba(59, 130, 246, 0.2);
-              background: rgba(255, 255, 255, 0.12);
-              backdrop-filter: blur(12px);
+            
+            .desktop-rsvp-card.expanding {
+              transform: scale(1.02);
+              box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
             }
-            .invitation-card:hover {
-              transform: translateY(-8px) scale(1.02);
-              box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 0 30px rgba(59, 130, 246, 0.2);
-              background: rgba(255, 255, 255, 0.12);
-              backdrop-filter: blur(12px);
+            
+            .desktop-rsvp-title {
+              font-size: 24px;
+              font-weight: 600;
+              color: #fff;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
             }
-            .time-location-card .detail-item { margin-bottom: 15px; }
-            .time-location-card .detail-icon { width: 20px !important; height: 20px !important; }
-            .time-location-card .address-detail-icon { width: 20px !important; height: 20px !important; }
-            .time-location-card svg { width: 20px !important; height: 20px !important; }
-            .time-location-card .detail-item svg { width: 20px !important; height: 20px !important; }
-            .time-location-card svg path { width: 20px !important; height: 20px !important; }
-            .time-location-card .detail-item svg path { width: 20px !important; height: 20px !important; }
-            .time-location-card svg { width: 20px !important; height: 20px !important; max-width: 20px !important; max-height: 20px !important; }
-            .time-location-card .address-detail-icon { display: block !important; width: 40px !important; height: 40px !important; }
-            .time-location-card .address-detail-icon svg { width: 40px !important; height: 40px !important; }
-            .time-location-card .address-detail-icon svg path { width: 40px !important; height: 40px !important; }
-            .mobile-card.time-location-card .address-detail-icon svg { width: 40px !important; height: 40px !important; max-width: 40px !important; max-height: 40px !important; }
-            .mobile-card.time-location-card .address-detail-icon svg path { width: 40px !important; height: 40px !important; }
-            .mobile-card.time-location-card .detail-item .address-detail-icon { transform: scale(2) translateX(1px) !important; }
-            .mobile-card.time-location-card .detail-item .address-detail-icon svg { transform: scale(2) !important; }
-            .program-card .program-item { 
-              margin-bottom: 11px; 
+            
+            .desktop-rsvp-title.accepted {
+              color: #22c55e;
+            }
+            
+            .desktop-rsvp-title.declined {
+              color: #ef4444;
+            }
+            
+            .desktop-rsvp-buttons {
+              display: flex;
+              gap: 20px;
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            
+            .desktop-rsvp-button {
+              padding: 15px 30px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 18px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              border: none;
+              min-width: 180px;
+              justify-content: center;
+            }
+            
+            .desktop-rsvp-accept {
+              background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+              border: 1px solid rgba(34, 197, 94, 0.3);
+              color: #ffffff;
+            }
+            
+            .desktop-rsvp-accept:hover {
+              background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+              border-color: rgba(34, 197, 94, 0.7);
+              transform: translateY(-3px) scale(1.02);
+              box-shadow: 0 15px 35px rgba(34, 197, 94, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
+              color: #ffffff;
+            }
+            
+            .desktop-rsvp-accept:active {
+              transform: translateY(-1px) scale(0.98);
+              box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
+              background: linear-gradient(135deg, rgba(34, 197, 94, 0.5), rgba(16, 185, 129, 0.5));
+              color: #ffffff;
+            }
+            
+            .desktop-rsvp-decline {
+              background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+              border: 1px solid rgba(107, 114, 128, 0.3);
+              color: rgb(151, 154, 160);
+            }
+            
+            .desktop-rsvp-decline:hover {
+              background: linear-gradient(135deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.4));
+              border-color: rgba(107, 114, 128, 0.7);
+              transform: translateY(-3px) scale(1.02);
+              box-shadow: 0 15px 35px rgba(107, 114, 128, 0.4), 0 0 25px rgba(107, 114, 128, 0.2);
+              color: #ffffff;
+            }
+            
+            .desktop-rsvp-decline:active {
+              transform: translateY(-1px) scale(0.98);
+              box-shadow: 0 8px 25px rgba(107, 114, 128, 0.5);
+              background: linear-gradient(135deg, rgba(107, 114, 128, 0.5), rgba(75, 85, 99, 0.5));
+              color: #ffffff;
+            }
+            
+            .desktop-rsvp-status-text {
+              font-size: 16px;
+              color: #94A3B8;
+              margin-top: 10px;
+              line-height: 1.5;
+            }
+            
+            /* Desktop QR Section */
+            .desktop-qr-section {
+              margin-top: 20px;
+              text-align: center;
+            }
+            
+            .desktop-qr-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #fff;
+              margin-bottom: 10px;
+            }
+            
+            .desktop-qr-description {
+              font-size: 14px;
+              color: #94A3B8;
+              margin-bottom: 20px;
+            }
+            
+            .desktop-qr-loading {
+              text-align: center;
+              padding: 20px;
+            }
+            
+            .desktop-qr-image-container {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 20px;
+            }
+            
+            .desktop-qr-image {
+              width: 200px;
+              height: 200px;
+              border-radius: 12px;
+              box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            }
+            
+            .desktop-qr-error {
+              text-align: center;
+              padding: 20px;
+              background: rgba(239, 68, 68, 0.1);
+              border-radius: 12px;
+              border: 1px solid rgba(239, 68, 68, 0.3);
+            }
+            
+            /* Desktop Change Option Button */
+            .desktop-change-option-button {
+              background: rgba(107, 114, 128, 0.2);
+              border: 1px solid rgba(107, 114, 128, 0.3);
+              color: rgb(151, 154, 160);
+              padding: 12px 24px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 14px;
+              cursor: pointer;
+              transition: all 0.3s ease;
               display: flex; 
-              align-items: baseline; 
+              align-items: center;
               gap: 8px;
-              padding-left: 0; /* Căn sát lề trái của card */
-              justify-content: flex-start;
+              margin: 20px auto 0;
             }
-            .program-card .program-time { 
+            
+            .desktop-change-option-button:hover {
+              background: rgba(107, 114, 128, 0.4);
+              border-color: rgba(107, 114, 128, 0.7);
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3);
+              color: #ffffff;
+            }
+            
+            /* Desktop Check-in Success */
+            .desktop-checkin-success {
+              text-align: center;
+              padding: 30px;
+            }
+            
+            .desktop-checkin-success-icon {
+              width: 80px;
+              height: 80px;
+              background: linear-gradient(135deg, #22c55e, #16a34a);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto 20px;
+              box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+            }
+            
+            .desktop-checkin-success-text {
+              font-size: 24px;
               font-weight: 700; 
-              color: #fff; 
-              width: 70px; 
-              flex-shrink: 0;
-              line-height: 1.2;
-              text-align: left;
+              color: #22c55e;
+              margin-bottom: 10px;
+            }
+            
+            .desktop-checkin-success-description {
               font-size: 16px;
+              color: #94A3B8;
+              line-height: 1.5;
             }
-            .program-card .program-description { 
-              color: #fff; 
-              flex: 1; 
-              line-height: 1.2;
+            
+            /* Desktop Declined Section */
+            .desktop-declined-section {
+              text-align: center;
+              padding: 20px;
+            }
+            
+            .desktop-declined-description {
               font-size: 16px;
-              font-style: italic;
-              margin-left: 0;
-              padding-left: 0;
-              transform: translateY(-1px);
+              color: #94A3B8;
+              margin: 20px 0;
+              line-height: 1.5;
             }
-            .address-detail-icon + .detail-text {
-              transform: translateX(8px);
+            
+            /* Desktop Change Option Section */
+            .desktop-change-option-section {
+              background: rgba(255,255,255,0.05);
+              border-radius: 12px;
+              padding: 25px;
+              margin-top: 20px;
+              text-align: center;
             }
-            .map-link {
-              transform: translateX(-1px);
+            
+            .desktop-change-option-title {
+              font-size: 20px;
+              font-weight: 600;
+              color: #fff;
+              margin-bottom: 10px;
+            }
+            
+            .desktop-change-option-description {
+              font-size: 16px;
+              color: #94A3B8;
+              margin-bottom: 20px;
+              line-height: 1.5;
+            }
+            
+            .desktop-change-option-buttons {
+              display: flex;
+              gap: 15px;
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            
+            .desktop-confirm-change-button {
+              background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+              border: 1px solid rgba(34, 197, 94, 0.3);
+              color: #ffffff;
+              padding: 12px 24px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              min-width: 100px;
+            }
+            
+            .desktop-confirm-change-button:hover {
+              background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
+              border-color: rgba(34, 197, 94, 0.7);
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+            }
+            
+            .desktop-cancel-change-button {
+              background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+              border: 1px solid rgba(107, 114, 128, 0.3);
+              color: rgb(151, 154, 160);
+              padding: 12px 24px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              min-width: 100px;
+            }
+            
+            .desktop-cancel-change-button:hover {
+              background: linear-gradient(135deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.4));
+              border-color: rgba(107, 114, 128, 0.7);
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3);
+              color: #ffffff;
+            }
+            
+            /* Desktop RSVP buttons styling */
+            .rsvp-button { 
+              padding: 12px 24px; 
+              border-radius: 12px; 
+              font-weight: 600; 
+              font-size: 20px; 
+              cursor: pointer; 
+              transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+              display: flex; 
+              align-items: center; 
+              gap: 8px; 
+              border: none;
+              backdrop-filter: blur(8px);
+              position: relative;
+              overflow: hidden;
+              min-width: 180px;
+              justify-content: center;
             }
           }
+          
+          /* Override cho icon tiêu đề card thời gian địa điểm */
           
           /* Override cho icon tiêu đề card thời gian địa điểm */
           .mobile-card.time-location-card .mobile-card-title svg { 
@@ -1550,19 +2630,7 @@ const InvitePage: React.FC = () => {
             max-height: 25px !important;
           }
           
-          @media (min-width: 769px) {
-            .mobile-cards { display: none; }
-          }
-            .event-title-main {
-              font-size: 37px;
-            }
-            .slogan-1 {
-              font-size: 14px;
-            }
-            .slogan-2 {
-              font-size: 12px;
-            }
-          }
+          /* Override cho icon tiêu đề card thời gian địa điểm */
         `}</style>
         
         <div className="main-container">
@@ -1576,144 +2644,42 @@ const InvitePage: React.FC = () => {
                 <div className="company-name">Technology Company</div>
               </div>
             </div>
-            <div className="event-title-main">Lễ kỷ niệm 15 năm</div>
-            <div className="slogan-1">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
-            <div className="slogan-2">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
+            <div className="event-title-main-desktop">Lễ kỷ niệm 15 năm</div>
+            <div className="event-title-main-mobile">Lễ kỷ niệm 15 năm</div>
+            <div className="slogan-1-desktop">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
+            <div className="slogan-1-mobile">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
+            <div className="slogan-2-desktop">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
+            <div className="slogan-2-mobile">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
           </div>
 
           
-          {/* Invitation Card */}
-          <div className="invitation-card">
-            <div className="greeting">
-              Kính mời: {inviteData.guest.title ? `${inviteData.guest.title} ` : ''}{inviteData.guest.name}
-              {(inviteData.guest.role || inviteData.guest.organization) && (
-                <div className="guest-info">
-                  {inviteData.guest.role && inviteData.guest.organization ? 
-                    `${inviteData.guest.role} - ${inviteData.guest.organization}` :
-                    inviteData.guest.role || inviteData.guest.organization
-                  }
-                </div>
-              )}
-            </div>
-            {inviteData.guest.event_content && (
-              <div className="invitation-text">
-                {inviteData.guest.event_content}
+          {/* Guest Card */}
+          <div className="guest-card-desktop">
+            <div className="greeting-section">
+              <div className="guest-info-table">
+                <div className="guest-info-row">
+              <div className="greeting-title">
+                Kính gửi:
               </div>
-            )}
-
-            <div className="details-grid">
-              {/* Time & Location Section */}
-              <div className="detail-section">
-                <h3>
-                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                  </svg>
-                  Thời gian & Địa điểm
-                </h3>
-                <div className="detail-item">
-                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                  </svg>
-                  <span className="detail-text">{formattedDate}</span>
                 </div>
-                <div className="detail-item">
-                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
-                  </svg>
-                  <span className="detail-text">{formatTime(inviteData.event.time)}</span>
-                </div>
-                {inviteData.event.venue_address && (
-                  <div className="detail-item">
-                    <svg className="address-detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2C8.13,2 5,5.13 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9C19,5.13 15.87,2 12,2M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5Z"/>
-                    </svg>
-                    <span className="detail-text">{inviteData.event.venue_address}</span>
+                <div className="guest-info-row">
+                <div className={`guest-name-desktop ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'long-name' : ''}`}>
+                  {inviteData.guest.title ? <><span className={`title-normal ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'small-title' : ''}`}>{inviteData.guest.title}</span> </> : ''}<span className="name-bold">{inviteData.guest.name}</span>
                   </div>
-                )}
-                {inviteData.event.venue_map_url && inviteData.event.venue_map_url.trim() !== '' && (
-                  <div className="detail-item">
-                    <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
-                    </svg>
-                    <a 
-                      href={inviteData.event.venue_map_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="detail-text map-link"
-                    >
-                      Xem trên Google Maps
-                    </a>
+                </div>
+                {(inviteData.guest.role || inviteData.guest.organization) && (
+                  <div className="guest-info-row">
+                  <div className="guest-info">
+                    {inviteData.guest.role && inviteData.guest.organization ? 
+                      `${inviteData.guest.role} - ${inviteData.guest.organization}` :
+                      inviteData.guest.role || inviteData.guest.organization
+                    }
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Program Section */}
-              <div className="detail-section">
-                <h3>
-                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Chương trình
-                </h3>
-                {programRows.length > 0 ? (
-                  programRows.map((row, index) => (
-                    <div key={index} className="program-item">
-                      <span className="program-time">{row.time}</span>
-                      <span className="program-description">{row.item}</span>
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    <div className="program-item">
-                      <span className="program-time">18:00</span>
-                      <span className="program-description">Đón khách & Check-in</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">18:30</span>
-                      <span className="program-description">Khai mạc</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">19:00</span>
-                      <span className="program-description">Vinh danh & Tri ân</span>
-                    </div>
-                    <div className="program-item">
-                      <span className="program-time">20:00</span>
-                      <span className="program-description">Gala & Networking</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="additional-info">
-              {inviteData.event.dress_code && (
-                <div className="info-item">Trang phục: {inviteData.event.dress_code}</div>
-              )}
-              <div className="info-item">Vui lòng xác nhận tham dự trước ngày {rsvpDeadline}</div>
             </div>
           </div>
-
-          {/* Card 1: Thông tin khách */}
-          <div className="greeting-section">
-            <div className="greeting-title">
-              Kính gửi:
-            </div>
-            <div className="guest-info-block">
-              <div className={`guest-name ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'long-name' : ''}`}>
-                {inviteData.guest.title ? <><span className={`title-normal ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'small-title' : ''}`}>{inviteData.guest.title}</span> </> : ''}<span className="name-bold">{inviteData.guest.name}</span>
-              </div>
-              {(inviteData.guest.role || inviteData.guest.organization) && (
-                <div className="guest-role">
-                  {inviteData.guest.role && inviteData.guest.organization ? 
-                    <><span className="role-bold">{inviteData.guest.role}</span> - {inviteData.guest.organization}</> :
-                    inviteData.guest.role || inviteData.guest.organization
-                  }
-                </div>
-              )}
-            </div>
-          </div>
-          
 
           {/* Card 2: Nội dung thiệp mời */}
           <div className="invitation-section">
@@ -1728,11 +2694,356 @@ const InvitePage: React.FC = () => {
             )}
           </div>
 
+          {/* Desktop Invitation Card */}
+          <div className="invitation-card-desktop">
+            <div className="desktop-tables-container">
+              {/* Bảng 1: Thời gian & Địa điểm */}
+              <div className="desktop-table desktop-time-location-table">
+                <h3 className="desktop-table-title">
+                  <svg className="desktop-table-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                  Thời gian & Địa điểm
+                </h3>
+                <div className="desktop-table-content">
+                  <div className="desktop-table-row">
+                    <div className="desktop-table-icon-cell">
+                      <svg className="desktop-table-row-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                      </svg>
+                    </div>
+                    <div className="desktop-table-content-cell">
+                      <span className="desktop-table-text">{formattedDate}</span>
+                    </div>
+                  </div>
+                  <div className="desktop-table-row">
+                    <div className="desktop-table-icon-cell">
+                      <svg className="desktop-table-row-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
+                      </svg>
+                    </div>
+                    <div className="desktop-table-content-cell">
+                      <span className="desktop-table-text">{formatTime(inviteData.event.time)}</span>
+                    </div>
+                  </div>
+                  {inviteData.event.venue_address && (
+                    <div className="desktop-table-row">
+                      <div className="desktop-table-icon-cell">
+                        <svg className="desktop-table-row-icon" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12,2C8.13,2 5,5.13 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9C19,5.13 15.87,2 12,2M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5Z"/>
+                        </svg>
+                      </div>
+                      <div className="desktop-table-content-cell">
+                        <span className="desktop-table-text">{inviteData.event.venue_address}</span>
+                      </div>
+                    </div>
+                  )}
+                  {inviteData.event.venue_map_url && inviteData.event.venue_map_url.trim() !== '' && (
+                    <div className="desktop-table-row">
+                      <div className="desktop-table-icon-cell">
+                        <svg className="desktop-table-row-icon" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                        </svg>
+                      </div>
+                      <div className="desktop-table-content-cell">
+                        <a 
+                          href={inviteData.event.venue_map_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="desktop-table-text desktop-map-link"
+                        >
+                          Xem trên Google Maps
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop QR Section */}
+          {inviteData.guest.rsvp_status === 'accepted' && !inviteData.guest.checkin_status && (
+            <div className="invitation-card desktop-qr-section">
+              <div className="qr-section">
+                <h3 className="qr-title">Mã QR Check-in</h3>
+                <p className="qr-description">Vui lòng quét mã QR này để check-in tại sự kiện</p>
+                {qrImageUrl ? (
+                  <div className="qr-image-container">
+                    <img 
+                      src={qrImageUrl} 
+                      alt="QR Code" 
+                      className="qr-image"
+                      onLoad={() => console.log('Desktop QR image loaded successfully:', qrImageUrl)}
+                      onError={(e) => console.error('Desktop QR image failed to load:', qrImageUrl, e)}
+                    />
+                  </div>
+                ) : (
+                  <div className="qr-loading">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+                    <p className="text-gray-400 mt-2">Đang tạo mã QR...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Card Xác nhận tham dự Desktop - Di chuyển xuống dưới cùng */}
+          <div className="desktop-rsvp-section">
+            <div ref={desktopRsvpCardRef} className={`desktop-rsvp-card ${inviteData.guest.rsvp_status === 'declined' ? 'rsvp-card-declined' : ''} ${showChangeOption ? 'expanding' : ''}`}>
+              {/* 1. Trạng thái "chưa phản hồi" - Hiển thị câu hỏi RSVP */}
+              {(() => {
+                console.log('=== DESKTOP RSVP STATUS CHECK ===', {
+                  rsvp_status: inviteData.guest.rsvp_status,
+                  checkin_status: inviteData.guest.checkin_status,
+                  showChangeOption
+                })
+                return inviteData.guest.rsvp_status === 'pending' && 
+                       (inviteData.guest.checkin_status as string) !== 'arrived'
+              })() && (
+                <>
+                  <h2 className="desktop-rsvp-title">Xác nhận tham dự</h2>
+                  <div className="desktop-rsvp-buttons">
+                    <button className="desktop-rsvp-button desktop-rsvp-accept" onClick={() => handleAccept()}>
+                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      Tôi sẽ tham dự
+                    </button>
+                    <button className="desktop-rsvp-button desktop-rsvp-decline" onClick={() => handleDecline()}>
+                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      Không thể tham dự
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* 2. Trạng thái "đã xác nhận" + chưa check-in - Hiển thị QR code */}
+              {inviteData.guest.rsvp_status === 'accepted' && 
+               (inviteData.guest.checkin_status as string) !== 'arrived' && 
+               !showChangeOption && 
+               !showCheckinSuccess && (
+                <>
+                  <h2 className="desktop-rsvp-title accepted" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <svg width="20" height="20" fill="#22c55e" viewBox="0 0 24 24" style={{marginRight: '8px'}}>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Đã xác nhận tham dự
+                  </h2>
+                  <p className="desktop-rsvp-status-text">
+                    Cảm ơn bạn đã xác nhận tham dự sự kiện. Vui lòng quét mã QR để check-in.
+                  </p>
+                  
+                  {!showCheckinSuccess && (
+                    <div className="desktop-qr-section">
+                      <h3 className="desktop-qr-title">Mã QR Check-in</h3>
+                      <p className="desktop-qr-description">Vui lòng quét mã QR này để check-in tại sự kiện</p>
+                      
+                      {qrLoading ? (
+                        <div className="desktop-qr-loading">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                          <p className="text-gray-400 mt-2">Đang tạo mã QR...</p>
+                        </div>
+                      ) : qrImageUrl ? (
+                        <div className="desktop-qr-image-container">
+                          <img 
+                            src={qrImageUrl} 
+                            alt="QR Code" 
+                            className="desktop-qr-image"
+                            onLoad={() => console.log('Desktop QR image loaded successfully:', qrImageUrl)}
+                            onError={(e) => console.error('Desktop QR image failed to load:', qrImageUrl, e)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="desktop-qr-error text-red-500">
+                          Không thể tạo mã QR
+                          <br />
+                          <small>Debug: qrImageUrl = {qrImageUrl || 'null'}</small>
+                          <br />
+                          <small>Debug: qrLoading = {qrLoading ? 'true' : 'false'}</small>
+                        </div>
+                      )}
+                      
+                      {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                        <button 
+                          className="desktop-change-option-button"
+                          onClick={handleChangeOption}
+                        >
+                          <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                          </svg>
+                          Tôi muốn thay đổi tùy chọn
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
+              {((inviteData.guest.checkin_status as string) === 'arrived' || showCheckinSuccess) && (
+                <div className="desktop-checkin-success">
+                  <div className="desktop-checkin-success-icon">
+                    <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                  </div>
+                  <div className="desktop-checkin-success-text">
+                    {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
+                  </div>
+                  <p className="desktop-checkin-success-description">
+                    Cảm ơn bạn đã tham dự sự kiện. Chúc bạn có những trải nghiệm tuyệt vời!
+                  </p>
+                </div>
+              )}
+
+              {/* 4. Trạng thái "đã từ chối" - Hiển thị thông báo từ chối */}
+              {inviteData.guest.rsvp_status === 'declined' && 
+               (inviteData.guest.checkin_status as string) !== 'arrived' && 
+               !showChangeOption && (
+                <div className="desktop-declined-section">
+                  <h2 className="desktop-rsvp-title declined" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <svg width="20" height="20" fill="#ef4444" viewBox="0 0 24 24" style={{marginRight: '8px'}}>
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                    Đã từ chối tham dự
+                  </h2>
+                  <p className="desktop-declined-description">
+                    Cảm ơn bạn đã phản hồi. Chúng tôi rất tiếc vì bạn không thể tham dự sự kiện này.
+                  </p>
+                  
+                  {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                    <button 
+                      className="desktop-change-option-button"
+                      onClick={handleChangeOption}
+                    >
+                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                      </svg>
+                      Tôi muốn thay đổi tùy chọn
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Hiển thị lại nút RSVP khi muốn thay đổi */}
+              {showChangeOption && 
+               (inviteData.guest.checkin_status as string) !== 'arrived' && (
+                <div className="desktop-change-option-section">
+                  <h3 className="desktop-change-option-title">Thay đổi tùy chọn tham dự</h3>
+                  <p className="desktop-change-option-description">Bạn có chắc chắn muốn thay đổi tùy chọn tham dự không?</p>
+                  
+                  <div className="desktop-change-option-buttons">
+                    <button 
+                      className="desktop-confirm-change-button"
+                      onClick={handleResetRSVP}
+                    >
+                      Có
+                    </button>
+                    <button 
+                      className="desktop-cancel-change-button"
+                      onClick={handleCancelChange}
+                    >
+                      Không
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Timeline Card - Tách riêng */}
+          <div className="desktop-timeline-section">
+            <div className="desktop-timeline-card">
+              <h3 className="desktop-timeline-title">
+                <svg className="desktop-timeline-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+                Chương trình
+              </h3>
+              <div className="desktop-timeline-content">
+                {programRows.length > 0 ? (
+                  programRows.map((row, index) => (
+                    <div key={index} className="desktop-timeline-row">
+                      <div className="desktop-timeline-time-cell">
+                        <span className="desktop-timeline-time">{row.time}</span>
+                      </div>
+                      <div className="desktop-timeline-content-cell">
+                        <span className="desktop-timeline-text">{row.item}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="desktop-timeline-row">
+                      <div className="desktop-timeline-time-cell">
+                        <span className="desktop-timeline-time">18:00</span>
+                      </div>
+                      <div className="desktop-timeline-content-cell">
+                        <span className="desktop-timeline-text">Đón khách & Check-in</span>
+                      </div>
+                    </div>
+                    <div className="desktop-timeline-row">
+                      <div className="desktop-timeline-time-cell">
+                        <span className="desktop-timeline-time">18:30</span>
+                      </div>
+                      <div className="desktop-timeline-content-cell">
+                        <span className="desktop-timeline-text">Khai mạc</span>
+                      </div>
+                    </div>
+                    <div className="desktop-timeline-row">
+                      <div className="desktop-timeline-time-cell">
+                        <span className="desktop-timeline-time">19:00</span>
+                      </div>
+                      <div className="desktop-timeline-content-cell">
+                        <span className="desktop-timeline-text">Vinh danh & Tri ân</span>
+                      </div>
+                    </div>
+                    <div className="desktop-timeline-row">
+                      <div className="desktop-timeline-time-cell">
+                        <span className="desktop-timeline-time">20:00</span>
+                      </div>
+                      <div className="desktop-timeline-content-cell">
+                        <span className="desktop-timeline-text">Gala & Networking</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Mobile Cards */}
           <div className="mobile-cards">
+            {/* Card 1: Thông tin khách */}
+            <div className="mobile-card guest-card">
+              <h2 className="mobile-card-title">Thông tin khách</h2>
+              <div className="mobile-card-content">
+                <div className="greeting-section">
+                  <div className="greeting-title">
+                    Kính gửi:
+                  </div>
+                  <div className="guest-info-block">
+                    <div className={`guest-name ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'long-name' : ''}`}>
+                      {inviteData.guest.title ? <><span className={`title-normal ${inviteData.guest.name && inviteData.guest.name.trim().split(' ').length >= 3 ? 'small-title' : ''}`}>{inviteData.guest.title}</span> </> : ''}<span className="name-bold">{inviteData.guest.name}</span>
+                    </div>
+                    {(inviteData.guest.role || inviteData.guest.organization) && (
+                      <div className="guest-role">
+                        {inviteData.guest.role && inviteData.guest.organization ? 
+                          <><span className="role-bold">{inviteData.guest.role}</span> - {inviteData.guest.organization}</> :
+                          inviteData.guest.role || inviteData.guest.organization
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Card 2: Xác nhận tham dự (RSVP) - Di chuyển lên vị trí thứ 2 */}
-            <div className={`mobile-card rsvp-card ${inviteData.guest.rsvp_status === 'declined' ? 'rsvp-card-declined' : ''}`}>
+            <div className={`mobile-card rsvp-card ${inviteData.guest.rsvp_status === 'declined' ? 'rsvp-card-declined' : ''} ${showChangeOption ? 'expanding' : ''}`}>
               {/* 1. Trạng thái "chưa phản hồi" - Hiển thị câu hỏi RSVP */}
               {(() => {
                 console.log('=== RSVP STATUS CHECK ===', {
@@ -1794,10 +3105,18 @@ const InvitePage: React.FC = () => {
                             src={qrImageUrl} 
                             alt="QR Code" 
                             className="qr-image"
+                            onLoad={() => console.log('QR image loaded successfully:', qrImageUrl)}
+                            onError={(e) => console.error('QR image failed to load:', qrImageUrl, e)}
                           />
                         </div>
                       ) : (
-                        <div className="qr-error text-red-500">Không thể tạo mã QR</div>
+                        <div className="qr-error text-red-500">
+                          Không thể tạo mã QR
+                          <br />
+                          <small>Debug: qrImageUrl = {qrImageUrl || 'null'}</small>
+                          <br />
+                          <small>Debug: qrLoading = {qrLoading ? 'true' : 'false'}</small>
+                        </div>
                       )}
                       
                       {(inviteData.guest.checkin_status as string) !== 'arrived' && (
@@ -1890,9 +3209,6 @@ const InvitePage: React.FC = () => {
             {/* Card 3: Thời gian & Địa điểm */}
             <div className="mobile-card time-location-card">
               <div className="mobile-card-title">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                </svg>
                 Thông tin sự kiện
               </div>
               <div className="detail-item">
@@ -1935,9 +3251,6 @@ const InvitePage: React.FC = () => {
             {/* Card 4: Timeline chương trình */}
             <div className="mobile-card program-card">
               <div className="mobile-card-title">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3,13H5V11H3M3,17H5V15H3M3,9H5V7H3M7,13H21V11H7M7,17H21V15H7M7,7V9H21V7H7Z"/>
-                </svg>
                 Chương trình
               </div>
               {programRows.length > 0 ? (
@@ -1971,7 +3284,6 @@ const InvitePage: React.FC = () => {
           </div>
 
           
-          <div className="rsvp-deadline">Hạn chót xác nhận: {rsvpDeadline}</div>
         </div>
       </div>
 
