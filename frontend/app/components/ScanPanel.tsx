@@ -70,6 +70,12 @@ export default function ScanPanel() {
     setStatusWithType("Đang kiểm tra...", 'info', false)
     setLastScanTime(Date.now())
     
+    // Hiển thị dấu tích ngay lập tức trước khi gọi API
+    const instantCheckinEvent = new CustomEvent('instant-checkin', {
+      detail: { token, guestName: 'Đang xử lý...' }
+    })
+    window.dispatchEvent(instantCheckinEvent)
+    
     try{
       const res = await fetch("/api/checkin",{
         method:"POST",
@@ -96,11 +102,10 @@ export default function ScanPanel() {
         })
         window.dispatchEvent(checkinEvent)
         
-        // Trigger storage event để cập nhật các trang khác
+        // Trigger storage event để cập nhật các trang khác ngay lập tức
         localStorage.setItem('exp_guests_updated', Date.now().toString())
-        setTimeout(() => {
-          localStorage.removeItem('exp_guests_updated')
-        }, 100)
+        // Không delay - xóa ngay lập tức
+        localStorage.removeItem('exp_guests_updated')
         
         // Also send message to parent window if in iframe
         if (window.parent !== window) {
@@ -120,17 +125,16 @@ export default function ScanPanel() {
           // Clear token sau khi quét thành công
           setToken("")
           
-          // Trigger checkin success event
+          // Trigger checkin success event ngay lập tức
           const checkinEvent = new CustomEvent('checkin-success', {
             detail: { guestId: data?.guest?.id, guestName: data?.guest?.name }
           })
           window.dispatchEvent(checkinEvent)
           
-          // Trigger storage event để cập nhật các trang khác
-          localStorage.setItem('exp_guests_updated', Date.now().toString())
-          setTimeout(() => {
-            localStorage.removeItem('exp_guests_updated')
-          }, 100)
+        // Trigger storage event để cập nhật các trang khác ngay lập tức
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        // Không delay - xóa ngay lập tức
+        localStorage.removeItem('exp_guests_updated')
           
           // Also send message to parent window if in iframe
           if (window.parent !== window) {
@@ -158,7 +162,7 @@ export default function ScanPanel() {
             localStorage.setItem('exp_guests_updated', Date.now().toString())
             setTimeout(() => {
               localStorage.removeItem('exp_guests_updated')
-            }, 100)
+            }, 10)
             
             // Also send message to parent window if in iframe
             if (window.parent !== window) {
@@ -182,7 +186,7 @@ export default function ScanPanel() {
             localStorage.setItem('exp_guests_updated', Date.now().toString())
             setTimeout(() => {
               localStorage.removeItem('exp_guests_updated')
-            }, 100)
+            }, 10)
             
             // Also send message to parent window if in iframe
             if (window.parent !== window) {

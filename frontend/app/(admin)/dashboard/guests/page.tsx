@@ -1974,7 +1974,47 @@ export default function GuestsPage(){
   }
 
   return (
-    <div className="space-y-6 px-1.5">
+    <div className="space-y-6">
+      <style jsx>{`
+        .guests-card-total,
+        .guests-card-pending,
+        .guests-card-accepted,
+        .guests-card-declined {
+          box-shadow: none !important;
+          filter: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+        .guests-card-total:active,
+        .guests-card-pending:active,
+        .guests-card-accepted:active,
+        .guests-card-declined:active {
+          box-shadow: none !important;
+          filter: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          transform: none !important;
+        }
+        .guests-card-total:focus,
+        .guests-card-pending:focus,
+        .guests-card-accepted:focus,
+        .guests-card-declined:focus {
+          box-shadow: none !important;
+          filter: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          outline: none !important;
+        }
+        .guests-card-total:hover,
+        .guests-card-pending:hover,
+        .guests-card-accepted:hover,
+        .guests-card-declined:hover {
+          box-shadow: none !important;
+          filter: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+      `}</style>
       {/* Background Loading Progress Indicator */}
       {isBackgroundLoading && (
         <div className="fixed top-4 right-4 z-50 bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-lg">
@@ -2069,13 +2109,13 @@ export default function GuestsPage(){
 
         
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+      <div className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 pb-2 py-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent scroll-smooth snap-x snap-mandatory">
         {/* Total Guests Card */}
         <div 
           onClick={() => setStatusFilter("all")}
-          className={`guests-card-total group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`guests-card-total group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
             statusFilter === "all" 
-              ? "bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400/60 shadow-lg shadow-cyan-500/30" 
+              ? "bg-gradient-to-br from-cyan-500/25 to-blue-500/25 border border-cyan-400/50" 
               : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
           }`}
         >
@@ -2104,9 +2144,9 @@ export default function GuestsPage(){
         {/* Pending Card */}
         <div 
           onClick={() => setStatusFilter("pending")}
-          className={`guests-card-pending group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`guests-card-pending group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
             statusFilter === "pending" 
-              ? "bg-gradient-to-br from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400/60 shadow-lg shadow-yellow-500/30" 
+              ? "bg-gradient-to-br from-yellow-500/25 to-orange-500/25 border border-yellow-400/50" 
               : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
           }`}
         >
@@ -2132,9 +2172,9 @@ export default function GuestsPage(){
         {/* Accepted Card */}
         <div 
           onClick={() => setStatusFilter("accepted")}
-          className={`guests-card-accepted group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`guests-card-accepted group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
             statusFilter === "accepted" 
-              ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border-2 border-green-400/60 shadow-lg shadow-green-500/30" 
+              ? "bg-gradient-to-br from-green-500/25 to-emerald-500/25 border border-green-400/50" 
               : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
           }`}
         >
@@ -2160,9 +2200,9 @@ export default function GuestsPage(){
         {/* Declined Card */}
         <div 
           onClick={() => setStatusFilter("declined")}
-          className={`guests-card-declined group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`guests-card-declined group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
             statusFilter === "declined" 
-              ? "bg-gradient-to-br from-red-500/30 to-pink-500/30 border-2 border-red-400/60 shadow-lg shadow-red-500/30" 
+              ? "bg-gradient-to-br from-red-500/25 to-pink-500/25 border border-red-400/50" 
               : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"
           }`}
         >
@@ -2371,7 +2411,7 @@ export default function GuestsPage(){
                   setOrganizationFilter("all")
                   setRoleFilter("all")
                 }}
-                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-red-500/30 hover:to-red-600/30 hover:border-red-400/50 hover:text-red-300 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-xl hover:shadow-red-500/30 text-sm whitespace-nowrap transform hover:scale-105"
+                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-red-500/30 hover:to-red-600/30 hover:border-red-400/50 hover:text-red-300 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-xl hover:shadow-red-500/30 text-sm whitespace-nowrap"
                 title="Xóa tất cả bộ lọc"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -2579,7 +2619,7 @@ export default function GuestsPage(){
                           className="group relative px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-xs hover:from-amber-500/30 hover:to-orange-500/30 hover:border-amber-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-amber-500/20"
                           title="Chỉnh sửa thông tin khách mời"
                         >
-                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-3.5 h-3.5 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                           </svg>
                           <span className="hidden sm:inline font-medium">Sửa</span>
@@ -2590,7 +2630,7 @@ export default function GuestsPage(){
                           className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 rounded-lg text-xs hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/20"
                           title="Xem trước thiệp mời"
                         >
-                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
@@ -2602,7 +2642,7 @@ export default function GuestsPage(){
                           className="group relative px-3 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
                           title="Copy link thiệp"
                         >
-                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-3.5 h-3.5 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                           </svg>
                           <span className="hidden sm:inline font-medium">Link</span>
@@ -2613,7 +2653,7 @@ export default function GuestsPage(){
                           className="group relative px-3 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs hover:from-red-500/30 hover:to-rose-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
                           title="Xóa khách mời"
                         >
-                          <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-3.5 h-3.5 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                           </svg>
@@ -2785,7 +2825,7 @@ export default function GuestsPage(){
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-4 sm:mt-6 px-2 sm:px-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-4 sm:mt-6">
             <div className="text-xs sm:text-sm text-white/60 text-center sm:text-left">
               Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredGuests.length)} trong tổng số {filteredGuests.length} khách mời
             </div>
@@ -3433,7 +3473,7 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                 className="group relative px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg text-xs hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/50 transition-all duration-300 flex items-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/20"
                 title="Copy link thiệp mời"
               >
-                <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3.5 h-3.5 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
                   <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
                 </svg>

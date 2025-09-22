@@ -181,6 +181,11 @@ export default function CheckinPage() {
       const data = await response.json()
 
       if (data && data.message === "ok") {
+        console.log('=== CHECKIN SUCCESS DATA ===')
+        console.log('Full API Response:', data)
+        console.log('Guest data:', data.guest)
+        console.log('checked_in_at:', data.checked_in_at)
+        
         const time = new Date().toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
         addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${time}`, "success")
         setQrCode("")
@@ -200,6 +205,8 @@ export default function CheckinPage() {
           event_id: data.guest.event_id,
           event_name: data.guest.event_name
         }
+        console.log('=== CHECKED IN GUEST OBJECT ===')
+        console.log('checkedInGuest:', checkedInGuest)
         setRecentlyCheckedInGuest(checkedInGuest)
         
         // Ẩn thông tin sau 10 giây
@@ -209,6 +216,9 @@ export default function CheckinPage() {
         
         await loadGuests()
       } else if (response.status === 409) {
+        console.log('=== GUEST ALREADY CHECKED IN ===')
+        console.log('API Response:', data)
+        
         const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
           timeZone: "Asia/Ho_Chi_Minh",
           year: "numeric",
@@ -218,6 +228,31 @@ export default function CheckinPage() {
           minute: "2-digit"
         })
         addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in trước đó\nThời gian: ${checkinTime}`, "warning")
+        
+        // Hiển thị thông tin khách đã check-in trước đó
+        if (data.guest) {
+          const checkedInGuest: CheckedInGuest = {
+            id: data.guest.id,
+            name: data.guest.name,
+            title: data.guest.title,
+            position: data.guest.position,
+            company: data.guest.company,
+            tag: data.guest.tag,
+            email: data.guest.email,
+            phone: data.guest.phone,
+            checked_in_at: data.checked_in_at,
+            checkin_method: "qr",
+            event_id: data.guest.event_id,
+            event_name: data.guest.event_name
+          }
+          console.log('Setting recentlyCheckedInGuest for already checked-in:', checkedInGuest)
+          setRecentlyCheckedInGuest(checkedInGuest)
+          
+          // Ẩn thông tin sau 10 giây
+          setTimeout(() => {
+            setRecentlyCheckedInGuest(null)
+          }, 10000)
+        }
       } else if (response.status === 410) {
         addNotification("Token đã hết hạn\nVui lòng tạo mã QR mới", "error")
       } else {
@@ -232,10 +267,66 @@ export default function CheckinPage() {
   const handleQRScan = async (qrData: string) => {
     try {
       const token = qrData.trim()
+      
+      // Hiển thị instant feedback ngay lập tức
+      console.log('=== INSTANT CHECKIN FEEDBACK ===')
+      const instantCheckinEvent = new CustomEvent('instant-checkin', {
+        detail: { token, guestName: 'Đang xử lý...' }
+      })
+      window.dispatchEvent(instantCheckinEvent)
+      
+      // BroadcastChannel để thông báo instant check-in
+      console.log('=== SENDING INSTANT CHECKIN BROADCAST ===')
+      const channel = new BroadcastChannel('checkin-channel')
+      const instantMessage = {
+        type: 'instant-checkin',
+        token: token,
+        guestId: null, // Sẽ cập nhật sau khi có response
+        timestamp: Date.now()
+      }
+      console.log('Sending instant message:', instantMessage)
+      channel.postMessage(instantMessage)
+      channel.close()
+      
+      // Trigger localStorage event để đảm bảo trang thiệp mời nhận được
+      console.log('=== TRIGGERING INSTANT STORAGE EVENT ===')
+      localStorage.setItem('exp_instant_checkin', JSON.stringify({
+        type: 'instant-checkin',
+        token: token,
+        timestamp: Date.now()
+      }))
+      
+      // Trigger URL hash để đảm bảo trang thiệp mời nhận được
+      console.log('=== TRIGGERING URL HASH EVENT ===')
+      const hashValue = `instant-checkin-${Date.now()}`
+      window.location.hash = hashValue
+      setTimeout(() => {
+        window.location.hash = ''
+      }, 100)
+      
+      // Trigger document.title để đảm bảo trang thiệp mời nhận được
+      console.log('=== TRIGGERING DOCUMENT TITLE EVENT ===')
+      const originalTitle = document.title
+      document.title = `INSTANT_CHECKIN_${Date.now()}`
+      setTimeout(() => {
+        document.title = originalTitle
+      }, 100)
+      
       const response = await api.checkinGuest({ qr_code: token })
       const data = await response.json()
 
+      console.log('=== QR SCAN API RESPONSE ===')
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+      console.log('Full API Response:', data)
+      console.log('Guest data:', data.guest)
+      console.log('checked_in_at:', data.checked_in_at)
+
       if (data && response.ok) {
+        console.log('=== CHECKIN SUCCESS DEBUG ===')
+        console.log('API Response:', data)
+        console.log('Guest data:', data.guest)
+        
         const time = new Date().toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
         addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${time}`, "success")
         setShowSuccessAnimation(true)
@@ -256,7 +347,34 @@ export default function CheckinPage() {
           event_id: data.guest.event_id,
           event_name: data.guest.event_name
         }
+        console.log('=== CREATING CHECKED IN GUEST OBJECT ===')
+        console.log('data.guest.id:', data.guest.id)
+        console.log('data.guest.name:', data.guest.name)
+        console.log('data.guest.title:', data.guest.title)
+        console.log('data.guest.position:', data.guest.position)
+        console.log('data.guest.company:', data.guest.company)
+        console.log('data.guest.tag:', data.guest.tag)
+        console.log('data.guest.email:', data.guest.email)
+        console.log('data.guest.phone:', data.guest.phone)
+        console.log('data.checked_in_at:', data.checked_in_at)
+        console.log('data.guest.event_id:', data.guest.event_id)
+        console.log('data.guest.event_name:', data.guest.event_name)
+        console.log('Final checkedInGuest object:', checkedInGuest)
         setRecentlyCheckedInGuest(checkedInGuest)
+        
+        // BroadcastChannel để thông báo check-in thành công với guestId thực
+        console.log('=== SENDING SUCCESS CHECKIN BROADCAST ===')
+        const successChannel = new BroadcastChannel('checkin-channel')
+        const successMessage = {
+          type: 'instant-checkin',
+          token: token,
+          guestId: data.guest.id,
+          guestName: data.guest.name,
+          timestamp: Date.now()
+        }
+        console.log('Sending success message:', successMessage)
+        successChannel.postMessage(successMessage)
+        successChannel.close()
         
         // Ẩn thông tin sau 10 giây
         setTimeout(() => {
@@ -265,6 +383,9 @@ export default function CheckinPage() {
         
         await loadGuests()
       } else if (response.status === 409) {
+        console.log('=== GUEST ALREADY CHECKED IN ===')
+        console.log('API Response:', data)
+        
         const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
           timeZone: "Asia/Ho_Chi_Minh",
           year: "numeric",
@@ -274,6 +395,31 @@ export default function CheckinPage() {
           minute: "2-digit"
         })
         addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in trước đó\nThời gian: ${checkinTime}`, "warning")
+        
+        // Hiển thị thông tin khách đã check-in trước đó
+        if (data.guest) {
+          const checkedInGuest: CheckedInGuest = {
+            id: data.guest.id,
+            name: data.guest.name,
+            title: data.guest.title,
+            position: data.guest.position,
+            company: data.guest.company,
+            tag: data.guest.tag,
+            email: data.guest.email,
+            phone: data.guest.phone,
+            checked_in_at: data.checked_in_at,
+            checkin_method: "qr",
+            event_id: data.guest.event_id,
+            event_name: data.guest.event_name
+          }
+          console.log('Setting recentlyCheckedInGuest for already checked-in:', checkedInGuest)
+          setRecentlyCheckedInGuest(checkedInGuest)
+          
+          // Ẩn thông tin sau 10 giây
+          setTimeout(() => {
+            setRecentlyCheckedInGuest(null)
+          }, 10000)
+        }
       } else if (response.status === 410) {
         addNotification("Token đã hết hạn\nVui lòng tạo mã QR mới", "error")
       } else {
@@ -854,6 +1000,15 @@ export default function CheckinPage() {
             {/* Recently Checked In Guest Card */}
             {recentlyCheckedInGuest ? (
               <div className="recently-checked-in-card rounded-xl border border-green-400/40 bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-6 shadow-lg shadow-green-500/20">
+                {console.log('=== RENDERING GUEST INFO ===')}
+                {console.log('recentlyCheckedInGuest:', recentlyCheckedInGuest)}
+                {console.log('Title:', recentlyCheckedInGuest.title)}
+                {console.log('Position:', recentlyCheckedInGuest.position)}
+                {console.log('Company:', recentlyCheckedInGuest.company)}
+                {console.log('Email:', recentlyCheckedInGuest.email)}
+                {console.log('Phone:', recentlyCheckedInGuest.phone)}
+                {console.log('Event name:', recentlyCheckedInGuest.event_name)}
+                {console.log('checked_in_at:', recentlyCheckedInGuest.checked_in_at)}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                   <h3 className="text-green-200 font-semibold text-lg">Khách vừa check-in</h3>
@@ -867,68 +1022,81 @@ export default function CheckinPage() {
                 
                 <div className="space-y-3">
                   {/* Name & Title */}
-                  <div className="flex items-center gap-2">
-                    <Icons.user className="w-4 h-4 text-green-300" />
-                    <span className="text-white font-medium text-lg">
-                      {recentlyCheckedInGuest.title && `${recentlyCheckedInGuest.title} `}
-                      {recentlyCheckedInGuest.name}
-                    </span>
+                  <div className="text-white font-medium text-lg">
+                    {recentlyCheckedInGuest.title && `${recentlyCheckedInGuest.title} `}
+                    {recentlyCheckedInGuest.name}
                   </div>
                   
                   {/* Position */}
                   {recentlyCheckedInGuest.position && (
-                    <div className="flex items-center gap-2">
-                      <Icons.briefcase className="w-4 h-4 text-green-300" />
-                      <span className="text-green-100">{recentlyCheckedInGuest.position}</span>
+                    <div className="text-green-100">
+                      {recentlyCheckedInGuest.position}
                     </div>
                   )}
                   
                   {/* Company */}
                   {recentlyCheckedInGuest.company && (
-                    <div className="flex items-center gap-2">
-                      <Icons.building className="w-4 h-4 text-green-300" />
-                      <span className="text-green-100 text-sm">{recentlyCheckedInGuest.company}</span>
+                    <div className="text-green-100 text-sm">
+                      {recentlyCheckedInGuest.company}
                     </div>
                   )}
                   
                   {/* Tag */}
                   {recentlyCheckedInGuest.tag && (
-                    <div className="flex items-center gap-2">
-                      <Icons.tag className="w-4 h-4 text-green-300" />
-                      <span className="px-2 py-1 bg-green-500/30 text-green-200 text-xs rounded-full">
-                        {recentlyCheckedInGuest.tag}
-                      </span>
+                    <div className="px-2 py-1 bg-green-500/30 text-green-200 text-xs rounded-full inline-block">
+                      {recentlyCheckedInGuest.tag}
                     </div>
                   )}
                   
                   {/* Contact Info */}
-                  <div className="space-y-2 pt-2 border-t border-green-400/20">
+                  <div className="space-y-1 pt-2 border-t border-green-400/20">
                     {recentlyCheckedInGuest.email && (
-                      <div className="flex items-center gap-2">
-                        <Icons.mail className="w-4 h-4 text-green-300" />
-                        <span className="text-green-100 text-sm">{recentlyCheckedInGuest.email}</span>
+                      <div className="text-green-100 text-sm">
+                        Email: {recentlyCheckedInGuest.email}
                       </div>
                     )}
                     
                     {recentlyCheckedInGuest.phone && (
-                      <div className="flex items-center gap-2">
-                        <Icons.phone className="w-4 h-4 text-green-300" />
-                        <span className="text-green-100 text-sm">{recentlyCheckedInGuest.phone}</span>
+                      <div className="text-green-100 text-sm">
+                        Phone: {recentlyCheckedInGuest.phone}
                       </div>
                     )}
                   </div>
                   
+                  {/* Event Info */}
+                  {recentlyCheckedInGuest.event_name && (
+                    <div className="text-green-100 text-sm pt-2 border-t border-green-400/20">
+                      Sự kiện: {recentlyCheckedInGuest.event_name}
+                    </div>
+                  )}
+                  
+                  {/* Check-in Method */}
+                  <div className="text-green-100 text-sm">
+                    Phương thức: {recentlyCheckedInGuest.checkin_method === 'qr' ? 'Quét QR' : 'Thủ công'}
+                  </div>
+                  
                   {/* Check-in Time */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-green-400/20">
-                    <Icons.clock className="w-4 h-4 text-green-300" />
-                    <span className="text-green-200 text-sm">
-                      Check-in: {new Date(recentlyCheckedInGuest.checked_in_at).toLocaleString("vi-VN", {
+                  <div className="text-green-200 text-sm pt-2 border-t border-green-400/20">
+                    Check-in: {recentlyCheckedInGuest.checked_in_at ? 
+                      new Date(recentlyCheckedInGuest.checked_in_at).toLocaleString("vi-VN", {
                         timeZone: "Asia/Ho_Chi_Minh",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit"
-                      })}
-                    </span>
+                      }) : 
+                      new Date().toLocaleString("vi-VN", {
+                        timeZone: "Asia/Ho_Chi_Minh",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit"
+                      })
+                    }
                   </div>
                 </div>
               </div>

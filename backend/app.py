@@ -419,8 +419,8 @@ def create_app() -> Flask:
             guest = Guest(
                 name=name,
                 title=data.get("title", "").strip() or None,
-                position=data.get("role", "").strip() or None,  # Map role to position
-                company=data.get("organization", "").strip() or None,  # Map organization to company
+                role=data.get("role", "").strip() or None,
+                organization=data.get("organization", "").strip() or None,
                 tag=data.get("tag", "").strip() or None,
                 email=email or None,
                 phone=data.get("phone", "").strip() or None,
@@ -735,7 +735,22 @@ def create_app() -> Flask:
                     guest_already.checkin_status = "arrived"
                     db.session.commit()
                     print(f"Already checked-in guest {guest_already.id} status updated to: '{guest_already.checkin_status}'")
-                return {"message": "already checked in", "checked_in_at": existing.time.isoformat()}, 409
+                return {
+                    "message": "already checked in", 
+                    "checked_in_at": existing.time.isoformat(),
+                    "guest": {
+                        "id": guest_already.id, 
+                        "name": guest_already.name,
+                        "title": guest_already.title,
+                        "position": guest_already.role,
+                        "company": guest_already.organization,
+                        "tag": guest_already.tag,
+                        "email": guest_already.email,
+                        "phone": guest_already.phone,
+                        "event_id": guest_already.event_id,
+                        "event_name": guest_already.event.name if guest_already.event else None
+                    }
+                }, 409
                 
             ci = Checkin(guest_id=tok.guest_id, gate=gate, staff=staff)
             db.session.add(ci)
@@ -750,7 +765,23 @@ def create_app() -> Flask:
             db.session.commit()
             print(f"Database committed. Guest {guest.id} final status: '{guest.checkin_status}'")
 
-            result = {"message": "ok", "guest": {"id": guest.id, "name": guest.name}, "time": ci.time.isoformat()}
+            result = {
+                "message": "ok", 
+                "guest": {
+                    "id": guest.id, 
+                    "name": guest.name,
+                    "title": guest.title,
+                    "position": guest.role,
+                    "company": guest.organization,
+                    "tag": guest.tag,
+                    "email": guest.email,
+                    "phone": guest.phone,
+                    "event_id": guest.event_id,
+                    "event_name": guest.event.name if guest.event else None
+                }, 
+                "checked_in_at": ci.time.isoformat(),
+                "time": ci.time.isoformat()
+            }
             print(f"Checkin success: {result}")
             # Notify invite stream instantly
             try:
