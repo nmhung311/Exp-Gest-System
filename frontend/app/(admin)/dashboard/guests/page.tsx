@@ -586,6 +586,18 @@ export default function GuestsPage(){
     console.log("Available events:", events)
     console.log("Is editing guest:", !!guest)
     
+    // Validation: Yêu cầu có sự kiện và chọn sự kiện trước khi thêm khách mới
+    if (!guest) {
+      if (events.length === 0) {
+        setResult("Vui lòng tạo sự kiện trước khi thêm khách mời")
+        return
+      }
+      if (!eventFilter || eventFilter === "") {
+        setResult("Vui lòng chọn sự kiện trước khi thêm khách mời")
+        return
+      }
+    }
+    
     if (guest) {
       console.log("Guest data for editing:", guest)
       console.log("Guest checkin_status:", guest.checkin_status)
@@ -670,6 +682,12 @@ export default function GuestsPage(){
     console.log("Available events:", events)
     
     try {
+      // Validation: Kiểm tra có sự kiện không
+      if (events.length === 0) {
+        setResult("Vui lòng tạo sự kiện trước khi thêm khách mời")
+        return
+      }
+      
       // Đảm bảo luôn gán vào sự kiện được chọn
       let eventId = guestForm.event_id ? parseInt(guestForm.event_id) : (eventFilter ? parseInt(eventFilter) : null)
       console.log("Event ID for guest:", eventId)
@@ -823,6 +841,7 @@ export default function GuestsPage(){
     
     try {
       console.log("🚀 Starting delete request for guest ID:", guestId)
+      console.log("🌐 API URL:", `/api/guests/${guestId}`)
       const response = await fetch(`/api/guests/${guestId}`, {
         method: "DELETE",
         headers: {
@@ -833,9 +852,15 @@ export default function GuestsPage(){
       console.log("📊 Delete response status:", response.status)
       console.log("📊 Delete response headers:", Object.fromEntries(response.headers.entries()))
       
-      if (response.ok) {
-        const result = await response.json()
-        console.log("✅ Delete result:", result)
+      if (response.status >= 200 && response.status < 300) {
+        let result
+        try {
+          result = await response.json()
+          console.log("✅ Delete result:", result)
+        } catch (parseError) {
+          console.error("❌ Failed to parse response as JSON:", parseError)
+          result = { message: "Failed to parse response" }
+        }
         
         await loadGuests()
         showToast("Xóa khách mời thành công!", "success")
@@ -854,8 +879,14 @@ export default function GuestsPage(){
           }, 300)
         }, 2000)
       } else {
-        const errorText = await response.text()
-        console.error("❌ Delete error:", { status: response.status, errorText })
+        let errorText
+        try {
+          errorText = await response.text()
+          console.error("❌ Delete error:", { status: response.status, errorText })
+        } catch (textError) {
+          console.error("❌ Failed to read error text:", textError)
+          errorText = "Unknown error"
+        }
         showToast(`Lỗi khi xóa khách mời: ${response.status} - ${errorText}`, "error")
       }
     } catch (e: any) {
@@ -2039,23 +2070,40 @@ export default function GuestsPage(){
             const currentEvent = events.find(e => e.id === parseInt(eventFilter))
             const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
             const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+            const isNoEventSelected = !eventFilter || eventFilter === ""
+            const isNoEvents = events.length === 0
             
             return (
               <button 
                 onClick={() => openGuestModal()}
-                disabled={isMaxGuestsReached}
+                disabled={isMaxGuestsReached || isNoEventSelected || isNoEvents}
                 className={`group relative px-3 py-2 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm text-sm ${
-                  isMaxGuestsReached
+                  isMaxGuestsReached || isNoEventSelected || isNoEvents
                     ? 'bg-gray-500/20 border-gray-500/30 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20'
                 }`}
-                title={isMaxGuestsReached ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` : ''}
+                title={
+                  isNoEvents
+                    ? 'Vui lòng tạo sự kiện trước khi thêm khách'
+                    : isNoEventSelected 
+                      ? 'Vui lòng chọn sự kiện trước khi thêm khách' 
+                      : isMaxGuestsReached 
+                        ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` 
+                        : ''
+                }
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
                 <span className="text-sm font-medium">
-                  {isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Thêm khách'}
+                  {isNoEvents
+                    ? 'Tạo sự kiện'
+                    : isNoEventSelected 
+                      ? 'Chọn sự kiện' 
+                      : isMaxGuestsReached 
+                        ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` 
+                        : 'Thêm khách'
+                  }
                 </span>
               </button>
             )
@@ -3838,5 +3886,4 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
         }
       `}</style>
     </div>
-  )
-}
+  )}

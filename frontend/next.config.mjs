@@ -1,5 +1,7 @@
 export default /** @type {import('next').NextConfig} */ ({
   reactStrictMode: true,
+  // Enable standalone output for Docker optimization
+  output: 'standalone',
   // Disable static export for GitHub Pages deployment
   // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   trailingSlash: process.env.NODE_ENV === 'production' ? true : false,

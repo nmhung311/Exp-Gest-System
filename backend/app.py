@@ -23,15 +23,15 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     
     # CORS configuration with environment variable support
-    cors_origins = os.getenv("CORS_ORIGINS", "http://27.72.246.67:9009")
+    cors_origins = os.getenv("CORS_ORIGINS", "http://192.168.1.135:9009")
     if isinstance(cors_origins, str):
         cors_origins = [origin.strip() for origin in cors_origins.split(",")]
     
     # Add default origins for development
     default_origins = [
-        "http://27.72.246.67:3000", 
-        "http://27.72.246.67:3001", 
-        "http://27.72.246.67:9009",
+        "http://192.168.1.135:3000", 
+        "http://192.168.1.135:3001", 
+        "http://192.168.1.135:9009",
         "http://localhost:3000", 
         "http://127.0.0.1:3000", 
         "http://192.168.1.135:3000", 
@@ -496,18 +496,19 @@ def create_app() -> Flask:
             if not guest:
                 return {"message": "Guest not found"}, 404
             
-            # Delete related tokens and checkins
-            Token.query.filter_by(guest_id=guest_id).delete()
-            Checkin.query.filter_by(guest_id=guest_id).delete()
+            # Store guest name for logging before deletion
+            guest_name = guest.name
             
+            # Delete the guest - related tokens and checkins will be automatically deleted due to CASCADE
             db.session.delete(guest)
             db.session.commit()
             
-            print(f"Deleted guest: {guest.name}")
+            print(f"Deleted guest: {guest_name}")
             return {"message": "Guest deleted successfully"}, 200
             
         except Exception as e:
             print(f"Error deleting guest: {e}")
+            db.session.rollback()  # Rollback on error
             return {"message": f"Error deleting guest: {str(e)}"}, 500
 
     # --- QR / Token ---

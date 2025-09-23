@@ -1,39 +1,56 @@
 version: '3.8'
 
+# Development override for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
 services:
-  # Frontend (Next.js) - Development
   frontend:
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
+    build:
+      target: runner
     environment:
       - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - app-network
-
-  # Backend (Flask) - Development
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      - /app/.next
+    command: npm run dev
     ports:
-      - "9009:9009"
+      - "3001:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  backend:
+    build:
+      target: production
     environment:
       - FLASK_ENV=development
-      - FLASK_APP=app.py
-      - FLASK_DEBUG=1
+      - FLASK_DEBUG=True
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=5008
     volumes:
       - ./backend:/app
-    networks:
-      - app-network
+      - backend_dev_data:/app/instance
+    command: python app.py
+    ports:
+      - "5008:5008"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
-networks:
-  app-network:
-    driver: bridge
+  nginx:
+    volumes:
+      - ./deploy/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "9010:80"
+
+volumes:
+  backend_dev_data:
+    driver: local

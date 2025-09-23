@@ -90,7 +90,7 @@ class Guest(db.Model):
 class Token(db.Model):
     __tablename__ = "tokens"
     id = db.Column(db.Integer, primary_key=True)
-    guest_id = db.Column(db.Integer, db.ForeignKey("guests.id"), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey("guests.id", ondelete="CASCADE"), nullable=False)
     token = db.Column(db.String(128), nullable=False, unique=True)
     status = db.Column(db.String(20), default="active")  # active/revoked
     created_at = db.Column(db.DateTime, default=get_hanoi_time)
@@ -119,7 +119,7 @@ class UserToken(db.Model):
 class Checkin(db.Model):
     __tablename__ = "checkins"
     id = db.Column(db.Integer, primary_key=True)
-    guest_id = db.Column(db.Integer, db.ForeignKey("guests.id"), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey("guests.id", ondelete="CASCADE"), nullable=False)
     time = db.Column(db.DateTime, default=get_hanoi_time)
     gate = db.Column(db.String(50), nullable=True)
     staff = db.Column(db.String(100), nullable=True)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5008'
+const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
 
 // Required for static export
 export async function generateStaticParams() {

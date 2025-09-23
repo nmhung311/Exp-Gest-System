@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://192.168.1.135:5008'
+const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
 
 // Required for static export
 export async function generateStaticParams() {
@@ -43,6 +43,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const { id } = params
+  console.log('🔍 Frontend API DELETE request for guest ID:', id)
+  console.log('🌐 Backend URL:', backendUrl)
+  console.log('🔗 Full URL:', `${backendUrl}/api/guests/${id}`)
+  
   try {
     const backendResponse = await fetch(`${backendUrl}/api/guests/${id}`, {
       method: 'DELETE',
@@ -51,15 +55,24 @@ export async function DELETE(
       },
     })
 
+    console.log('📡 Backend response status:', backendResponse.status)
+    console.log('📡 Backend response ok:', backendResponse.ok)
+    
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text()
+      console.error('❌ Backend error response:', errorText)
       return new NextResponse(errorText, { status: backendResponse.status })
     }
 
     const data = await backendResponse.json()
+    console.log('✅ Backend success response:', data)
     return NextResponse.json(data)
   } catch (error: any) {
-    console.error('Error proxying guest delete request:', error)
+    console.error('💥 Frontend API route error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
   }
 }

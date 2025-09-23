@@ -42,7 +42,7 @@ npm run build
 ### Thay vì hardcode URLs:
 ```typescript
 // ❌ Cũ - hardcode
-const response = await fetch("http://27.72.246.67:9009/api/events")
+const response = await fetch("http://192.168.1.135:9009/api/events")
 
 // ✅ Mới - sử dụng API utility
 const data = await api.getEvents()
@@ -74,8 +74,8 @@ await api.deleteCheckin(id)
 ## 🌐 Tự động chuyển đổi URLs
 
 ### Development
-- API: `http://27.72.246.67:9009`
-- Frontend: `http://27.72.246.67:9009`
+- API: `http://192.168.1.135:9009`
+- Frontend: `http://192.168.1.135:9009`
 
 ### Production
 - API: `https://your-domain.com/api`

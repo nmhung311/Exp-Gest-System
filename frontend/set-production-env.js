@@ -25,8 +25,8 @@ NEXT_PUBLIC_FRONTEND_URL=https://${domain}
 // Tạo nội dung cho .env.local (development)
 const devEnvContent = `# Development environment variables
 # This file is for local development only
-NEXT_PUBLIC_API_BASE_URL=http://27.72.246.67:9009
-NEXT_PUBLIC_FRONTEND_URL=http://27.72.246.67:9009
+NEXT_PUBLIC_API_BASE_URL=http://192.168.1.135:9009
+NEXT_PUBLIC_FRONTEND_URL=http://192.168.1.135:9009
 `
 
 // Ghi file .env.production

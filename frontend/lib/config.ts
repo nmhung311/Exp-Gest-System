@@ -32,12 +32,12 @@ export const API_ENDPOINTS = {
   CHECKIN: `/api/checkin`,
   CHECKIN_BY_ID: (id: string) => `/api/checkin/${id}`,
   
-  // Auth - Sử dụng trực tiếp backend URL cho static export
+  // Auth - Sử dụng Next.js API routes làm proxy
   AUTH: {
     LOGIN: `/api/auth/login`,
     REGISTER: `/api/auth/register`,
-    USERS: `${API_BASE_URL}/api/auth/users`,
-    ME: `${API_BASE_URL}/api/auth/me`,
+    USERS: `/api/auth/users`,
+    ME: `/api/auth/me`,
   },
 } as const
 
