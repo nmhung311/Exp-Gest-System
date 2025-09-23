@@ -1000,15 +1000,21 @@ export default function CheckinPage() {
             {/* Recently Checked In Guest Card */}
             {recentlyCheckedInGuest ? (
               <div className="recently-checked-in-card rounded-xl border border-green-400/40 bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-6 shadow-lg shadow-green-500/20">
-                {console.log('=== RENDERING GUEST INFO ===')}
-                {console.log('recentlyCheckedInGuest:', recentlyCheckedInGuest)}
-                {console.log('Title:', recentlyCheckedInGuest.title)}
-                {console.log('Position:', recentlyCheckedInGuest.position)}
-                {console.log('Company:', recentlyCheckedInGuest.company)}
-                {console.log('Email:', recentlyCheckedInGuest.email)}
-                {console.log('Phone:', recentlyCheckedInGuest.phone)}
-                {console.log('Event name:', recentlyCheckedInGuest.event_name)}
-                {console.log('checked_in_at:', recentlyCheckedInGuest.checked_in_at)}
+                {(() => {
+                  console.log('=== RENDERING GUEST INFO ===');
+                  console.log('recentlyCheckedInGuest:', recentlyCheckedInGuest);
+                  console.log('Title:', recentlyCheckedInGuest.title);
+                  console.log('Position:', recentlyCheckedInGuest.position);
+                  console.log('Company:', recentlyCheckedInGuest.company);
+                  console.log('Email:', recentlyCheckedInGuest.email);
+                  console.log('Phone:', recentlyCheckedInGuest.phone);
+                  return null;
+                })()}
+                {(() => {
+                  console.log('Event name:', recentlyCheckedInGuest.event_name);
+                  console.log('checked_in_at:', recentlyCheckedInGuest.checked_in_at);
+                  return null;
+                })()}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                   <h3 className="text-green-200 font-semibold text-lg">Khách vừa check-in</h3>
