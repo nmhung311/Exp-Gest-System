@@ -1805,7 +1805,7 @@ const InvitePage: React.FC = () => {
             /* Specific override for address icon in mobile event info card */
             .mobile-event-info-card .address-detail-icon { 
               width: 44px !important; 
-              height: 44px !important; g
+              height: 44px !important; 
               color: #fff !important; 
               text-align: center !important; 
               justify-self: center !important; 
