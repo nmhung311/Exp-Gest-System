@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://192.168.1.135:5008'
 
+// Required for static export
+export async function generateStaticParams() {
+  return []
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
