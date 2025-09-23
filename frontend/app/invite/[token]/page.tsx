@@ -5,6 +5,9 @@ import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
 import BackgroundGlow from '../../_components/BackgroundGlow'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 interface EventData {
   id: number;
   name: string;

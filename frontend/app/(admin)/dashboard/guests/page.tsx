@@ -2109,11 +2109,11 @@ export default function GuestsPage(){
 
         
       {/* Statistics Cards */}
-      <div className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 pb-2 py-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent scroll-smooth snap-x snap-mandatory">
+      <div className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 pb-2 py-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent scroll-smooth snap-x snap-mandatory md:grid md:grid-cols-4 md:overflow-x-visible md:snap-none">
         {/* Total Guests Card */}
         <div 
           onClick={() => setStatusFilter("all")}
-          className={`guests-card-total group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
+          className={`guests-card-total group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
             statusFilter === "all" 
               ? "bg-gradient-to-br from-cyan-500/25 to-blue-500/25 border border-cyan-400/50" 
               : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
@@ -2144,7 +2144,7 @@ export default function GuestsPage(){
         {/* Pending Card */}
         <div 
           onClick={() => setStatusFilter("pending")}
-          className={`guests-card-pending group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
+          className={`guests-card-pending group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
             statusFilter === "pending" 
               ? "bg-gradient-to-br from-yellow-500/25 to-orange-500/25 border border-yellow-400/50" 
               : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
@@ -2172,7 +2172,7 @@ export default function GuestsPage(){
         {/* Accepted Card */}
         <div 
           onClick={() => setStatusFilter("accepted")}
-          className={`guests-card-accepted group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
+          className={`guests-card-accepted group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
             statusFilter === "accepted" 
               ? "bg-gradient-to-br from-green-500/25 to-emerald-500/25 border border-green-400/50" 
               : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
@@ -2200,7 +2200,7 @@ export default function GuestsPage(){
         {/* Declined Card */}
         <div 
           onClick={() => setStatusFilter("declined")}
-          className={`guests-card-declined group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] h-[100px] sm:h-[120px] md:h-[140px] snap-start shadow-none ${
+          className={`guests-card-declined group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
             statusFilter === "declined" 
               ? "bg-gradient-to-br from-red-500/25 to-pink-500/25 border border-red-400/50" 
               : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"

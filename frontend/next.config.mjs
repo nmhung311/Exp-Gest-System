@@ -1,6 +1,7 @@
 export default /** @type {import('next').NextConfig} */ ({
   reactStrictMode: true,
-  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  // Temporarily disable static export to fix build issues
+  // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   trailingSlash: process.env.NODE_ENV === 'production' ? true : false,
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
