@@ -1342,7 +1342,8 @@ const InvitePage: React.FC = () => {
               backdrop-filter: blur(8px);
               position: relative;
               overflow: hidden;
-              min-width: 180px;
+              min-width: 250px !important;
+              width: 250px !important;
               justify-content: center;
               text-align: center;
             }
@@ -1368,7 +1369,7 @@ const InvitePage: React.FC = () => {
               padding: 25px !important; 
               margin-top: -28px !important;
               margin-bottom: 20px !important; 
-              margin-left: -25px !important;
+              margin-left: -10px !important;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
             
@@ -1387,11 +1388,19 @@ const InvitePage: React.FC = () => {
             /* Show mobile event info card */
             .mobile-event-info-card { 
               display: block !important; 
+              margin-left: auto !important;
+              margin-right: auto !important;
             }
             
             /* Show mobile RSVP card */
             .mobile-rsvp-card { 
               display: block !important; 
+            }
+            
+            /* Show mobile timeline card */
+            .mobile-timeline-card { 
+              display: block !important; 
+              margin-top: 20px !important;
             }
             
             /* Hide old event info card in mobile cards section */
@@ -1429,6 +1438,65 @@ const InvitePage: React.FC = () => {
               font-size: 16px !important; 
               text-align: left !important; 
             }
+            
+            /* Mobile timeline card styling */
+            .mobile-timeline-card .mobile-card-title {
+              text-align: left !important;
+              justify-content: flex-start !important;
+              margin-left: 0 !important;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+              padding-bottom: 15px !important;
+              margin-bottom: 20px !important;
+              font-weight: 700 !important;
+            }
+            
+            .mobile-timeline-card .mobile-card-title svg {
+              width: 25px !important;
+              height: 25px !important;
+              color: #3B82F6 !important;
+              max-width: 25px !important;
+              max-height: 25px !important;
+            }
+            
+            .mobile-timeline-content {
+              display: flex;
+              flex-direction: column;
+              gap: 15px;
+            }
+            
+            .mobile-timeline-row {
+              display: grid;
+              grid-template-columns: 80px 1fr;
+              gap: 15px;
+              align-items: center;
+              text-align: left;
+            }
+            
+            .mobile-timeline-time-cell {
+              text-align: left;
+            }
+            
+            .mobile-timeline-time {
+              font-size: 16px;
+              font-weight: 600;
+              color: #ffffff;
+              background: rgba(255, 255, 255, 0.1);
+              padding: 6px 12px;
+              border-radius: 8px;
+              display: inline-block;
+              min-width: 60px;
+              text-align: center;
+            }
+            
+            .mobile-timeline-content-cell {
+              text-align: left;
+            }
+            
+            .mobile-timeline-text {
+              font-size: 16px;
+              color: #E2E8F0;
+              line-height: 1.4;
+            }
             .guest-info { font-size: 15px !important; }
             /* Giảm kích thước mobile guest card */
             .greeting-title { font-size: 16px !important; }
@@ -1458,6 +1526,11 @@ const InvitePage: React.FC = () => {
               border-radius: 20px !important;
               padding: 25px !important;
               margin-bottom: 20px !important;
+              margin-left: auto !important;
+              margin-right: auto !important;
+              width: calc(100% - 40px) !important;
+              max-width: 400px !important;
+              min-width: 300px !important;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
             }
             
@@ -1492,31 +1565,39 @@ const InvitePage: React.FC = () => {
             .mobile-event-content-card { display: none; }
             .mobile-event-info-card { display: none; }
             .mobile-rsvp-card { display: none; }
+            .mobile-timeline-card { display: none; }
             .mobile-card { 
               background: rgba(255,255,255,0.08); 
               backdrop-filter: blur(8px); 
               border: 1px solid rgba(255,255,255,0.15); 
               border-radius: 20px; 
               padding: 25px; 
-              margin-bottom: 0; 
-              min-width: 280px;
-              max-width: 320px;
+              margin-bottom: 20px; 
+              margin-left: auto;
+              margin-right: auto;
+              width: calc(100% - 40px);
+              max-width: 400px;
+              min-width: 300px;
               flex-shrink: 0;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              display: block;
             }
             .mobile-card-title { 
-            font-size: 20px; 
+              font-size: 20px; 
               font-weight: 600; 
-            color: #fff; 
+              color: #fff; 
               margin-bottom: 20px; 
-            display: flex; 
-            align-items: center; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center;
               gap: 12px;
+              text-align: center;
             }
             .mobile-card-content { 
               color: #E2E8F0; 
               line-height: 1.6; 
               font-size: 16px;
+              text-align: center;
             }
             .mobile-card-content p { 
               margin: 0 0 12px 0; 
@@ -1696,12 +1777,12 @@ const InvitePage: React.FC = () => {
               padding-left: 28px !important; 
             }
             .detail-item { 
-              display: grid !important; 
-              grid-template-columns: 40px 1fr !important; 
+              display: flex !important; 
               align-items: center !important; 
               margin-bottom: 15px !important; 
               gap: 12px !important; 
-              justify-content: start !important; 
+              justify-content: flex-start !important;
+              text-align: left !important;
             }
             .detail-icon { 
               width: 20px !important; 
@@ -1711,11 +1792,21 @@ const InvitePage: React.FC = () => {
               justify-self: center !important; 
             }
             .address-detail-icon { 
-              width: 20px !important; 
-              height: 20px !important; 
+              width: 22px !important; 
+              height: 22px !important; 
               color: #fff !important; 
               text-align: center !important; 
               justify-self: center !important; 
+            }
+            
+            /* Specific override for address icon in mobile event info card */
+            .mobile-event-info-card .address-detail-icon { 
+              width: 44px !important; 
+              height: 44px !important; 
+              color: #fff !important; 
+              text-align: center !important; 
+              justify-self: center !important; 
+              transform: translateX(-2px) !important;
             }
             .detail-text { 
               color: #fff !important; 
@@ -1795,11 +1886,11 @@ const InvitePage: React.FC = () => {
               overflow: visible !important;
             }
             .mobile-card.rsvp-card { 
-              padding: 20px; 
+              padding: 25px; 
               margin-bottom: 0; 
               min-height: 200px;
               min-width: 300px;
-              max-width: 350px;
+              max-width: 400px;
               overflow: visible;
             }
             .mobile-card.rsvp-card.expanding {
@@ -1811,12 +1902,12 @@ const InvitePage: React.FC = () => {
               overflow: visible !important;
             }
             .mobile-card.time-location-card { 
-              min-width: 280px;
-              max-width: 320px;
+              min-width: 300px !important;
+              max-width: 400px !important;
             }
             .mobile-card.program-card { 
-              min-width: 280px;
-              max-width: 320px;
+              min-width: 300px !important;
+              max-width: 400px !important;
             }
               transform: translateY(0) !important;
               max-height: none !important;
@@ -1830,7 +1921,9 @@ const InvitePage: React.FC = () => {
             font-size: 20px; 
             font-weight: 600; 
             color: #fff; 
-            margin-bottom: 8px; 
+            margin-bottom: 25px; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 15px;
             transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           }
           .rsvp-title.accepted { color: #22c55e; }
@@ -1841,6 +1934,8 @@ const InvitePage: React.FC = () => {
             gap: 20px; 
             justify-content: center; 
             margin-bottom: 8px; 
+            flex-direction: column;
+            align-items: center;
             transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           }
           .rsvp-button::before {
@@ -1860,6 +1955,8 @@ const InvitePage: React.FC = () => {
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2)); 
             border: 1px solid rgba(34, 197, 94, 0.3); 
             color: #ffffff; 
+            min-width: 250px !important;
+            width: 250px !important;
           }
           .rsvp-accept:hover { 
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4)); 
@@ -1878,6 +1975,8 @@ const InvitePage: React.FC = () => {
             background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2)); 
             border: 1px solid rgba(107, 114, 128, 0.3); 
             color:rgb(151, 154, 160); 
+            min-width: 250px !important;
+            width: 250px !important;
           }
           .rsvp-decline:hover { 
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(236, 72, 153, 0.4)); 
@@ -2275,6 +2374,7 @@ const InvitePage: React.FC = () => {
             .mobile-event-content-card { display: none !important; }
             .mobile-event-info-card { display: none !important; }
             .mobile-rsvp-card { display: none !important; }
+            .mobile-timeline-card { display: none !important; }
             .invitation-section { display: flex !important; }
             .header-top { margin-bottom: 15px; }
             .guest-card-desktop .guest-info-table {
@@ -2332,17 +2432,17 @@ const InvitePage: React.FC = () => {
               border-radius: 20px; 
               padding: 25px; 
               margin-bottom: 0; 
-              min-width: 280px;
-              max-width: 320px;
+              min-width: 300px;
+              max-width: 400px;
               flex-shrink: 0;
               transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
             .mobile-card.rsvp-card { 
-              padding: 20px; 
+              padding: 25px; 
               margin-bottom: 0; 
               min-height: 200px;
               min-width: 300px;
-              max-width: 350px;
+              max-width: 400px;
               overflow: visible;
             }
             .invitation-card-desktop { display: block; }
@@ -2629,7 +2729,7 @@ const InvitePage: React.FC = () => {
             .detail-section h3 svg { width: 32px; height: 32px; margin-right: 16px; color: #3B82F6; }
             .detail-item { display: flex; align-items: center; margin-bottom: 15px; justify-content: flex-start; }
             .detail-icon { width: 20px; height: 20px; margin-right: 16px; color: #fff; text-align: left; }
-            .address-detail-icon { width: 20px !important; height: 20px !important; margin-right: 16px !important; color: #fff !important; text-align: left; }
+            .address-detail-icon { width: 22px !important; height: 22px !important; margin-right: 16px !important; color: #fff !important; text-align: left; }
             .detail-text { color: #fff; font-size: 16px; text-align: left; }
             .map-link { 
               color: #fff; 
@@ -3299,6 +3399,62 @@ const InvitePage: React.FC = () => {
             )}
           </div>
 
+          {/* Mobile Timeline Card - Added after RSVP card */}
+          <div className="mobile-card program-card mobile-timeline-card">
+            <div className="mobile-card-title">
+              Chương trình
+            </div>
+            <div className="mobile-timeline-content">
+              {programRows.length > 0 ? (
+                programRows.map((row, index) => (
+                  <div key={index} className="mobile-timeline-row">
+                    <div className="mobile-timeline-time-cell">
+                      <span className="mobile-timeline-time">{row.time}</span>
+                    </div>
+                    <div className="mobile-timeline-content-cell">
+                      <span className="mobile-timeline-text">{row.item}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="mobile-timeline-row">
+                    <div className="mobile-timeline-time-cell">
+                      <span className="mobile-timeline-time">18:00</span>
+                    </div>
+                    <div className="mobile-timeline-content-cell">
+                      <span className="mobile-timeline-text">Đón khách & Check-in</span>
+                    </div>
+                  </div>
+                  <div className="mobile-timeline-row">
+                    <div className="mobile-timeline-time-cell">
+                      <span className="mobile-timeline-time">18:30</span>
+                    </div>
+                    <div className="mobile-timeline-content-cell">
+                      <span className="mobile-timeline-text">Khai mạc</span>
+                    </div>
+                  </div>
+                  <div className="mobile-timeline-row">
+                    <div className="mobile-timeline-time-cell">
+                      <span className="mobile-timeline-time">19:00</span>
+                    </div>
+                    <div className="mobile-timeline-content-cell">
+                      <span className="mobile-timeline-text">Vinh danh & Tri ân</span>
+                    </div>
+                  </div>
+                  <div className="mobile-timeline-row">
+                    <div className="mobile-timeline-time-cell">
+                      <span className="mobile-timeline-time">20:00</span>
+                    </div>
+                    <div className="mobile-timeline-content-cell">
+                      <span className="mobile-timeline-text">Gala & Networking</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           
           {/* Guest Card */}
           <div className="guest-card-desktop">
@@ -3656,248 +3812,6 @@ const InvitePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile Cards */}
-          <div className="mobile-cards">
-            {/* Card 1: Xác nhận tham dự (RSVP) */}
-            <div className={`mobile-card rsvp-card ${inviteData.guest.rsvp_status === 'declined' ? 'rsvp-card-declined' : ''} ${showChangeOption ? 'expanding' : ''}`}>
-              {/* 1. Trạng thái "chưa phản hồi" - Hiển thị câu hỏi RSVP */}
-              {(() => {
-                console.log('=== RSVP STATUS CHECK ===', {
-                  rsvp_status: inviteData.guest.rsvp_status,
-                  checkin_status: inviteData.guest.checkin_status,
-                  showChangeOption
-                })
-                return inviteData.guest.rsvp_status === 'pending' && 
-                       (inviteData.guest.checkin_status as string) !== 'arrived'
-              })() && (
-                <>
-                  <h2 className="rsvp-title">Xác nhận tham dự</h2>
-                  <div className="rsvp-buttons">
-                    <button className="rsvp-button rsvp-accept" onClick={() => handleAccept()}>
-                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Tôi sẽ tham dự
-                    </button>
-                    <button className="rsvp-button rsvp-decline" onClick={() => handleDecline()}>
-                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      Không thể tham dự
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* 2. Trạng thái "đã xác nhận" + chưa check-in - Hiển thị QR code */}
-              {inviteData.guest.rsvp_status === 'accepted' && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && 
-               !showChangeOption && 
-               !showCheckinSuccess && (
-                <>
-                  <h2 className="rsvp-title accepted" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    <svg width="20" height="20" fill="#22c55e" viewBox="0 0 24 24" style={{marginRight: '8px'}}>
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                    Đã xác nhận tham dự
-                  </h2>
-                  <p className="rsvp-status-text">
-                    Cảm ơn bạn đã xác nhận tham dự sự kiện. Vui lòng quét mã QR để check-in.
-                  </p>
-                  
-                  {!showCheckinSuccess && !instantCheckin && (
-                    <div className="qr-section">
-                      <h3 className="qr-title">Mã QR Check-in</h3>
-                      <p className="qr-description">Vui lòng quét mã QR này để check-in tại sự kiện</p>
-                      
-                      {qrLoading ? (
-                        <div className="qr-loading">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                          <p className="text-gray-400 mt-2">Đang tạo mã QR...</p>
-                        </div>
-                      ) : qrImageUrl ? (
-                        <div className="qr-image-container">
-                          <img 
-                            src={qrImageUrl} 
-                            alt="QR Code" 
-                            className="qr-image"
-                            onLoad={() => console.log('QR image loaded successfully:', qrImageUrl)}
-                            onError={(e) => console.error('QR image failed to load:', qrImageUrl, e)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="qr-error text-red-500">
-                          Không thể tạo mã QR
-                          <br />
-                          <small>Debug: qrImageUrl = {qrImageUrl || 'null'}</small>
-                          <br />
-                          <small>Debug: qrLoading = {qrLoading ? 'true' : 'false'}</small>
-                        </div>
-                      )}
-                      
-                      {(inviteData.guest.checkin_status as string) !== 'arrived' && (
-                        <button 
-                          className="change-option-button"
-                          onClick={handleChangeOption}
-                        >
-                          <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                          </svg>
-                          Tôi muốn thay đổi tùy chọn
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
-              {((inviteData.guest.checkin_status as string) === 'arrived' || showCheckinSuccess || instantCheckin) && (
-                <div className="checkin-success">
-                  <div className="checkin-success-icon">
-                    <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  </div>
-                  <div className="checkin-success-text">
-                    {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
-                  </div>
-                  <p className="checkin-success-description">
-                    Cảm ơn bạn đã tham dự sự kiện. Chúc bạn có những trải nghiệm tuyệt vời!
-                  </p>
-                </div>
-              )}
-
-              {/* 4. Trạng thái "đã từ chối" - Hiển thị thông báo từ chối */}
-              {inviteData.guest.rsvp_status === 'declined' && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && 
-               !showChangeOption && (
-                <div className="declined-section">
-                  <h2 className="rsvp-title declined" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    <svg width="20" height="20" fill="#ef4444" viewBox="0 0 24 24" style={{marginRight: '8px'}}>
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                    Đã từ chối tham dự
-                  </h2>
-                  <p className="declined-description">
-                    Cảm ơn bạn đã phản hồi. Chúng tôi rất tiếc vì bạn không thể tham dự sự kiện này.
-                  </p>
-                  
-                  {(inviteData.guest.checkin_status as string) !== 'arrived' && (
-                    <button 
-                      className="change-option-button"
-                      onClick={handleChangeOption}
-                    >
-                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                      </svg>
-                      Tôi muốn thay đổi tùy chọn
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Hiển thị lại nút RSVP khi muốn thay đổi */}
-              {showChangeOption && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && (
-                <div className="change-option-section">
-                  <h3 className="change-option-title">Thay đổi tùy chọn tham dự</h3>
-                  <p className="change-option-description">Bạn có chắc chắn muốn thay đổi tùy chọn tham dự không?</p>
-                  
-                  <div className="change-option-buttons">
-                    <button 
-                      className="confirm-change-button"
-                      onClick={handleResetRSVP}
-                    >
-                      Có
-                    </button>
-                    <button 
-                      className="cancel-change-button"
-                      onClick={handleCancelChange}
-                    >
-                      Không
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Card 2: Thời gian & Địa điểm */}
-            <div className="mobile-card time-location-card">
-              <div className="mobile-card-title">
-                Thông tin sự kiện
-              </div>
-              <div className="detail-item">
-                <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                </svg>
-                <span className="detail-text">{formattedDate}</span>
-              </div>
-              <div className="detail-item">
-                <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
-                </svg>
-                <span className="detail-text">{formatTime(inviteData.event.time)}</span>
-              </div>
-              {inviteData.event.venue_address && (
-                <div className="detail-item">
-                  <svg className="address-detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12,2C8.13,2 5,5.13 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9C19,5.13 15.87,2 12,2M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5Z"/>
-                  </svg>
-                  <span className="detail-text">{inviteData.event.venue_address}</span>
-                </div>
-              )}
-              {inviteData.event.venue_map_url && inviteData.event.venue_map_url.trim() !== '' && (
-                <div className="detail-item">
-                  <svg className="detail-icon" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
-                  </svg>
-                  <a 
-                    href={inviteData.event.venue_map_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="detail-text map-link"
-                  >
-                    Xem trên Google Maps
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* Card 3: Timeline chương trình */}
-            <div className="mobile-card program-card">
-              <div className="mobile-card-title">
-                Chương trình
-              </div>
-              {programRows.length > 0 ? (
-                programRows.map((row, index) => (
-                  <div key={index} className="program-item">
-                    <span className="program-time">{row.time}</span>
-                    <span className="program-description">{row.item}</span>
-                  </div>
-                ))
-              ) : (
-                <>
-                  <div className="program-item">
-                    <span className="program-time">18:00</span>
-                    <span className="program-description">Đón khách & Check-in</span>
-                  </div>
-                  <div className="program-item">
-                    <span className="program-time">18:30</span>
-                    <span className="program-description">Khai mạc</span>
-                  </div>
-                  <div className="program-item">
-                    <span className="program-time">19:00</span>
-                    <span className="program-description">Vinh danh & Tri ân</span>
-                  </div>
-                  <div className="program-item">
-                    <span className="program-time">20:00</span>
-                    <span className="program-description">Gala & Networking</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
 
           
         </div>
