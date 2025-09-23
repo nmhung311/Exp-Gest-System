@@ -34,10 +34,12 @@ jobs:
         cd frontend
         npm ci
         
-    - name: Build frontend
+    - name: Build frontend (Static Export)
       run: |
         cd frontend
-        NODE_ENV=production npm run export
+        # Temporarily enable static export for GitHub Pages
+        sed -i 's|// output: process.env.NODE_ENV === '\''production'\'' ? '\''export'\'' : undefined,|output: process.env.NODE_ENV === '\''production'\'' ? '\''export'\'' : undefined,|' next.config.mjs
+        NODE_ENV=production npm run build
         
     - name: Setup Pages
       uses: actions/configure-pages@v4

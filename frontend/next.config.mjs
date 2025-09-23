@@ -1,6 +1,6 @@
 export default /** @type {import('next').NextConfig} */ ({
   reactStrictMode: true,
-  // Disable static export to support dynamic API routes
+  // Disable static export for GitHub Pages deployment
   // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   trailingSlash: process.env.NODE_ENV === 'production' ? true : false,
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
