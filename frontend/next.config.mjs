@@ -4,6 +4,7 @@ export default /** @type {import('next').NextConfig} */ ({
   trailingSlash: true,
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
