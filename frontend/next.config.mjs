@@ -1,7 +1,7 @@
 export default /** @type {import('next').NextConfig} */ ({
   reactStrictMode: true,
-  output: 'standalone',
-  trailingSlash: false,
+  output: 'export',
+  trailingSlash: true,
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
     remotePatterns: [
