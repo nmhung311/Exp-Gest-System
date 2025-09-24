@@ -30,3 +30,5 @@ export async function GET(request: NextRequest) {
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
   }
 }
+
+

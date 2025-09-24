@@ -88,6 +88,8 @@ export default function GuestsPage(){
     onCancel: () => void
   } | null>(null)
   const [mobileActionDropdown, setMobileActionDropdown] = useState<number | null>(null)
+  const [showMobileFilterBubble, setShowMobileFilterBubble] = useState(false)
+  const [showMobileActionBubble, setShowMobileActionBubble] = useState(false)
   
   // Copy link modal states
   const [showCopyLinkModal, setShowCopyLinkModal] = useState(false)
@@ -158,6 +160,40 @@ export default function GuestsPage(){
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [mobileActionDropdown])
+
+  // Close mobile filter bubble when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMobileFilterBubble) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.mobile-filter-bubble')) {
+          setShowMobileFilterBubble(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMobileFilterBubble])
+
+  // Close mobile action bubble when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMobileActionBubble) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.mobile-action-bubble')) {
+          setShowMobileActionBubble(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMobileActionBubble])
 
   // Touch handlers for swipe to dismiss
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -2045,6 +2081,84 @@ export default function GuestsPage(){
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }
+
+        /* Mobile Filter Bubble Animations */
+        @keyframes bubble-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.8) translateY(-10px);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.05) translateY(-5px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        @keyframes bubble-out {
+          0% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.8) translateY(-10px);
+          }
+        }
+
+        .mobile-filter-bubble .filter-bubble-content {
+          animation: bubble-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mobile-filter-bubble.closing .filter-bubble-content {
+          animation: bubble-out 0.2s cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        /* Pulse effect for active filter indicators */
+        @keyframes pulse-dot {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(1.2);
+          }
+        }
+
+        .mobile-filter-bubble .active-filter-dot {
+          animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        /* Messenger-like bounce effect */
+        .mobile-filter-bubble button:active {
+          transform: scale(0.98);
+          transition: transform 0.1s ease;
+        }
+
+        /* Mobile Action Bubble Animations */
+        .mobile-action-bubble .action-bubble-content {
+          animation: bubble-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mobile-action-bubble.closing .action-bubble-content {
+          animation: bubble-out 0.2s cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        /* Messenger-like bounce effect for action bubble */
+        .mobile-action-bubble button:active {
+          transform: scale(0.98);
+          transition: transform 0.1s ease;
+        }
+
+        /* Action bubble button hover effects */
+        .mobile-action-bubble .action-bubble-content button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
       `}</style>
       {/* Background Loading Progress Indicator */}
       {isBackgroundLoading && (
@@ -2063,8 +2177,141 @@ export default function GuestsPage(){
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
-        <div className="grid grid-cols-2 sm:flex gap-2">
+        {/* Title with inline mobile action button */}
+        <div className="flex items-center justify-between sm:justify-start gap-3">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý khách mời</h1>
+          
+          {/* Mobile Action Button - Inline */}
+          <div className="sm:hidden mobile-action-bubble">
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowMobileActionBubble(!showMobileActionBubble)
+                  triggerHaptic('light')
+                }}
+                className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 rounded-lg hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/20"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                </svg>
+              </button>
+              
+              {/* Action Bubble */}
+              {showMobileActionBubble && (
+                <div className="absolute top-full right-0 mt-2 z-50 w-64">
+                  <div className="bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-2xl p-4 shadow-2xl action-bubble-content">
+                    {/* Bubble tail */}
+                    <div className="absolute -top-2 right-6 w-4 h-4 bg-gray-900/95 border-l border-t border-white/20 rotate-45"></div>
+                    
+                    <div className="space-y-3">
+                      {/* Add Guest Button */}
+                      {(() => {
+                        const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+                        const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+                        const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+                        const isNoEventSelected = !eventFilter || eventFilter === ""
+                        const isNoEvents = events.length === 0
+                        
+                        return (
+                          <button 
+                            onClick={() => {
+                              openGuestModal()
+                              setShowMobileActionBubble(false)
+                              triggerHaptic('medium')
+                            }}
+                            disabled={isMaxGuestsReached || isNoEventSelected || isNoEvents}
+                            className={`w-full px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm text-sm ${
+                              isMaxGuestsReached || isNoEventSelected || isNoEvents
+                                ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                            </svg>
+                            <span className="font-medium">
+                              {isNoEvents
+                                ? 'Tạo sự kiện'
+                                : isNoEventSelected 
+                                  ? 'Chọn sự kiện' 
+                                  : isMaxGuestsReached 
+                                    ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` 
+                                    : 'Thêm khách'
+                              }
+                            </span>
+                          </button>
+                        )
+                      })()}
+                      
+                      {/* Import Button */}
+                      {(() => {
+                        const currentEvent = events.find(e => e.id === parseInt(eventFilter))
+                        const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
+                        const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+                        
+                        return (
+                          <button 
+                            onClick={() => {
+                              setShowImportModal(true)
+                              setShowMobileActionBubble(false)
+                              triggerHaptic('medium')
+                            }}
+                            disabled={isMaxGuestsReached}
+                            className={`w-full px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm text-sm ${
+                              isMaxGuestsReached
+                                ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 hover:shadow-lg hover:shadow-green-500/20'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            <span className="font-medium">
+                              {isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Import'}
+                            </span>
+                          </button>
+                        )
+                      })()}
+                      
+                      {/* Export Button */}
+                      <button 
+                        onClick={() => {
+                          exportAllGuests()
+                          setShowMobileActionBubble(false)
+                          triggerHaptic('medium')
+                        }}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-xl hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm hover:shadow-lg hover:shadow-indigo-500/20 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        <span className="font-medium">Export</span>
+                      </button>
+                      
+                      {/* Refresh Button */}
+                      <button 
+                        onClick={() => {
+                          refreshGuests()
+                          setShowMobileActionBubble(false)
+                          triggerHaptic('medium')
+                        }}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-xl hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/20 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span className="font-medium">Refresh</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Desktop Actions */}
+        <div className="hidden sm:flex gap-2">
           {(() => {
             // Kiểm tra số lượng khách hiện tại trong sự kiện
             const currentEvent = events.find(e => e.id === parseInt(eventFilter))
@@ -2485,85 +2732,146 @@ export default function GuestsPage(){
             </div>
           </div>
           
-          {/* Search Bar - Always visible */}
-          <input
-            type="text"
-            placeholder="Tìm kiếm khách mời..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm w-full"
-          />
-          
-          {/* Other Filters - Hidden when bulk actions are active */}
-          {!showBulkActions && (
-            <>
-              {/* Event Dropdown */}
-              <CustomDropdown
-                options={events.map(event => ({
-                  value: event.id.toString(),
-                  label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
-                }))}
-                value={eventFilter}
-                onChange={(value) => setEventFilter(value)}
-                placeholder="Chọn sự kiện"
-                className="w-full"
-              />
-              
-              {/* Filters Grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <CustomDropdown
-                  options={[
-                    { value: "all", label: "Tất cả trạng thái" },
-                    { value: "pending", label: "Chờ phản hồi" },
-                    { value: "accepted", label: "Đã xác nhận" },
-                    { value: "declined", label: "Đã từ chối" }
-                  ]}
-                  value={statusFilter}
-                  onChange={(value) => setStatusFilter(value as any)}
-                  placeholder="Chọn trạng thái"
-                  className="w-full"
-                />
-                <CustomDropdown
-                  options={tagFilterOptions}
-                  value={tagFilter}
-                  onChange={(value) => setTagFilter(value)}
-                  placeholder="Chọn tag"
-                  className="w-full"
-                />
-                <CustomDropdown
-                  options={organizationFilterOptions}
-                  value={organizationFilter}
-                  onChange={(value) => setOrganizationFilter(value)}
-                  placeholder="Chọn tổ chức"
-                  className="w-full"
-                />
-                <CustomDropdown
-                  options={roleFilterOptions}
-                  value={roleFilter}
-                  onChange={(value) => setRoleFilter(value)}
-                  placeholder="Chọn vai trò"
-                  className="w-full"
-                />
+          {/* Search Bar with Inline Filter Button */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Tìm kiếm khách mời..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm"
+            />
+            
+            {/* Mobile Filter Button - Inline */}
+            {!showBulkActions && (
+              <div className="mobile-filter-bubble">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowMobileFilterBubble(!showMobileFilterBubble)
+                      triggerHaptic('light')
+                    }}
+                    className="p-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:from-blue-500/30 hover:to-purple-500/30 hover:border-blue-400/50 transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                  </button>
+                  
+                  {/* Filter Bubble */}
+                  {showMobileFilterBubble && (
+                    <div className="absolute top-full right-0 mt-2 z-50 w-80">
+                      <div className="bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-2xl p-4 shadow-2xl filter-bubble-content">
+                        {/* Bubble tail */}
+                        <div className="absolute -top-2 right-6 w-4 h-4 bg-gray-900/95 border-l border-t border-white/20 rotate-45"></div>
+                        
+                        <div className="space-y-4">
+                          {/* Event Dropdown */}
+                          <div>
+                            <label className="block text-white/70 text-sm font-medium mb-2">Sự kiện</label>
+                            <CustomDropdown
+                              options={events.map(event => ({
+                                value: event.id.toString(),
+                                label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
+                              }))}
+                              value={eventFilter}
+                              onChange={(value) => setEventFilter(value)}
+                              placeholder="Chọn sự kiện"
+                              className="w-full"
+                            />
+                          </div>
+                          
+                          {/* Status Filter */}
+                          <div>
+                            <label className="block text-white/70 text-sm font-medium mb-2">Trạng thái RSVP</label>
+                            <CustomDropdown
+                              options={[
+                                { value: "all", label: "Tất cả trạng thái" },
+                                { value: "pending", label: "Chờ phản hồi" },
+                                { value: "accepted", label: "Đã xác nhận" },
+                                { value: "declined", label: "Đã từ chối" }
+                              ]}
+                              value={statusFilter}
+                              onChange={(value) => setStatusFilter(value as any)}
+                              placeholder="Chọn trạng thái"
+                              className="w-full"
+                            />
+                          </div>
+                          
+                          {/* Organization Filter */}
+                          <div>
+                            <label className="block text-white/70 text-sm font-medium mb-2">Tổ chức</label>
+                            <CustomDropdown
+                              options={organizationFilterOptions}
+                              value={organizationFilter}
+                              onChange={(value) => setOrganizationFilter(value)}
+                              placeholder="Chọn tổ chức"
+                              className="w-full"
+                            />
+                          </div>
+                          
+                          {/* Tag and Role Filters - Inline */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-white/70 text-sm font-medium mb-2">Tag</label>
+                              <CustomDropdown
+                                options={tagFilterOptions}
+                                value={tagFilter}
+                                onChange={(value) => setTagFilter(value)}
+                                placeholder="Chọn tag"
+                                className="w-full"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-white/70 text-sm font-medium mb-2">Vai trò</label>
+                              <CustomDropdown
+                                options={roleFilterOptions}
+                                value={roleFilter}
+                                onChange={(value) => setRoleFilter(value)}
+                                placeholder="Chọn vai trò"
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Clear Filters Button */}
+                          <button
+                            onClick={() => {
+                              setSearchTerm("")
+                              setStatusFilter("all")
+                              setTagFilter("all")
+                              setOrganizationFilter("all")
+                              setRoleFilter("all")
+                              triggerHaptic('medium')
+                            }}
+                            className="w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400 rounded-xl hover:from-red-500/30 hover:to-pink-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            <span className="font-medium">Xóa tất cả bộ lọc</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              
-              {/* Clear Filters Button */}
-              <button
-                onClick={() => {
-                  setSearchTerm("")
-                  setStatusFilter("all")
-                  setTagFilter("all")
-                  setOrganizationFilter("all")
-                  setRoleFilter("all")
-                }}
-                className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-gray-500/20 w-full"
-                title="Xóa tất cả bộ lọc"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm font-medium">Xóa lọc</span>
-              </button>
-            </>
+            )}
+          </div>
+          
+          {/* Event Dropdown - Separate row */}
+          {!showBulkActions && (
+            <CustomDropdown
+              options={events.map(event => ({
+                value: event.id.toString(),
+                label: `${event.name} - ${event.date ? new Date(event.date).toLocaleDateString('vi-VN') : 'Không có ngày'}`
+              }))}
+              value={eventFilter}
+              onChange={(value) => setEventFilter(value)}
+              placeholder="Chọn sự kiện"
+              className="w-full"
+            />
           )}
         </div>
 

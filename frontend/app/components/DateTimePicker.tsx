@@ -86,15 +86,75 @@ export default function DateTimePicker({
     
     const rect = inputRef.getBoundingClientRect()
     const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
     const spaceBelow = viewportHeight - rect.bottom
     const spaceAbove = rect.top
     
-    // If there's not enough space below (less than 250px) and more space above, show on top
+    // Check if DateTimePicker is inside a table (timeline)
+    const isInTable = inputRef.closest('table') !== null
+    
+    // For time pickers in tables, prefer showing above to avoid overflow
+    if (isInTable && type === 'time') {
+      // Check if this is near the bottom of the table
+      const table = inputRef.closest('table')
+      if (table) {
+        const tableRect = table.getBoundingClientRect()
+        const isNearBottom = rect.bottom > tableRect.bottom - 100
+        
+        // If near bottom of table or not enough space below, show on top
+        if (isNearBottom || spaceBelow < 200) {
+          return 'top'
+        }
+      }
+      
+      // If there's space above (more than 200px), show on top
+      if (spaceAbove > 200) {
+        return 'top'
+      }
+      // Otherwise show below but with adjusted positioning
+      return 'bottom'
+    }
+    
+    // Original logic for other cases
     if (spaceBelow < 250 && spaceAbove > spaceBelow) {
       return 'top'
     }
     
     return 'bottom'
+  }
+
+  // Calculate horizontal position for time picker
+  const calculateTimePickerPosition = () => {
+    if (typeof window === 'undefined' || !inputRef) return { left: 0 }
+    
+    const rect = inputRef.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const pickerWidth = 320 // w-80 = 320px
+    
+    // Check if DateTimePicker is inside a table (timeline)
+    const isInTable = inputRef.closest('table') !== null
+    
+    let left: number
+    
+    if (isInTable && type === 'time') {
+      // For timeline table, center the popup relative to the input
+      left = rect.left + (rect.width / 2) - (pickerWidth / 2)
+    } else {
+      // For other cases, try to align with right edge of input
+      left = rect.right - pickerWidth
+    }
+    
+    // If popup would go off-screen to the left, align with left edge of input
+    if (left < 8) {
+      left = rect.left
+    }
+    
+    // If popup would go off-screen to the right, align with right edge of viewport
+    if (left + pickerWidth > viewportWidth - 8) {
+      left = viewportWidth - pickerWidth - 8
+    }
+    
+    return { left: Math.max(8, left) }
   }
 
   // Close picker when clicking outside
@@ -272,9 +332,9 @@ export default function DateTimePicker({
           className="fixed z-[9999] w-80 bg-black/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl"
           style={{
             top: position === 'top' 
-              ? `${inputRef?.getBoundingClientRect().top - 264}px`
-              : `${inputRef?.getBoundingClientRect().bottom + 8}px`,
-            left: `${inputRef?.getBoundingClientRect().left}px`
+              ? `${(inputRef?.getBoundingClientRect().top || 0) - 264}px`
+              : `${(inputRef?.getBoundingClientRect().bottom || 0) + 8}px`,
+            left: `${calculateTimePickerPosition().left}px`
           }}
           onClick={(e) => e.stopPropagation()}
         >

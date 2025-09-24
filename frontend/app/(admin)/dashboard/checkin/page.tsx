@@ -38,6 +38,7 @@ interface Notification {
 interface EditCheckinState {
   isOpen: boolean
   guest: CheckedInGuest | null
+  loading: boolean
 }
 
 const guestsPerPage = 6
@@ -70,7 +71,7 @@ export default function CheckinPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
   // edit/multiselect
-  const [editCheckin, setEditCheckin] = useState<EditCheckinState>({ isOpen: false, guest: null })
+  const [editCheckin, setEditCheckin] = useState<EditCheckinState>({ isOpen: false, guest: null, loading: false })
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set())
   const [showActionBubble, setShowActionBubble] = useState(false)
@@ -79,8 +80,45 @@ export default function CheckinPage() {
   // cards
   const [selectedCard, setSelectedCard] = useState<"total" | "scanned" | "notScanned" | null>(null)
   
+  // Touch handlers for horizontal swipe navigation
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  
   // recently checked in guest
   const [recentlyCheckedInGuest, setRecentlyCheckedInGuest] = useState<CheckedInGuest | null>(null)
+
+  // Touch handlers for horizontal swipe navigation
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe && currentCardIndex < 2) {
+      setCurrentCardIndex(currentCardIndex + 1)
+    } else if (isRightSwipe && currentCardIndex > 0) {
+      setCurrentCardIndex(currentCardIndex - 1)
+    }
+  }
+
+  // Card types array for navigation
+  const cardTypes: ("total" | "scanned" | "notScanned")[] = ["total", "scanned", "notScanned"]
+  
+  // Update selected card based on current index
+  useEffect(() => {
+    setSelectedCard(cardTypes[currentCardIndex])
+  }, [currentCardIndex])
 
   // Set mounted state
   useEffect(() => {
@@ -136,6 +174,21 @@ export default function CheckinPage() {
   useEffect(() => {
     loadGuests()
   }, [])
+
+  // Auto switch to scanned view if there are checked-in guests
+  useEffect(() => {
+    if (allGuests.length > 0) {
+      const guestsForEvent = allGuests.filter((g: any) =>
+        selectedEventId ? g?.event_id === selectedEventId : true
+      )
+      const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "arrived")
+      
+      // If there are checked-in guests and no card is selected, auto-select scanned view
+      if (scanned.length > 0 && selectedCard === null) {
+        setSelectedCard("scanned")
+      }
+    }
+  }, [allGuests, selectedEventId, selectedCard])
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -215,12 +268,15 @@ export default function CheckinPage() {
         }, 10000)
         
         await loadGuests()
+        
+        // Auto switch to scanned view after successful check-in
+        setSelectedCard("scanned")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
         
         const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
-          timeZone: "Asia/Ho_Chi_Minh",
+          timeZone: "Asia/Bangkok",
           year: "numeric",
           month: "2-digit", 
           day: "2-digit",
@@ -382,12 +438,15 @@ export default function CheckinPage() {
         }, 10000)
         
         await loadGuests()
+        
+        // Auto switch to scanned view after successful check-in
+        setSelectedCard("scanned")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
         
         const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
-          timeZone: "Asia/Ho_Chi_Minh",
+          timeZone: "Asia/Bangkok",
           year: "numeric",
           month: "2-digit", 
           day: "2-digit",
@@ -436,36 +495,98 @@ export default function CheckinPage() {
   }
 
   // edit/checkin status
-  const openEditPopup = (guest: CheckedInGuest) => setEditCheckin({ isOpen: true, guest })
-  const closeEditPopup = () => setEditCheckin({ isOpen: false, guest: null })
-
-  const updateCheckinStatus = async (guest: CheckedInGuest, newStatus: "arrived" | "not_arrived") => {
+  const openEditPopup = async (guest: CheckedInGuest) => {
+    setEditCheckin({ isOpen: true, guest, loading: true })
+    
     try {
-      const res = await fetch(`/api/guests/${guest.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: guest.name,
-          title: guest.title || "",
-          role: guest.position || "",
-          organization: guest.company || "",
-          tag: guest.tag || "",
-          email: guest.email || "",
-          phone: guest.phone || "",
-          checkin_status: newStatus,
-        }),
+      // Fetch all guests to get detailed information
+      const response = await api.getGuests()
+      if (!response.ok) throw new Error("Failed to fetch guest details")
+      
+      const payload = await response.json()
+      const allGuests = Array.isArray(payload?.guests) ? payload.guests : []
+      
+      // Find the specific guest with detailed information
+      const detailedGuestData = allGuests.find((g: any) => g.id === guest.id)
+      
+      if (detailedGuestData) {
+        // Update the guest with detailed information from database
+        const detailedGuest: CheckedInGuest = {
+          ...guest,
+          title: detailedGuestData.title || guest.title,
+          position: detailedGuestData.role || guest.position,
+          company: detailedGuestData.organization || guest.company,
+          email: detailedGuestData.email || guest.email,
+          phone: detailedGuestData.phone || guest.phone,
+          tag: detailedGuestData.tag || guest.tag,
+        }
+        
+        setEditCheckin({ isOpen: true, guest: detailedGuest, loading: false })
+      } else {
+        // If guest not found in detailed data, use existing data
+        setEditCheckin({ isOpen: true, guest, loading: false })
+      }
+    } catch (error) {
+      console.error("Error fetching guest details:", error)
+      addNotification("Lỗi khi tải thông tin chi tiết khách", "error")
+      setEditCheckin({ isOpen: false, guest: null, loading: false })
+    }
+  }
+  
+  const closeEditPopup = () => setEditCheckin({ isOpen: false, guest: null, loading: false })
+
+  const handleUpdateGuest = async (guest: CheckedInGuest) => {
+    try {
+      const res = await api.updateGuest(guest.id.toString(), {
+        name: guest.name,
+        title: guest.title || "",
+        role: guest.position || "",
+        organization: guest.company || "",
+        tag: guest.tag || "",
+        email: guest.email || "",
+        phone: guest.phone || "",
+        checkin_status: "arrived",
+        checked_in_at: guest.checked_in_at
       })
-      if (!res.ok) throw new Error("update failed")
+      
+      if (!res.ok) throw new Error("Update failed")
 
       // Refresh data after update
       await loadGuests()
       addNotification(
-        `Đã cập nhật ${guest.name}\nThành "${newStatus === "arrived" ? "Đã đến" : "Chưa đến"}"`,
+        `Đã cập nhật thông tin ${guest.name}\nThành công`,
         "success"
       )
       closeEditPopup()
     } catch {
-      addNotification("Lỗi khi cập nhật trạng thái\nVui lòng thử lại", "error")
+      addNotification("Lỗi khi cập nhật thông tin\nVui lòng thử lại", "error")
+    }
+  }
+
+  const handleCheckout = async (guest: CheckedInGuest) => {
+    try {
+      const res = await api.updateGuest(guest.id.toString(), {
+        name: guest.name,
+        title: guest.title || "",
+        role: guest.position || "",
+        organization: guest.company || "",
+        tag: guest.tag || "",
+        email: guest.email || "",
+        phone: guest.phone || "",
+        checkin_status: "not_arrived",
+      })
+      
+      if (!res.ok) throw new Error("Checkout failed")
+
+      // Refresh data after checkout
+      await loadGuests()
+      addNotification(
+        `Đã check-out ${guest.name}\nThành công`,
+        "success"
+      )
+      closeEditPopup()
+    } catch {
+      addNotification("Lỗi khi check-out\nVui lòng thử lại", "error")
     }
   }
 
@@ -697,92 +818,135 @@ export default function CheckinPage() {
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-        {/* Total */}
-        <div
-          className={`checkin-card-total group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-            selectedCard === "total"
-              ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
-              : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
-          }`}
-          onClick={() => setSelectedCard(selectedCard === "total" ? null : "total")}
+      {/* Cards - Horizontal Scrollable */}
+      <div className="relative mb-8 mt-4">
+        <div 
+          className="overflow-x-auto scrollbar-hide py-4"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-xl">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+          <div className="flex gap-3 sm:gap-4 md:gap-6 min-w-max px-2">
+            {/* Total */}
+            <div
+              className={`checkin-card-total group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
+                selectedCard === "total"
+                  ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+                  : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
+              }`}
+              onClick={() => setSelectedCard(selectedCard === "total" ? null : "total")}
+            >
+              <div className="relative flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-xl">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng (RSVP)</div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.total}</div>
               </div>
-              <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng (RSVP)</div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full" style={{ width: "100%" }} />
+              </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white">{stats.total}</div>
-          </div>
-          <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full" style={{ width: "100%" }} />
+
+            {/* Scanned */}
+            <div
+              className={`checkin-card-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
+                selectedCard === "scanned"
+                  ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
+                  : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
+              }`}
+              onClick={() => setSelectedCard(selectedCard === "scanned" ? null : "scanned")}
+            >
+              <div className="relative flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-xl">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs sm:text-sm text-green-300/80 font-medium">Đã quét</div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.scanned}</div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{ width: `${stats.total ? (stats.scanned / stats.total) * 100 : 0}%` }} />
+              </div>
+            </div>
+
+            {/* Not scanned */}
+            <div
+              className={`checkin-card-not-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
+                selectedCard === "notScanned"
+                  ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
+                  : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+              }`}
+              onClick={() => setSelectedCard(selectedCard === "notScanned" ? null : "notScanned")}
+            >
+              <div className="relative flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 sm:p-3 bg-orange-500/20 rounded-xl">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs sm:text-sm text-orange-300/80 font-medium">Chưa quét</div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.notScanned}</div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{ width: `${stats.total ? (stats.notScanned / stats.total) * 100 : 0}%` }} />
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Scanned */}
-        <div
-          className={`checkin-card-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-            selectedCard === "scanned"
-              ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
-              : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
-          }`}
-          onClick={() => setSelectedCard(selectedCard === "scanned" ? null : "scanned")}
-        >
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-green-500/20 rounded-xl">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                </svg>
-              </div>
-              <div className="text-xs sm:text-sm text-green-300/80 font-medium">Đã quét</div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white">{stats.scanned}</div>
-          </div>
-          <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{ width: `${stats.total ? (stats.scanned / stats.total) * 100 : 0}%` }} />
-          </div>
-        </div>
-
-        {/* Not scanned */}
-        <div
-          className={`checkin-card-not-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-            selectedCard === "notScanned"
-              ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
-              : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
-          }`}
-          onClick={() => setSelectedCard(selectedCard === "notScanned" ? null : "notScanned")}
-        >
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-orange-500/20 rounded-xl">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div className="text-xs sm:text-sm text-orange-300/80 font-medium">Chưa quét</div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white">{stats.notScanned}</div>
-          </div>
-          <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{ width: `${stats.total ? (stats.notScanned / stats.total) * 100 : 0}%` }} />
-          </div>
+        
+        {/* Navigation Indicators - Fixed Position */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full flex justify-center gap-2 mt-6">
+          {cardTypes.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentCardIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentCardIndex 
+                  ? 'bg-white w-6' 
+                  : 'bg-white/30 hover:bg-white/50'
+              }`}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search and Scanner - Mobile Inline */}
       <div className="flex items-center gap-2">
-        <input
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40 text-sm sm:text-base"
-          placeholder="Tìm theo tên, email, công ty..."
-        />
+        {/* Search Bar */}
+        <div className="flex-1">
+          <input
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40 text-sm"
+            placeholder="Tìm khách..."
+          />
+        </div>
+        
+        {/* Scanner Button - Mobile Inline */}
+        <button
+          className={`scanner-btn px-3 py-2 rounded-lg border transition-all duration-300 flex items-center gap-1 text-sm font-medium ${
+            isScannerActive 
+              ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
+              : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
+          }`}
+          onClick={() => setIsScannerActive(v => !v)}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="hidden sm:inline">{isScannerActive ? "Tắt camera" : "Bật camera"}</span>
+        </button>
       </div>
 
       {/* Guests list */}
@@ -826,7 +990,15 @@ export default function CheckinPage() {
                   {guest.company && `🏢 ${guest.company}`}
                 </div>
                 {guest.checked_in_at && (
-                  <div className="mt-1 text-xs text-white/60">{new Date(guest.checked_in_at).toLocaleString("vi-VN")}</div>
+                  <div className="mt-1 text-xs text-white/60">{new Date(guest.checked_in_at).toLocaleString("vi-VN", {
+                    timeZone: "Asia/Bangkok",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false
+                  })}</div>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -966,28 +1138,31 @@ export default function CheckinPage() {
         </div>
       )}
 
-      {/* Scanner Panel */}
+      {/* Scanner Panel - Show on all devices */}
       <div className="mt-6 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <button
-            className={`scanner-btn px-4 py-2.5 rounded-lg border transition-all duration-300 flex items-center gap-2 text-sm font-medium ${
-              isScannerActive 
-                ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
-                : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
-            }`}
-            onClick={() => setIsScannerActive(v => !v)}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {isScannerActive ? "Tắt camera" : "Bật camera"}
-          </button>
-          {scannerError && (
-            <div className="text-red-400 text-sm bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
-              {scannerError}
-            </div>
-          )}
+        {/* Desktop Scanner Button - Hidden on mobile */}
+        <div className="hidden sm:block">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <button
+              className={`scanner-btn px-4 py-2.5 rounded-lg border transition-all duration-300 flex items-center gap-2 text-sm font-medium ${
+                isScannerActive 
+                  ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
+                  : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
+              }`}
+              onClick={() => setIsScannerActive(v => !v)}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {isScannerActive ? "Tắt camera" : "Bật camera"}
+            </button>
+            {scannerError && (
+              <div className="text-red-400 text-sm bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
+                {scannerError}
+              </div>
+            )}
+          </div>
         </div>
 
         {isScannerActive && (
@@ -1085,7 +1260,7 @@ export default function CheckinPage() {
                   <div className="text-green-200 text-sm pt-2 border-t border-green-400/20">
                     Check-in: {recentlyCheckedInGuest.checked_in_at ? 
                       new Date(recentlyCheckedInGuest.checked_in_at).toLocaleString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
+                        timeZone: "Asia/Bangkok",
                         year: "numeric",
                         month: "2-digit",
                         day: "2-digit",
@@ -1094,7 +1269,7 @@ export default function CheckinPage() {
                         second: "2-digit"
                       }) : 
                       new Date().toLocaleString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
+                        timeZone: "Asia/Bangkok",
                         year: "numeric",
                         month: "2-digit",
                         day: "2-digit",
@@ -1139,46 +1314,26 @@ export default function CheckinPage() {
 
       {/* CSS cho Check-in Cards với hiệu ứng hover */}
       <style jsx>{`
-        /* Check-in Cards với hiệu ứng hover */
+        /* Check-in Cards với hiệu ứng hover nhẹ */
         .checkin-card-total:hover {
-          background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(8, 145, 178, 0.4));
-          border-color: rgba(6, 182, 212, 0.7);
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 15px 35px rgba(6, 182, 212, 0.4), 0 0 25px rgba(6, 182, 212, 0.2);
+          background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(8, 145, 178, 0.2));
+          border-color: rgba(6, 182, 212, 0.5);
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 8px 20px rgba(6, 182, 212, 0.2);
         }
         
         .checkin-card-scanned:hover {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(16, 185, 129, 0.4));
-          border-color: rgba(34, 197, 94, 0.7);
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 15px 35px rgba(34, 197, 94, 0.4), 0 0 25px rgba(34, 197, 94, 0.2);
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+          border-color: rgba(34, 197, 94, 0.5);
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 8px 20px rgba(34, 197, 94, 0.2);
         }
         
         .checkin-card-not-scanned:hover {
-          background: linear-gradient(135deg, rgba(249, 115, 22, 0.4), rgba(239, 68, 68, 0.4));
-          border-color: rgba(249, 115, 22, 0.7);
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 15px 35px rgba(249, 115, 22, 0.4), 0 0 25px rgba(249, 115, 22, 0.2);
-        }
-        
-        /* Hiệu ứng shimmer cho check-in cards */
-        .checkin-card-total::before,
-        .checkin-card-scanned::before,
-        .checkin-card-not-scanned::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-          transition: left 0.6s ease;
-        }
-        
-        .checkin-card-total:hover::before,
-        .checkin-card-scanned:hover::before,
-        .checkin-card-not-scanned:hover::before {
-          left: 100%;
+          background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(239, 68, 68, 0.2));
+          border-color: rgba(249, 115, 22, 0.5);
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 8px 20px rgba(249, 115, 22, 0.2);
         }
 
         /* Hiệu ứng hover mạnh cho guest cards */
@@ -1318,7 +1473,146 @@ export default function CheckinPage() {
             transform: translateX(0);
           }
         }
+
+        /* Horizontal scrollable cards */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Mobile touch effects */
+        @media (max-width: 768px) {
+          .checkin-card-total:active,
+          .checkin-card-scanned:active,
+          .checkin-card-not-scanned:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+          }
+        }
+        
+        /* Desktop hover effects */
+        @media (min-width: 769px) {
+          .checkin-card-total:hover,
+          .checkin-card-scanned:hover,
+          .checkin-card-not-scanned:hover {
+            cursor: pointer;
+          }
+        }
       `}</style>
+
+      {/* Edit Guest Modal */}
+      {editCheckin.isOpen && editCheckin.guest && mounted && (
+        <Portal>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-gray-900 border border-white/20 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Thông tin chi tiết khách</h2>
+                <button
+                  onClick={closeEditPopup}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {editCheckin.loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <p className="text-white/70">Đang tải thông tin chi tiết...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Guest Information */}
+                  <div className="space-y-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Tên khách</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.name}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Chức danh</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.title || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Vị trí</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.position || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Công ty</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.company || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Email</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.email || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Số điện thoại</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.phone || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Tag</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.tag || 'Chưa có'}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Thời gian check-in</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">
+                          {editCheckin.guest.checked_in_at 
+                            ? new Date(editCheckin.guest.checked_in_at).toLocaleString("vi-VN", { 
+                                timeZone: "Asia/Bangkok",
+                                year: "numeric",
+                                month: "2-digit", 
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit"
+                              })
+                            : 'Chưa có thông tin'
+                          }
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Phương thức check-in</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.checkin_method}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={closeEditPopup}
+                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={() => handleCheckout(editCheckin.guest!)}
+                      className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Check-out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   )
 }
@@ -1418,7 +1712,7 @@ async function bulk(
         if (result.already_checked_in_count > 0) {
           const alreadyCheckedInDetails = result.already_checked_in.map((g: any) => {
             const checkinTime = new Date(g.checkin_time).toLocaleString("vi-VN", {
-              timeZone: "Asia/Ho_Chi_Minh",
+              timeZone: "Asia/Bangkok",
               year: "numeric",
               month: "2-digit", 
               day: "2-digit",

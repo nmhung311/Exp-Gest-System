@@ -309,11 +309,11 @@ export default function RegisterPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-12 text-center">
+          <div className="mt-12 text-left">
             <p className="text-gray-500 text-xs mb-2">
-              © 2024 EXP Technology Co., Ltd. All rights reserved.
+              © 2025 EXP Technology Company Limited. All rights reserved.
             </p>
-            <div className="flex justify-center space-x-4 text-xs">
+            <div className="flex justify-start space-x-4 text-xs">
               <a href="#" className="text-gray-500 hover:text-gray-400 transition-colors">
                 Privacy Policy
               </a>

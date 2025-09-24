@@ -269,7 +269,7 @@ export default function AdminLayout({
         )}
       </header>
       <main className="w-full px-4 md:px-14 py-4 md:py-8 space-y-4 md:space-y-6">{children}</main>
-      <footer className="mx-auto max-w-6xl px-4 py-10 text-xs text-white/60">© 2025 EXP Technology Company Limited</footer>
+      <footer className="mx-auto max-w-6xl px-4 py-10 text-xs text-white/60 text-left">© 2025 EXP Technology Company Limited</footer>
     </>
   )
 }

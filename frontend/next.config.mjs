@@ -29,10 +29,11 @@ export default /** @type {import('next').NextConfig} */ ({
         source: '/dashboard/:path*',
         destination: '/:path*',
       },
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:5008/api/:path*',
-      },
+      // Remove the API rewrite rule as it interferes with Next.js API routes
+      // {
+      //   source: '/api/:path*',
+      //   destination: 'http://localhost:5008/api/:path*',
+      // },
     ]
   },
 });

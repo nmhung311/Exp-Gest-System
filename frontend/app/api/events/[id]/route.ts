@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
 
-// Required for static export
-export async function generateStaticParams() {
-  // Return empty array since this is an API route
-  // Static export will not generate static pages for API routes
-  return []
-}
+// Removed generateStaticParams to make this a dynamic API route
 
 export async function GET(
   request: NextRequest,

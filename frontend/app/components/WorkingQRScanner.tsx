@@ -36,20 +36,57 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
   const startScanning = async () => {
     try {
       setError(null)
-      setDebugInfo("Đang khởi động camera...")
+      setDebugInfo("Đang khởi động camera phía sau...")
       
       // Dừng stream cũ nếu có
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop())
       }
       
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+      // Thử các cấu hình camera khác nhau để đảm bảo sử dụng camera phía sau
+      const constraints = [
+        // Ưu tiên camera phía sau với environment
+        {
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        },
+        // Fallback với camera phía sau không có size constraints
+        {
+          video: { 
+            facingMode: 'environment'
+          }
+        },
+        // Fallback với camera phía sau và exact constraints
+        {
+          video: { 
+            facingMode: { exact: 'environment' }
+          }
         }
-      })
+      ]
+      
+      let stream: MediaStream | null = null
+      let lastError: Error | null = null
+      
+      // Thử từng constraint cho đến khi thành công
+      for (let i = 0; i < constraints.length; i++) {
+        try {
+          setDebugInfo(`Thử cấu hình camera ${i + 1}/${constraints.length}...`)
+          stream = await navigator.mediaDevices.getUserMedia(constraints[i])
+          setDebugInfo(`Camera phía sau đã được khởi động thành công`)
+          break
+        } catch (err) {
+          lastError = err as Error
+          console.warn(`Camera constraint ${i + 1} failed:`, err)
+          setDebugInfo(`Cấu hình ${i + 1} thất bại, thử tiếp...`)
+        }
+      }
+      
+      if (!stream) {
+        throw lastError || new Error('Không thể truy cập camera phía sau')
+      }
       
       streamRef.current = stream
       
@@ -58,21 +95,21 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
         
         // Đợi video load xong
         videoRef.current.onloadedmetadata = () => {
-          setDebugInfo("Video metadata loaded")
+          setDebugInfo("Video metadata loaded - Camera phía sau")
           videoRef.current?.play().then(() => {
-            setDebugInfo("Video playing successfully")
+            setDebugInfo("Camera phía sau đang hoạt động")
             setIsScanning(true)
             startQRDetection()
           }).catch((playError) => {
             console.warn('Video play error:', playError)
-            setDebugInfo("Video play error but continuing...")
+            setDebugInfo("Video play error nhưng vẫn tiếp tục...")
             setIsScanning(true)
             startQRDetection()
           })
         }
       }
     } catch (err) {
-      const errorMessage = 'Không thể truy cập camera. Vui lòng cho phép quyền truy cập camera.'
+      const errorMessage = 'Không thể truy cập camera phía sau. Vui lòng cho phép quyền truy cập camera và đảm bảo thiết bị có camera phía sau.'
       setError(errorMessage)
       setDebugInfo("Lỗi: " + errorMessage)
       onError?.(errorMessage)

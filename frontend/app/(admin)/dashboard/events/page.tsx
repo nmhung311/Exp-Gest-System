@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import CustomDropdown from '../../../components/CustomDropdown'
 import CustomCheckbox from '../../../components/CustomCheckbox'
-import SimpleInvitePreview from '../../../components/SimpleInvitePreview'
 import DateTimePicker from '../../../components/DateTimePicker'
 
 import { api } from "@/lib/api"
@@ -55,7 +54,6 @@ export default function EventsPage() {
 
   type ProgramRow = { time: string; item: string }
   const [programRows, setProgramRows] = useState<ProgramRow[]>([])
-  const [showPreviewModal, setShowPreviewModal] = useState(false)
 
   function parseProgramOutline(src: string | undefined | null): ProgramRow[] {
     if (!src) return []
@@ -187,13 +185,6 @@ export default function EventsPage() {
       setProgramRows([])
   }
 
-  const openPreviewModal = () => {
-    setShowPreviewModal(true)
-  }
-
-  const closePreviewModal = () => {
-    setShowPreviewModal(false)
-  }
 
   const saveEvent = async () => {
     try {
@@ -885,7 +876,7 @@ export default function EventsPage() {
             <thead className="text-xs text-white/70 uppercase bg-black/40 border-b border-white/10">
               <tr>
                 <th className="px-6 py-4 w-1/3 font-semibold">Tên sự kiện</th>
-                <th className="px-6 py-4 w-1/5 font-semibold">Ngày & Giờ</th>
+                <th className="px-6 py-4 w-32 font-semibold">Ngày & Giờ</th>
                 <th className="px-6 py-4 w-1/5 font-semibold">Địa điểm</th>
                 <th className="px-6 py-4 w-16 font-semibold">Khách</th>
                 <th className="px-6 py-4 w-35 font-semibold">Trạng thái</th>
@@ -900,7 +891,7 @@ export default function EventsPage() {
                       <h3 className="text-white font-medium text-sm">{event.name}</h3>
                     </div>
                   </td>
-                  <td className="px-6 py-4 w-1/5 text-white/80">
+                  <td className="px-6 py-4 w-32 text-white/80">
                     <div className="text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</div>
                     <div className="text-xs text-white/60">{event.time}</div>
                   </td>
@@ -1049,10 +1040,10 @@ export default function EventsPage() {
         )}
 
       {/* Event Modal - Compact */}
-      {showEventModal && !showPreviewModal && mounted && createPortal(
+      {showEventModal && mounted && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]">
           <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4">
-            <div className="bg-gray-900 border border-white/20 rounded-lg p-4 sm:p-6 w-full max-w-7xl max-h-[95dvh] overflow-y-auto">
+            <div className="bg-gray-900 border border-white/20 rounded-lg p-4 sm:p-6 w-full max-w-5xl max-h-[95dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-white">
                 {editingEvent ? 'Chỉnh sửa sự kiện' : 'Tạo sự kiện mới'}
@@ -1070,8 +1061,8 @@ export default function EventsPage() {
             {/* Main Layout Container - 2 Rows */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* All content in one grid container */}
-                {/* Column 1 - Thông tin cơ bản (4/12 columns) */}
-                <div className="lg:col-span-4">
+                {/* Column 1 - Thông tin cơ bản (6/12 columns) */}
+                <div className="lg:col-span-6">
                   <div className="bg-white/5 rounded-lg p-6 h-full">
                     <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1131,8 +1122,8 @@ export default function EventsPage() {
                 </div>
               </div>
 
-                {/* Column 2 - Địa điểm cấu hình (4/12 columns) */}
-                <div className="lg:col-span-4">
+                {/* Column 2 - Địa điểm cấu hình (6/12 columns) */}
+                <div className="lg:col-span-6">
                   <div className="bg-white/5 rounded-lg p-6 h-full">
                     <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1196,21 +1187,8 @@ export default function EventsPage() {
               </div>
               </div>
 
-                {/* Column 3 - Cài đặt bổ sung (4/12 columns, spans 2 rows) */}
-                <div className="lg:col-span-4 lg:row-span-2">
-                  <div className="bg-white/5 rounded-lg p-6 h-full">
-                    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                      </svg>
-                      Cài đặt bổ sung
-                    </h3>
-                  <div className="space-y-3">
-                  </div>
-                </div>
-              </div>
-              {/* Bottom Row - Timeline Table (8/12 columns width) */}
-              <div className="lg:col-span-8">
+              {/* Bottom Row - Timeline Table (full width) */}
+              <div className="lg:col-span-12">
                 <div className="bg-white/5 rounded-lg p-6 overflow-visible">
                   <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1282,8 +1260,6 @@ export default function EventsPage() {
                   </div>
                 </div>
               </div>
-              {/* Empty space to align with the right column */}
-              <div className="lg:col-span-4"></div>
             </div>
 
             {/* Action Buttons - Sticky Footer */}
@@ -1291,17 +1267,6 @@ export default function EventsPage() {
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {/* Secondary Actions - Left Side */}
                 <div className="flex gap-2 sm:order-1">
-                  <button
-                    onClick={openPreviewModal}
-                    className="preview-button group relative px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm overflow-hidden"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="hidden sm:inline">Xem trước</span>
-                    <span className="sm:hidden">Xem thiệp</span>
-                  </button>
                   <button
                     onClick={closeEventModal}
                     className="cancel-button group relative px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm overflow-hidden"
@@ -1331,14 +1296,6 @@ export default function EventsPage() {
         </div>, document.body
       )}
 
-      {/* Preview Modal */}
-      {showPreviewModal && mounted && createPortal(
-        <SimpleInvitePreview 
-          eventData={formData} 
-          onClose={closePreviewModal} 
-        />, 
-        document.body
-      )}
 
       {/* Event Detail Modal */}
       {selectedEventId && mounted && createPortal(
@@ -1541,32 +1498,6 @@ export default function EventsPage() {
           box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
         }
         
-        /* Nút Preview (xanh dương) */
-        .preview-button {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          color: #3b82f6;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          position: relative;
-          overflow: hidden;
-          justify-content: center;
-        }
-        
-        .preview-button:hover {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4));
-          border-color: rgba(59, 130, 246, 0.7);
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4), 0 0 25px rgba(59, 130, 246, 0.2);
-          color: #ffffff;
-        }
-        
-        .preview-button:active {
-          transform: translateY(-1px) scale(0.98);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
-        }
         
         /* Nút Cancel (đỏ) */
         .cancel-button {

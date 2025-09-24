@@ -16,6 +16,8 @@ interface CheckinStats {
   today: number
   thisWeek: number
   thisMonth: number
+  checkinRate: number
+  avgCheckinTime: string
 }
 
 interface GuestStats {
@@ -62,7 +64,12 @@ export default function StatsPage() {
       const response = await fetch('/api/guests')
       if (response.ok) {
         const data = await response.json()
-        setGuests(data)
+        // Handle both array and object response formats
+        const guestsData = Array.isArray(data) ? data : (data.guests || data)
+        setGuests(guestsData)
+        console.log('Loaded guests:', guestsData.length)
+      } else {
+        console.error('Failed to load guests:', response.status)
       }
     } catch (error) {
       console.error('Error loading guests:', error)
@@ -74,7 +81,12 @@ export default function StatsPage() {
       const response = await fetch('/api/guests/checked-in')
       if (response.ok) {
         const data = await response.json()
-        setCheckedInGuests(data)
+        // Handle both array and object response formats
+        const checkedInData = Array.isArray(data) ? data : (data.guests || data)
+        setCheckedInGuests(checkedInData)
+        console.log('Loaded checked-in guests:', checkedInData.length)
+      } else {
+        console.error('Failed to load checked-in guests:', response.status)
       }
     } catch (error) {
       console.error('Error loading checked-in guests:', error)
@@ -96,6 +108,25 @@ export default function StatsPage() {
 
   // Calculate check-in statistics
   const safeCheckedInGuests = Array.isArray(checkedInGuests) ? checkedInGuests : []
+  
+  // Calculate check-in rate
+  const acceptedGuests = safeGuests.filter(g => g.rsvp_status === 'accepted')
+  const checkinRate = acceptedGuests.length > 0 ? Math.round((safeCheckedInGuests.length / acceptedGuests.length) * 100) : 0
+  
+  // Calculate average check-in time
+  const getAvgCheckinTime = () => {
+    if (safeCheckedInGuests.length === 0) return 'N/A'
+    
+    const checkinTimes = safeCheckedInGuests
+      .filter(g => g.checked_in_at)
+      .map(g => new Date(g.checked_in_at!).getHours())
+    
+    if (checkinTimes.length === 0) return 'N/A'
+    
+    const avgHour = Math.round(checkinTimes.reduce((sum, hour) => sum + hour, 0) / checkinTimes.length)
+    return `${avgHour}:00`
+  }
+  
   const checkinStats: CheckinStats = {
     total: safeCheckedInGuests.length,
     today: safeCheckedInGuests.filter(g => {
@@ -114,7 +145,9 @@ export default function StatsPage() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       const checkinDate = new Date(g.checked_in_at!)
       return checkinDate >= monthStart
-    }).length
+    }).length,
+    checkinRate,
+    avgCheckinTime: getAvgCheckinTime()
   }
 
   // Filter data based on time range
@@ -457,8 +490,8 @@ export default function StatsPage() {
             <span>Thống Kê Check-in</span>
           </h2>
 
-          {/* Desktop: 4 cards per row on ≥1280px, 2 cards per row on 1024px */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Desktop: 6 cards per row on ≥1280px, 3 cards per row on 1024px, 2 cards per row on mobile */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
             {/* Total Check-ins - Desktop Optimized */}
             <div className="group relative bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-4 sm:p-6 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20">
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -546,6 +579,69 @@ export default function StatsPage() {
                 <div className="mt-auto">
                   <div className="h-1.5 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" style={{width: `${checkinStats.total > 0 ? (checkinStats.thisMonth / checkinStats.total) * 100 : 0}%`}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Check-in Rate - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-emerald-500/10 to-teal-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-2xl p-4 sm:p-6 hover:from-emerald-500/20 hover:to-teal-500/20 hover:border-emerald-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-emerald-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{checkinStats.checkinRate}%</div>
+                    <div className="text-sm text-emerald-300/80 font-medium">Tỷ lệ check-in</div>
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  {/* Circular Progress */}
+                  <div className="relative w-16 h-16 mx-auto">
+                    <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-emerald-500/20"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-emerald-400"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray={`${checkinStats.checkinRate}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Average Check-in Time - Desktop Optimized */}
+            <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-amber-500/20 rounded-2xl p-4 sm:p-6 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4 flex-1">
+                  <div className="p-3 bg-amber-500/20 rounded-xl">
+                    <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-white mb-2">{checkinStats.avgCheckinTime}</div>
+                    <div className="text-sm text-amber-300/80 font-medium">Giờ check-in TB</div>
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  <div className="h-1.5 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full w-full"></div>
                   </div>
                 </div>
               </div>
