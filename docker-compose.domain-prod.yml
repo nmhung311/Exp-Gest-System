@@ -1,0 +1,68 @@
+version: '3.8'
+
+# Production configuration for event.expsolution.io
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_BASE_URL=https://event.expsolution.io/api
+      - NEXT_PUBLIC_FRONTEND_URL=https://event.expsolution.io
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=5008
+      - CORS_ORIGINS=https://event.expsolution.io,https://www.event.expsolution.io
+    ports:
+      - "5008:5008"
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/instance
+    command: python app.py
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./deploy/nginx-domain.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  backend_data:
+    driver: local
