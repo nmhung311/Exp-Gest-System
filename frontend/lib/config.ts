@@ -3,9 +3,9 @@
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// API Base URLs
+// API Base URLs - Always use Next.js API routes for frontend calls
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (isDevelopment ? 'http://localhost:5008' : 'http://192.168.1.135:5008')
+  (isDevelopment ? 'http://localhost:3000' : 'https://event.expsolution.io')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
@@ -24,6 +24,7 @@ export const API_ENDPOINTS = {
   GUEST_BULK_CHECKIN: `/api/guests/bulk-checkin`,
   GUEST_BULK_CHECKOUT: `/api/guests/bulk-checkout`,
   GUEST_BULK_DELETE: `/api/guests/bulk-delete`,
+  GUEST_BULK_RSVP: `/api/guests/bulk-rsvp`,
   GUEST_IMPORT: `/api/guests/import`,
   GUEST_IMPORT_CSV: `/api/guests/import-csv`,
   GUESTS_CHECKED_IN: `/api/guests/checked-in`,
@@ -43,7 +44,7 @@ export const API_ENDPOINTS = {
 
 // Utility functions
 export const getApiUrl = (endpoint: string) => {
-  // Nếu endpoint bắt đầu với '/api/' thì đó là Next.js API route, không cần thêm API_BASE_URL
+  // Force trả về relative URL cho Next.js API routes
   if (endpoint.startsWith('/api/')) {
     return endpoint
   }
@@ -51,7 +52,7 @@ export const getApiUrl = (endpoint: string) => {
   if (endpoint.startsWith('http')) {
     return endpoint
   }
-  // Các trường hợp khác - không sử dụng API_BASE_URL nữa
+  // Các trường hợp khác - trả về endpoint gốc
   return endpoint
 }
 

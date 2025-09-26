@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
+const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008'
 
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
     
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const response = await fetch(`${backendUrl}/api/guests/bulk-rsvp`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body)
     })
     

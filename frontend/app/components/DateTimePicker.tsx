@@ -201,7 +201,11 @@ export default function DateTimePicker({
   // Handle date selection
   const handleDateSelect = (day: Date) => {
     if (day && day.getMonth() === currentMonth.getMonth()) {
-      const dateStr = day.toISOString().split('T')[0]
+      // Sử dụng local date thay vì UTC để tránh timezone offset
+      const year = day.getFullYear()
+      const month = String(day.getMonth() + 1).padStart(2, '0')
+      const date = String(day.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${date}`
       onChange(dateStr)
       setIsOpen(false)
     }
@@ -303,7 +307,11 @@ export default function DateTimePicker({
               <button
                 onClick={() => {
                   const today = new Date()
-                  const todayStr = today.toISOString().split('T')[0]
+                  // Sử dụng local date thay vì UTC để tránh timezone offset
+                  const year = today.getFullYear()
+                  const month = String(today.getMonth() + 1).padStart(2, '0')
+                  const date = String(today.getDate()).padStart(2, '0')
+                  const todayStr = `${year}-${month}-${date}`
                   onChange(todayStr)
                   setIsOpen(false)
                 }}

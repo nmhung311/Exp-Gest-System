@@ -6,6 +6,7 @@ import Portal from "../../../components/Portal"
 import SystemModal from "../../../components/SystemModal"
 import CopyLinkModal from "../../../components/CopyLinkModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
+import { authApi } from "@/lib/auth"
 interface Guest {
   id: number
   name: string
@@ -458,13 +459,9 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("/api/guests/bulk-checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guest_ids: Array.from(selectedGuests),
-          event_id: parseInt(eventFilter)
-        })
+      const response = await api.bulkCheckinGuests({
+        guest_ids: Array.from(selectedGuests),
+        event_id: parseInt(eventFilter)
       })
       
       if (response.ok) {
@@ -494,12 +491,8 @@ export default function GuestsPage(){
     if (selectedGuests.size === 0) return
     
     try {
-      const response = await fetch("/api/guests/bulk-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guest_ids: Array.from(selectedGuests)
-        })
+      const response = await api.bulkCheckoutGuests({
+        guest_ids: Array.from(selectedGuests)
       })
       
       if (response.ok) {
@@ -579,13 +572,9 @@ export default function GuestsPage(){
     }
     
     try {
-      const response = await fetch("/api/guests/bulk-rsvp", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guest_ids: Array.from(selectedGuests),
-          rsvp_status: rsvpStatus
-        })
+      const response = await api.bulkUpdateRSVP({
+        guest_ids: Array.from(selectedGuests),
+        rsvp_status: rsvpStatus
       })
       
       if (response.ok) {
@@ -839,12 +828,7 @@ export default function GuestsPage(){
   async function deleteGuestSilent(guestId: number): Promise<boolean> {
     try {
       console.log("🚀 Starting silent delete request for guest ID:", guestId)
-      const response = await fetch(`/api/guests/${guestId}`, {
-        method: "DELETE",
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
+      const response = await api.deleteGuest(guestId.toString())
       
       console.log("📊 Delete response status:", response.status)
       
@@ -877,18 +861,12 @@ export default function GuestsPage(){
     
     try {
       console.log("🚀 Starting delete request for guest ID:", guestId)
-      console.log("🌐 API URL:", `/api/guests/${guestId}`)
-      const response = await fetch(`/api/guests/${guestId}`, {
-        method: "DELETE",
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
+      const response = await api.deleteGuest(guestId.toString())
       
       console.log("📊 Delete response status:", response.status)
-      console.log("📊 Delete response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("📊 Delete response ok:", response.ok)
       
-      if (response.status >= 200 && response.status < 300) {
+      if (response.ok) {
         let result
         try {
           result = await response.json()
@@ -934,9 +912,7 @@ export default function GuestsPage(){
   async function copyInviteLinkOld(guestId: number, guestName: string) {
     try {
       // Tạo token mới cho khách mời
-      const response = await fetch(`/api/guests/${guestId}/qr`, {
-        method: 'POST'
-      })
+      const response = await api.getGuestQR(guestId.toString())
       
       if (response.ok) {
         const data = await response.json()
@@ -1579,12 +1555,8 @@ export default function GuestsPage(){
 
       // No duplicates, proceed with normal import
       if (importType === "json") {
-        // Send guests directly without mapping
-        const res = await fetch("/api/guests/import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newGuests)
-        })
+        // Send guests directly without mapping using apiCall for proper authentication
+        const res = await authApi.importGuests(newGuests)
         
         if (!res.ok) {
           const errorText = await res.text()
@@ -1618,10 +1590,7 @@ export default function GuestsPage(){
         formData.append('file', csvFile!)
         formData.append('event_id', eventFilter)
         
-        const res = await fetch("/api/guests/import-csv", {
-          method: "POST",
-          body: formData
-        })
+        const res = await authApi.importGuestsCSV(formData)
         
         if (!res.ok) {
           const errorText = await res.text()
@@ -1735,7 +1704,7 @@ export default function GuestsPage(){
 
   const checkinStatusOptions = useMemo(() => [
     { value: "not_arrived", label: "Chưa đến" },
-    { value: "arrived", label: "Đã đến" }
+    { value: "checked_in", label: "Đã check-in" }
   ], [])
 
   const rsvpStatusOptions = useMemo(() => [
@@ -2017,10 +1986,66 @@ export default function GuestsPage(){
     }
   }, [selectedGuests, filteredGuests])
 
-  // Reset to first page when search/filter changes
+  // Handle mobile keyboard scroll issue
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, statusFilter, eventFilter])
+    // Only apply on mobile devices
+    const isMobile = window.innerWidth <= 768
+    
+    if (!isMobile) return
+
+    let initialScrollY = 0
+    let isKeyboardOpen = false
+
+    const handleResize = () => {
+      const currentHeight = window.innerHeight
+      const screenHeight = window.screen.height
+      
+      // Detect keyboard state based on viewport height
+      if (currentHeight < screenHeight * 0.75) {
+        // Keyboard is open
+        if (!isKeyboardOpen) {
+          initialScrollY = window.scrollY
+          isKeyboardOpen = true
+        }
+      } else {
+        // Keyboard is closed
+        if (isKeyboardOpen) {
+          isKeyboardOpen = false
+          // Scroll back to original position smoothly
+          setTimeout(() => {
+            window.scrollTo({ top: initialScrollY, behavior: 'smooth' })
+          }, 100)
+        }
+      }
+    }
+
+    const handleFocusOut = (e) => {
+      // Only handle search inputs
+      if (e.target.placeholder && e.target.placeholder.includes('Tìm kiếm')) {
+        setTimeout(() => {
+          // Check if keyboard is still open
+          if (window.innerHeight > window.screen.height * 0.75) {
+            window.scrollTo({ top: initialScrollY, behavior: 'smooth' })
+          }
+        }, 300)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    
+    // Add focus out listener to search inputs
+    const searchInputs = document.querySelectorAll('input[type="text"][placeholder*="Tìm kiếm"]')
+    searchInputs.forEach(input => {
+      input.addEventListener('blur', handleFocusOut)
+    })
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      searchInputs.forEach(input => {
+        input.removeEventListener('blur', handleFocusOut)
+      })
+    }
+  }, [])
 
   // Persist selected event across navigation
   useEffect(() => {
@@ -3571,7 +3596,7 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
             {/* Event Content */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-white/80">Nội dung sự kiện</label>
+                <label className="block text-sm font-medium text-white/80">Lời mời trên thiệp</label>
                 <span className={`text-xs ${Array.from(guestForm.event_content).length > 230 ? 'text-red-400' : 'text-white/60'}`}>
                   {Array.from(guestForm.event_content).length}/230
                 </span>

@@ -118,7 +118,7 @@ export async function getCheckinStats(eventFilter?: string): Promise<{
       : allGuests
     
     const checkedIn = filteredGuests.filter((guest: Guest) => 
-      guest.checkin_status === 'arrived' || guest.checkin_status === 'checked_in'
+      guest.checkin_status === 'checked_in' || guest.checkin_status === 'checked_out'
     )
     
     const notCheckedIn = filteredGuests.filter((guest: Guest) => 

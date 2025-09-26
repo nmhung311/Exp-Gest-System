@@ -21,12 +21,13 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.json()
         
-        if (data && data.token) {
-          localStorage.setItem('auth_token', data.token)
+        if (data && data.user) {
           // Lưu thông tin user vào localStorage
-          if (data.user) {
-            localStorage.setItem('current_user', JSON.stringify(data.user))
-          }
+          localStorage.setItem('current_user', JSON.stringify(data.user))
+          
+          console.log('Login successful, user saved:', data.user.username)
+          
+          // Redirect ngay lập tức
           window.location.href = '/dashboard'
         } else {
           setError(data.message || 'Đăng nhập thất bại')

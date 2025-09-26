@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import CustomDropdown from '../../../components/CustomDropdown'
 import CustomCheckbox from '../../../components/CustomCheckbox'
@@ -20,7 +21,8 @@ interface Event {
   created_at: string
 }
 
-export default function EventsPage() {
+function EventsPageContent() {
+  const searchParams = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [showEventModal, setShowEventModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
@@ -101,6 +103,17 @@ export default function EventsPage() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Get edit parameter from URL
+  useEffect(() => {
+    const editParam = searchParams.get('edit')
+    if (editParam) {
+      const eventId = parseInt(editParam)
+      if (!isNaN(eventId)) {
+        setEditEventId(eventId)
+      }
+    }
+  }, [searchParams])
 
   // Auto-open edit form when editEventId is set
   useEffect(() => {
@@ -254,10 +267,12 @@ export default function EventsPage() {
         return
       }
       
-      // Validate date format
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-      if (!dateRegex.test(formData.date)) {
-        setToastMsg('Định dạng ngày không hợp lệ (YYYY-MM-DD)')
+      // Validate date format (support both YYYY-MM-DD and DD/MM/YYYY)
+      const dateRegex1 = /^\d{4}-\d{2}-\d{2}$/
+      const dateRegex2 = /^\d{1,2}\/\d{1,2}\/\d{4}$/
+      
+      if (!dateRegex1.test(formData.date) && !dateRegex2.test(formData.date)) {
+        setToastMsg('Định dạng ngày không hợp lệ (YYYY-MM-DD hoặc DD/MM/YYYY)')
         setToastType('warning')
         setToastVisible(true)
         setSaving(false)
@@ -265,26 +280,22 @@ export default function EventsPage() {
         return
       }
       
-      // Validate time format
-      const timeRegex = /^\d{2}:\d{2}$/
-      if (!timeRegex.test(formData.time)) {
-        setToastMsg('Định dạng giờ không hợp lệ (HH:MM)')
-        setToastType('warning')
-        setToastVisible(true)
-        setSaving(false)
-        setTimeout(() => setToastVisible(false), 3000)
-        return
+      // Convert date to YYYY-MM-DD format if needed
+      let normalizedDate = formData.date
+      if (dateRegex2.test(formData.date)) {
+        const [day, month, year] = formData.date.split('/')
+        normalizedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
       }
       
-      const program_outline_payload = JSON.stringify(
-        programRows.filter(r => r.time || r.item)
-      )
+      
+      
+      const program_outline_payload = JSON.stringify(programRows)
 
       if (editingEvent) {
         // Update event to backend
         const res = await api.updateEvent(editingEvent.id.toString(), {
             name: formData.name.trim(),
-            date: formData.date,
+            date: normalizedDate,
             time: formData.time,
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
@@ -317,7 +328,7 @@ export default function EventsPage() {
         // Create new event in backend
         const res = await api.createEvent({
             name: formData.name.trim(),
-            date: formData.date,
+            date: normalizedDate,
             time: formData.time,
             venue_address: formData.venue_address?.trim() || '',
             venue_map_url: formData.venue_map_url?.trim() || '',
@@ -1264,7 +1275,7 @@ export default function EventsPage() {
 
             {/* Action Buttons - Sticky Footer */}
             <div className="sticky bottom-0 left-0 right-0 bg-gray-900 border-t border-white/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 sm:py-4 mt-6">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-row gap-2 sm:gap-3">
                 {/* Secondary Actions - Left Side */}
                 <div className="flex gap-2 sm:order-1">
                   <button
@@ -1791,5 +1802,20 @@ export default function EventsPage() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Quản lý sự kiện</h1>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </div>
+    }>
+      <EventsPageContent />
+    </Suspense>
   )
 }

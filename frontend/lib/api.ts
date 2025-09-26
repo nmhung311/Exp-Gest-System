@@ -1,25 +1,26 @@
 // API utility functions
-// Thay thế cho việc hardcode URLs trong components
+// Đơn giản hóa - chỉ sử dụng cookies cho authentication
 
 import { API_ENDPOINTS, getApiUrl } from './config'
 
-// Generic API call function
+// Generic API call function - đơn giản với cookies
 export const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> => {
   const url = endpoint.startsWith('http') ? endpoint : getApiUrl(endpoint)
   
-  const defaultOptions: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  }
+  const headers = new Headers(options.headers || {})
+  if (!headers.has("content-type")) headers.set("content-type", "application/json")
 
-  const response = await fetch(url, { ...defaultOptions, ...options })
+  console.log("📤 Making API call to:", url)
+  const res = await fetch(url, { 
+    ...options, 
+    headers, 
+    credentials: "include" // Chỉ cần cookies
+  })
   
-  return response
+  return res
 }
 
 // Specific API functions for different endpoints
@@ -66,12 +67,16 @@ export const api = {
     body: JSON.stringify(data),
   }),
   bulkDeleteGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_DELETE, {
-    method: 'POST',
+    method: 'DELETE',
     body: JSON.stringify(data),
   }),
-  importGuests: (formData: FormData) => apiCall(API_ENDPOINTS.GUEST_IMPORT, {
+  bulkUpdateRSVP: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_RSVP, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  importGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_IMPORT, {
     method: 'POST',
-    body: formData,
+    body: JSON.stringify(data),
   }),
   importGuestsCSV: (formData: FormData) => apiCall(API_ENDPOINTS.GUEST_IMPORT_CSV, {
     method: 'POST',
@@ -102,12 +107,7 @@ export const api = {
   }),
   getUsers: () => apiCall(API_ENDPOINTS.AUTH.USERS),
   getCurrentUser: async () => {
-    const token = localStorage.getItem('auth_token')
-    const response = await apiCall(API_ENDPOINTS.AUTH.ME, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    })
+    const response = await apiCall(API_ENDPOINTS.AUTH.ME)
     
     if (response.ok) {
       const data = await response.json()

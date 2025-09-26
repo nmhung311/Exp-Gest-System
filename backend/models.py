@@ -60,7 +60,7 @@ class Guest(db.Model):
     email = db.Column(db.String(255), nullable=True, unique=True)
     phone = db.Column(db.String(50), nullable=True, unique=True)
     rsvp_status = db.Column(db.String(20), default="pending")  # pending/accepted/declined
-    checkin_status = db.Column(db.String(20), default="not_arrived")  # not_arrived/arrived
+    checkin_status = db.Column(db.String(20), default="not_arrived")  # not_arrived/checked_in/checked_out
     event_content = db.Column(db.Text, nullable=True)  # Nội dung sự kiện cho khách mời
     event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete="CASCADE"), nullable=True)
     created_at = db.Column(db.DateTime, default=get_hanoi_time)

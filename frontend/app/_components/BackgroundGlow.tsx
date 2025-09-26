@@ -6,7 +6,6 @@ export default function BackgroundGlow() {
       aria-hidden
       className="
         fixed inset-0 -z-10 pointer-events-none
-        bg-[#0B0F14]
       "
     >
       {/* lớp gradient */}

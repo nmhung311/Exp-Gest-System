@@ -148,8 +148,8 @@ def build_checkin_query(filters: Dict[str, Any]):
         if filters['status'] == 'checked_in':
             query = query.filter(
                 or_(
-                    Guest.checkin_status == 'arrived',
-                    Guest.checkin_status == 'checked_in'
+                    Guest.checkin_status == 'checked_in',
+                    Guest.checkin_status == 'checked_out'
                 )
             )
         elif filters['status'] == 'not_checked_in':
@@ -406,7 +406,7 @@ def batch_get_stats():
                     'accepted': len([g for g in guests if g.rsvp_status == 'accepted']),
                     'declined': len([g for g in guests if g.rsvp_status == 'declined']),
                     'pending': len([g for g in guests if g.rsvp_status == 'pending']),
-                    'checked_in': len([g for g in guests if g.checkin_status in ['arrived', 'checked_in']])
+                    'checked_in': len([g for g in guests if g.checkin_status in ['checked_in', 'checked_out']])
                 }
                 
             elif entity == 'events':
@@ -427,7 +427,7 @@ def batch_get_stats():
                 
                 result['checkin'] = {
                     'total': len(guests),
-                    'checked_in': len([g for g in guests if g.checkin_status in ['arrived', 'checked_in']]),
+                    'checked_in': len([g for g in guests if g.checkin_status in ['checked_in', 'checked_out']]),
                     'not_checked_in': len([g for g in guests if g.checkin_status == 'not_arrived'])
                 }
         

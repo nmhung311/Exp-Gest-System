@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008';
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008';
   
   try {
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const response = await fetch(`${backendUrl}/api/guests`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     const data = await response.json();
@@ -19,15 +26,22 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008';
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008';
   const body = await request.json();
 
   try {
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const response = await fetch(`${backendUrl}/api/guests`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

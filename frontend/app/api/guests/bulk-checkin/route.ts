@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
+const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,11 +17,18 @@ export async function POST(request: NextRequest) {
     console.log('Bulk checkin request:', requestBody)
     console.log('Backend URL:', `${backendUrl}/api/guests/bulk-checkin`)
     
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const response = await fetch(`${backendUrl}/api/guests/bulk-checkin`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(requestBody)
     })
     

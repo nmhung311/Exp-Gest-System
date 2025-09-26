@@ -1,26 +1,10 @@
-import "./tailwind.css"
-import "./utilities.css"
-import "./globals.css"
-import BackgroundGlow from "./_components/BackgroundGlow"
+import './globals.css'
+import TokenInitializer from '../components/TokenInitializer'
 
 export const metadata = { 
   title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",
   description: "EXP Technology — AI, Blockchain, Automation, Fintech and digital solutions. Together we stand.",
   author: "EXP Technology",
-  openGraph: {
-    title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",
-    description: "EXP Technology — AI, Blockchain, Automation, Fintech and digital solutions. Together we stand.",
-    type: "website",
-    image: "/images/exp-logo.png",
-  },
-  twitter: {
-    card: "summary_large_image",
-    image: "/images/exp-logo.png",
-  }
-}
-
-export const viewport = {
-  themeColor: "#0f172a",
 }
 
 export default function RootLayout({
@@ -29,24 +13,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="vi" className="dark">
-      <head>
-        <meta name="theme-color" content="#0f172a" />
-              <link rel="icon" href="/favicon.ico" />
-              <link rel="icon" type="image/svg+xml" href="/exp-logo.svg" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="min-h-screen relative overflow-x-hidden text-white font-sans bg-[#0B0F14] antialiased" style={{
-        background: 'var(--bg-neon)',
-        backgroundBlendMode: 'screen'
+    <html lang="en">
+      <body className="min-h-screen" style={{
+        background: `
+          radial-gradient(60rem 40rem at 30% 75%, rgba(201,92,61,0.55) 0%, rgba(168,63,44,0.38) 35%, transparent 65%),
+          radial-gradient(70rem 50rem at 52% 52%, rgba(102,51,153,0.55) 0%, rgba(60,30,78,0.38) 45%, transparent 72%),
+          radial-gradient(65rem 45rem at 82% 40%, rgba(18,108,94,0.55) 0%, rgba(11,42,74,0.38) 40%, transparent 70%),
+          #0b0f14
+        `
       }}>
-        <BackgroundGlow />
+        <TokenInitializer />
         {children}
       </body>
     </html>
   )
 }
-
-

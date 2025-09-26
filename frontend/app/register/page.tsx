@@ -3,6 +3,36 @@ import { useState } from "react"
 import Link from "next/link"
 import { API_ENDPOINTS } from '@/lib/api'
 
+// Password validation function
+const validatePassword = (password: string) => {
+  const errors = []
+  
+  if (password.length < 8) {
+    errors.push("Ít nhất 8 ký tự")
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Ít nhất 1 chữ viết hoa")
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push("Ít nhất 1 chữ viết thường")
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    errors.push("Ít nhất 1 số")
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Ít nhất 1 ký tự đặc biệt")
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
 export default function RegisterPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
@@ -12,11 +42,26 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordValidation, setPasswordValidation] = useState({ isValid: false, errors: [] })
+
+  // Validate password when it changes
+  const handlePasswordChange = (value: string) => {
+    setPassword(value)
+    setPasswordValidation(validatePassword(value))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
+
+    // Validate password strength
+    const passwordCheck = validatePassword(password)
+    if (!passwordCheck.isValid) {
+      setError("Mật khẩu không đủ mạnh. Vui lòng kiểm tra các yêu cầu bên dưới.")
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError("Mật khẩu xác nhận không khớp")
@@ -196,7 +241,7 @@ export default function RegisterPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   className="w-full pl-10 pr-12 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
                   placeholder="Enter your password"
                   required
@@ -220,6 +265,65 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+              
+              {/* Password Requirements */}
+              {password && (
+                <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                  <div className="text-sm font-medium text-gray-300 mb-2">Yêu cầu mật khẩu:</div>
+                  <div className="space-y-1">
+                    <div className={`flex items-center text-xs ${password.length >= 8 ? 'text-green-400' : 'text-red-400'}`}>
+                      <svg className={`w-3 h-3 mr-2 ${password.length >= 8 ? 'text-green-400' : 'text-red-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                        {password.length >= 8 ? (
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        )}
+                      </svg>
+                      Ít nhất 8 ký tự
+                    </div>
+                    <div className={`flex items-center text-xs ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-red-400'}`}>
+                      <svg className={`w-3 h-3 mr-2 ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-red-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                        {/[A-Z]/.test(password) ? (
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        )}
+                      </svg>
+                      Ít nhất 1 chữ viết hoa
+                    </div>
+                    <div className={`flex items-center text-xs ${/[a-z]/.test(password) ? 'text-green-400' : 'text-red-400'}`}>
+                      <svg className={`w-3 h-3 mr-2 ${/[a-z]/.test(password) ? 'text-green-400' : 'text-red-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                        {/[a-z]/.test(password) ? (
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        )}
+                      </svg>
+                      Ít nhất 1 chữ viết thường
+                    </div>
+                    <div className={`flex items-center text-xs ${/[0-9]/.test(password) ? 'text-green-400' : 'text-red-400'}`}>
+                      <svg className={`w-3 h-3 mr-2 ${/[0-9]/.test(password) ? 'text-green-400' : 'text-red-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                        {/[0-9]/.test(password) ? (
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        )}
+                      </svg>
+                      Ít nhất 1 số
+                    </div>
+                    <div className={`flex items-center text-xs ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-400' : 'text-red-400'}`}>
+                      <svg className={`w-3 h-3 mr-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-400' : 'text-red-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? (
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        )}
+                      </svg>
+                      Ít nhất 1 ký tự đặc biệt
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

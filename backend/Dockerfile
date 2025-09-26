@@ -55,10 +55,10 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5008/health', timeout=10)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5008/health', timeout=10)" || exit 1
 
 # Expose port
 EXPOSE 5008
 
 # Start the application
-CMD ["gunicorn", "-w", "2", "app:app", "--bind", "0.0.0.0:5008", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["python", "app.py"]

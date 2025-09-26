@@ -123,7 +123,7 @@ export default function CheckinList({
   
   // Get check-in status
   const getCheckinStatus = (guest: Guest) => {
-    if (guest.checkin_status === 'arrived' || guest.checkin_status === 'checked_in') {
+    if (guest.checkin_status === 'checked_in' || guest.checkin_status === 'checked_out') {
       return 'checked_in'
     }
     return 'not_checked_in'

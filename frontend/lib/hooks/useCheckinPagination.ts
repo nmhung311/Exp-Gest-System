@@ -180,7 +180,7 @@ export function useCheckinPagination({
     
     // Check-in specific data
     checkedInGuests: pagination.currentItems.filter(guest => 
-      guest.checkin_status === 'arrived' || guest.checkin_status === 'checked_in'
+      guest.checkin_status === 'checked_in' || guest.checkin_status === 'checked_out'
     ),
     notCheckedInGuests: pagination.currentItems.filter(guest => 
       guest.checkin_status === 'not_arrived'

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* CSS Variables for shadcn/ui + expsolution.io theme */
 :root {
   --background: 0 0% 100%;
@@ -67,8 +71,7 @@
 }
 
 html, body {
-  /* màu nền cơ bản */
-  background-color: #0B0F14;
+  /* màu nền cơ bản - đã xóa để hiển thị gradient neon */
   overflow-x: hidden;
 }
 

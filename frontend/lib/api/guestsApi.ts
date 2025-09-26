@@ -2,6 +2,7 @@
 // Tối ưu API calls cho pagination
 
 import { api, apiCall } from '@/lib/api'
+import { authApi } from '@/lib/auth'
 import { Guest } from '@/lib/types/guest'
 
 export interface GuestsApiResponse {
@@ -142,7 +143,7 @@ export async function getGuestsStats(eventFilter?: string): Promise<{
         accepted: filteredGuests.filter((g: Guest) => g.rsvp_status === 'accepted').length,
         declined: filteredGuests.filter((g: Guest) => g.rsvp_status === 'declined').length,
         pending: filteredGuests.filter((g: Guest) => g.rsvp_status === 'pending').length,
-        checkedIn: filteredGuests.filter((g: Guest) => g.checkin_status === 'arrived').length
+        checkedIn: filteredGuests.filter((g: Guest) => g.checkin_status === 'checked_in').length
       }
     }
     
@@ -225,8 +226,8 @@ export async function importGuests(
     formData.append('file', file)
     
     const response = format === 'json' 
-      ? await api.importGuests(formData)
-      : await api.importGuestsCSV(formData)
+      ? await authApi.importGuests(formData)
+      : await authApi.importGuestsCSV(formData)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

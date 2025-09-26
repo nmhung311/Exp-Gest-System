@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008';
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008';
   
   try {
     const response = await fetch(`${backendUrl}/api/guests/checked-in`, {

@@ -1,28 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5008'
+const backendUrl =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "") ||
+  "http://backend:5008";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await req.text();
     
-    const backendResponse = await fetch(`${backendUrl}/api/guests/import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!backendResponse.ok) {
-      const errorText = await backendResponse.text()
-      return new NextResponse(errorText, { status: backendResponse.status })
+    // Chuyển cookies từ request sang backend
+    const cookieHeader = req.headers.get("cookie");
+    const headers: HeadersInit = {
+      "content-type": "application/json",
+    };
+    
+    if (cookieHeader) {
+      headers["cookie"] = cookieHeader;
     }
 
-    const data = await backendResponse.json()
-    return NextResponse.json(data)
-  } catch (error: any) {
-    console.error('Error proxying guest import request:', error)
-    return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+    console.log("📤 Proxying import request to backend");
+    
+    const res = await fetch(`${backendUrl}/api/guests/import`, {
+      method: "POST",
+      headers,
+      body,
+    });
+
+    const text = await res.text();
+    return new NextResponse(text, { status: res.status });
+  } catch (e) {
+    console.error("Import route error:", e);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

@@ -34,7 +34,7 @@ interface GuestData {
   group_tag: string;
   is_vip: boolean;
   rsvp_status: 'pending' | 'accepted' | 'declined';
-  checkin_status: 'not_arrived' | 'checked_in' | 'checked_out' | 'arrived';
+  checkin_status: 'not_arrived' | 'checked_in' | 'checked_out';
   event_content?: string;
 }
 
@@ -66,7 +66,7 @@ const InvitePage: React.FC = () => {
   const desktopRsvpCardRef = useRef<HTMLDivElement>(null)
   
   // Function to update checkin status
-  const updateCheckinStatus = (status: 'not_arrived' | 'checked_in' | 'checked_out' | 'arrived') => {
+  const updateCheckinStatus = (status: 'not_arrived' | 'checked_in' | 'checked_out') => {
     if (inviteData) {
       setInviteData({
         ...inviteData,
@@ -194,7 +194,7 @@ const InvitePage: React.FC = () => {
     console.log('showCheckinSuccess:', showCheckinSuccess)
     
     if (inviteData && inviteData.guest.rsvp_status === 'accepted' && 
-        (inviteData.guest.checkin_status as string) === 'arrived') {
+        (inviteData.guest.checkin_status as string) === 'checked_in') {
       console.log('Setting showCheckinSuccess to true...')
       // Hiển thị ngay lập tức - không delay
       setShowCheckinSuccess(true)
@@ -225,7 +225,7 @@ const InvitePage: React.FC = () => {
         console.log('Current guest ID:', inviteData?.guest.id)
         
         // Cập nhật ngay lập tức để hiển thị dấu tích
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
         setInstantCheckin(true) // Instant check-in
         setShowCheckinSuccess(true)
       }
@@ -252,12 +252,12 @@ const InvitePage: React.FC = () => {
           console.log('✅ MATCHED GUEST ID - Showing instant check-in!')
           setInstantCheckin(true)
           setShowCheckinSuccess(true)
-          updateCheckinStatus('arrived')
+          updateCheckinStatus('checked_in')
         } else if (event.data.guestId === null) {
           console.log('⚠️ NULL GUEST ID - Showing generic instant check-in')
           setInstantCheckin(true)
           setShowCheckinSuccess(true)
-          updateCheckinStatus('arrived')
+          updateCheckinStatus('checked_in')
         } else {
           console.log('❌ GUEST ID MISMATCH - Ignoring message')
         }
@@ -291,7 +291,7 @@ const InvitePage: React.FC = () => {
               console.log('✅ AGGRESSIVE POLLING DETECTED INSTANT CHECKIN - Showing immediately!')
               setInstantCheckin(true)
               setShowCheckinSuccess(true)
-              updateCheckinStatus('arrived')
+              updateCheckinStatus('checked_in')
               
               // Clear the data để tránh duplicate
               localStorage.removeItem('exp_instant_checkin')
@@ -336,7 +336,7 @@ const InvitePage: React.FC = () => {
           console.log('Real-time check-in detected via SSE!')
           // Cập nhật ngay lập tức với requestAnimationFrame
           requestAnimationFrame(() => {
-            updateCheckinStatus('arrived')
+            updateCheckinStatus('checked_in')
             setInstantCheckin(true)
             setShowCheckinSuccess(true)
           })
@@ -369,7 +369,7 @@ const InvitePage: React.FC = () => {
       console.log('=== EXTERNAL CHECKIN EVENT ===')
       if (inviteData) {
         // Cập nhật ngay lập tức thay vì chờ đợi
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
         setInstantCheckin(true) // Instant check-in
         setShowCheckinSuccess(true)
         
@@ -387,7 +387,7 @@ const InvitePage: React.FC = () => {
         console.log('Instant check-in displayed immediately!')
         
         // Cập nhật status để ẩn QR code ngay lập tức
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
       }
     }
 
@@ -403,7 +403,7 @@ const InvitePage: React.FC = () => {
             console.log('✅ INSTANT CHECKIN FROM STORAGE - Showing immediately!')
             setInstantCheckin(true)
             setShowCheckinSuccess(true)
-            updateCheckinStatus('arrived')
+            updateCheckinStatus('checked_in')
           }
         } catch (error) {
           console.error('Error parsing instant checkin data:', error)
@@ -418,7 +418,7 @@ const InvitePage: React.FC = () => {
         console.log('✅ HASH DETECTED INSTANT CHECKIN - Showing immediately!')
         setInstantCheckin(true)
         setShowCheckinSuccess(true)
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
       }
     }
 
@@ -429,7 +429,7 @@ const InvitePage: React.FC = () => {
         console.log('✅ TITLE DETECTED INSTANT CHECKIN - Showing immediately!')
         setInstantCheckin(true)
         setShowCheckinSuccess(true)
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
       }
     }
 
@@ -446,7 +446,7 @@ const InvitePage: React.FC = () => {
         console.log('✅ TITLE POLLING DETECTED INSTANT CHECKIN - Showing immediately!')
         setInstantCheckin(true)
         setShowCheckinSuccess(true)
-        updateCheckinStatus('arrived')
+        updateCheckinStatus('checked_in')
       }
     }, 50) // Poll mỗi 50ms
     
@@ -463,7 +463,7 @@ const InvitePage: React.FC = () => {
               console.log('✅ VISIBILITY CHANGE DETECTED INSTANT CHECKIN - Showing immediately!')
               setInstantCheckin(true)
               setShowCheckinSuccess(true)
-              updateCheckinStatus('arrived')
+              updateCheckinStatus('checked_in')
               localStorage.removeItem('exp_instant_checkin')
             }
           }
@@ -551,7 +551,6 @@ const InvitePage: React.FC = () => {
   useEffect(() => {
     const autoGenerateQR = async () => {
       if (inviteData?.guest?.rsvp_status === 'accepted' && 
-          inviteData?.guest?.checkin_status !== 'arrived' && 
           inviteData?.guest?.checkin_status !== 'checked_in' &&
           !qrImageUrl) {
         
@@ -651,7 +650,6 @@ const InvitePage: React.FC = () => {
           
           // Tự động tạo QR code nếu guest đã accepted và chưa checkin
           if (data.guest?.rsvp_status === 'accepted' && 
-              data.guest?.checkin_status !== 'arrived' && 
               data.guest?.checkin_status !== 'checked_in') {
             console.log('=== AUTO GENERATING QR CODE ===')
             console.log('Guest RSVP status:', data.guest.rsvp_status)
@@ -723,7 +721,6 @@ const InvitePage: React.FC = () => {
           
           // Tự động tạo QR code cho demo data nếu đã accepted
           if (demoData.guest?.rsvp_status === 'accepted' && 
-              demoData.guest?.checkin_status !== 'arrived' && 
               demoData.guest?.checkin_status !== 'checked_in') {
             console.log('=== AUTO GENERATING QR CODE FOR DEMO ===')
             setTimeout(async () => {
@@ -822,28 +819,17 @@ const InvitePage: React.FC = () => {
     // Delay 300ms trước khi thực hiện
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    const requestBody = {
-      name: inviteData.guest.name,
-      email: inviteData.guest.email || '',
-      phone: inviteData.guest.phone || '',
-      title: inviteData.guest.title,
-      role: inviteData.guest.role,
-      organization: inviteData.guest.organization,
-      rsvp_status: 'accepted',
-      event_content: inviteData.guest.event_content || '',
-      event_id: inviteData.event.id
-    }
-    
-    console.log('Request body:', requestBody)
-    console.log('API URL:', `/api/guests/${inviteData.guest.id}`)
+    console.log('API URL:', `/api/invite/rsvp/${inviteData.guest.id}`)
     
     try {
-      const response = await fetch(`/api/guests/${inviteData.guest.id}`, {
+      const response = await fetch(`/api/invite/rsvp/${inviteData.guest.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          rsvp_status: 'accepted'
+        }),
       })
 
       console.log('Response status:', response.status)
@@ -912,28 +898,17 @@ const InvitePage: React.FC = () => {
     // Delay 300ms trước khi thực hiện
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    const requestBody = {
-      name: inviteData.guest.name,
-      email: inviteData.guest.email || '',
-      phone: inviteData.guest.phone || '',
-      title: inviteData.guest.title,
-      role: inviteData.guest.role,
-      organization: inviteData.guest.organization,
-      rsvp_status: 'declined',
-      event_content: inviteData.guest.event_content || '',
-      event_id: inviteData.event.id
-    }
-    
-    console.log('Request body:', requestBody)
-    console.log('API URL:', `/api/guests/${inviteData.guest.id}`)
+    console.log('API URL:', `/api/invite/rsvp/${inviteData.guest.id}`)
     
     try {
-      const response = await fetch(`/api/guests/${inviteData.guest.id}`, {
+      const response = await fetch(`/api/invite/rsvp/${inviteData.guest.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          rsvp_status: 'declined'
+        }),
       })
 
       console.log('Response status:', response.status)
@@ -1054,20 +1029,13 @@ const InvitePage: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 300))
     
     try {
-      const response = await fetch(`/api/guests/${inviteData.guest.id}`, {
+      const response = await fetch(`/api/invite/rsvp/${inviteData.guest.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: inviteData.guest.name,
-          email: inviteData.guest.email || '',
-          phone: inviteData.guest.phone || '',
-          title: inviteData.guest.title,
-          role: inviteData.guest.role,
-          organization: inviteData.guest.organization,
-          rsvp_status: 'pending',
-          event_content: inviteData.guest.event_content || ''
+          rsvp_status: 'pending'
         }),
       })
 
@@ -1222,22 +1190,6 @@ const InvitePage: React.FC = () => {
             font-weight: 500;
             display: none;
           }
-          .slogan-2-desktop { 
-            font-size: 20px; 
-            color: #94A3B8; 
-            text-align: center; 
-            margin-bottom: 20px; 
-            font-style: italic;
-            display: block;
-          }
-          .slogan-2-mobile { 
-            font-size: 12px; 
-            color: #94A3B8; 
-            text-align: center; 
-            margin-bottom: 20px; 
-            font-style: italic;
-            display: none;
-          }
           .main-title { text-align: center; margin-bottom: 50px; }
           .event-title { font-size: 48px; font-weight: 700; color: #fff; margin-bottom: 10px; }
           .title-underline { width: 200px; height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); margin: 0 auto; border-radius: 2px; }
@@ -1355,8 +1307,6 @@ const InvitePage: React.FC = () => {
             .event-title-main-mobile { display: block; }
             .slogan-1-desktop { display: none; }
             .slogan-1-mobile { display: block; }
-            .slogan-2-desktop { display: none; }
-            .slogan-2-mobile { display: block; }
             .desktop-qr-section { display: none; }
             .guest-card-desktop { display: none; }
             .desktop-rsvp-section { display: none; }
@@ -1804,8 +1754,8 @@ const InvitePage: React.FC = () => {
             
             /* Specific override for address icon in mobile event info card */
             .mobile-event-info-card .address-detail-icon { 
-              width: 44px !important; 
-              height: 44px !important; 
+              width: 22px !important; 
+              height: 22px !important; 
               color: #fff !important; 
               text-align: center !important; 
               justify-self: center !important; 
@@ -2371,8 +2321,6 @@ const InvitePage: React.FC = () => {
             .event-title-main-mobile { display: none; }
             .slogan-1-desktop { display: block; }
             .slogan-1-mobile { display: none; }
-            .slogan-2-desktop { display: block; }
-            .slogan-2-mobile { display: none; }
             .mobile-guest-card-after-title { display: none !important; }
             .mobile-event-content-card { display: none !important; }
             .mobile-event-info-card { display: none !important; }
@@ -3150,10 +3098,8 @@ const InvitePage: React.FC = () => {
             </div>
             <div className="event-title-main-desktop">Lễ kỷ niệm 15 năm</div>
             <div className="event-title-main-mobile">Lễ kỷ niệm 15 năm</div>
-            <div className="slogan-1-desktop">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
-            <div className="slogan-1-mobile">Ngày Truyền thống Công ty TNHH Công nghệ EXP</div>
-            <div className="slogan-2-desktop">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
-            <div className="slogan-2-mobile">"Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm"</div>
+            <div className="slogan-1-desktop">Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm</div>
+            <div className="slogan-1-mobile">Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm</div>
           </div>
 
           {/* Mobile Guest Card - Moved after title */}
@@ -3247,7 +3193,7 @@ const InvitePage: React.FC = () => {
                 showChangeOption
               })
               return inviteData.guest.rsvp_status === 'pending' && 
-                     (inviteData.guest.checkin_status as string) !== 'arrived'
+                     (inviteData.guest.checkin_status as string) !== 'checked_in'
             })() && (
               <>
                 <h2 className="rsvp-title">Xác nhận tham dự</h2>
@@ -3270,7 +3216,7 @@ const InvitePage: React.FC = () => {
 
             {/* 2. Trạng thái "đã xác nhận" + chưa check-in - Hiển thị QR code */}
             {inviteData.guest.rsvp_status === 'accepted' && 
-             (inviteData.guest.checkin_status as string) !== 'arrived' && 
+             (inviteData.guest.checkin_status as string) !== 'checked_in' &&
              !showChangeOption && 
              !showCheckinSuccess && 
              !instantCheckin && (
@@ -3315,7 +3261,7 @@ const InvitePage: React.FC = () => {
                       </div>
                     )}
                     
-                    {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                    {(inviteData.guest.checkin_status as string) !== 'checked_in' && !showChangeOption && (
                       <button 
                         className="change-option-button"
                         onClick={handleChangeOption}
@@ -3332,7 +3278,7 @@ const InvitePage: React.FC = () => {
             )}
 
             {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
-            {((inviteData.guest.checkin_status as string) === 'arrived' || showCheckinSuccess || instantCheckin) && (
+            {((inviteData.guest.checkin_status as string) === 'checked_in' || showCheckinSuccess || instantCheckin) && (
               <div className="checkin-success">
                 <div className="checkin-success-icon">
                   <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
@@ -3350,7 +3296,7 @@ const InvitePage: React.FC = () => {
 
             {/* 4. Trạng thái "đã từ chối" - Hiển thị thông báo từ chối */}
             {inviteData.guest.rsvp_status === 'declined' && 
-             (inviteData.guest.checkin_status as string) !== 'arrived' && 
+             (inviteData.guest.checkin_status as string) !== 'checked_in' &&
              !showChangeOption && (
               <div className="declined-section">
                 <h2 className="rsvp-title declined" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -3363,7 +3309,7 @@ const InvitePage: React.FC = () => {
                   Cảm ơn bạn đã phản hồi. Chúng tôi rất tiếc vì bạn không thể tham dự sự kiện này.
                 </p>
                 
-                {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                {(inviteData.guest.checkin_status as string) !== 'checked_in' && !showChangeOption && (
                   <button 
                     className="change-option-button"
                     onClick={handleChangeOption}
@@ -3379,7 +3325,7 @@ const InvitePage: React.FC = () => {
 
             {/* Hiển thị lại nút RSVP khi muốn thay đổi */}
             {showChangeOption && 
-             (inviteData.guest.checkin_status as string) !== 'arrived' && (
+             (inviteData.guest.checkin_status as string) !== 'checked_in' &&(
               <div className="change-option-section">
                 <h3 className="change-option-title">Thay đổi tùy chọn tham dự</h3>
                 <p className="change-option-description">Bạn có chắc chắn muốn thay đổi tùy chọn tham dự không?</p>
@@ -3602,7 +3548,7 @@ const InvitePage: React.FC = () => {
                   showChangeOption
                 })
                 return inviteData.guest.rsvp_status === 'pending' && 
-                       (inviteData.guest.checkin_status as string) !== 'arrived'
+                       (inviteData.guest.checkin_status as string) !== 'checked_in'
               })() && (
                 <>
                   <h2 className="desktop-rsvp-title">Xác nhận tham dự</h2>
@@ -3625,7 +3571,7 @@ const InvitePage: React.FC = () => {
 
               {/* 2. Trạng thái "đã xác nhận" + chưa check-in - Hiển thị QR code */}
               {inviteData.guest.rsvp_status === 'accepted' && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && 
+               (inviteData.guest.checkin_status as string) !== 'checked_in' &&
                !showChangeOption && 
                !showCheckinSuccess && (
                 <>
@@ -3669,7 +3615,7 @@ const InvitePage: React.FC = () => {
                         </div>
                       )}
                       
-                      {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                      {(inviteData.guest.checkin_status as string) !== 'checked_in' && !showChangeOption && (
                         <button 
                           className="desktop-change-option-button"
                           onClick={handleChangeOption}
@@ -3686,7 +3632,7 @@ const InvitePage: React.FC = () => {
               )}
 
               {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
-              {((inviteData.guest.checkin_status as string) === 'arrived' || showCheckinSuccess || instantCheckin) && (
+              {((inviteData.guest.checkin_status as string) === 'checked_in' || showCheckinSuccess || instantCheckin) && (
                 <div className="desktop-checkin-success">
                   <div className="desktop-checkin-success-icon">
                     <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
@@ -3704,7 +3650,7 @@ const InvitePage: React.FC = () => {
 
               {/* 4. Trạng thái "đã từ chối" - Hiển thị thông báo từ chối */}
               {inviteData.guest.rsvp_status === 'declined' && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && 
+               (inviteData.guest.checkin_status as string) !== 'checked_in' &&
                !showChangeOption && (
                 <div className="desktop-declined-section">
                   <h2 className="desktop-rsvp-title declined" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -3717,7 +3663,7 @@ const InvitePage: React.FC = () => {
                     Cảm ơn bạn đã phản hồi. Chúng tôi rất tiếc vì bạn không thể tham dự sự kiện này.
                   </p>
                   
-                  {(inviteData.guest.checkin_status as string) !== 'arrived' && (
+                  {(inviteData.guest.checkin_status as string) !== 'checked_in' && !showChangeOption && (
                     <button 
                       className="desktop-change-option-button"
                       onClick={handleChangeOption}
@@ -3733,7 +3679,7 @@ const InvitePage: React.FC = () => {
 
               {/* Hiển thị lại nút RSVP khi muốn thay đổi */}
               {showChangeOption && 
-               (inviteData.guest.checkin_status as string) !== 'arrived' && (
+               (inviteData.guest.checkin_status as string) !== 'checked_in' &&(
                 <div className="desktop-change-option-section">
                   <h3 className="desktop-change-option-title">Thay đổi tùy chọn tham dự</h3>
                   <p className="desktop-change-option-description">Bạn có chắc chắn muốn thay đổi tùy chọn tham dự không?</p>

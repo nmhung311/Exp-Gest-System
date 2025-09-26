@@ -37,13 +37,17 @@ interface ReusableInvitePageProps {
   guestData: GuestData;
   token: string;
   onClose?: () => void;
+  onAccept?: () => void;
+  onDecline?: () => void;
 }
 
 const ReusableInvitePage: React.FC<ReusableInvitePageProps> = ({
   eventData,
   guestData,
   token,
-  onClose
+  onClose,
+  onAccept,
+  onDecline
 }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [programRows, setProgramRows] = useState<Array<{time: string, item: string}>>([])
@@ -166,8 +170,12 @@ const ReusableInvitePage: React.FC<ReusableInvitePageProps> = ({
           .rsvp-button { padding: 15px 30px; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
           .rsvp-accept { background: #1E88E5; color: #fff; border: none; }
           .rsvp-accept:hover { background: #1976D2; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(30, 136, 229, 0.3); }
+          .rsvp-accept:disabled { background: #6B7280; cursor: not-allowed; transform: none; box-shadow: none; }
+          .rsvp-accept:disabled:hover { background: #6B7280; transform: none; box-shadow: none; }
           .rsvp-decline { background: #EF4444; color: #fff; border: none; }
           .rsvp-decline:hover { background: #DC2626; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3); }
+          .rsvp-decline:disabled { background: #6B7280; cursor: not-allowed; transform: none; box-shadow: none; }
+          .rsvp-decline:disabled:hover { background: #6B7280; transform: none; box-shadow: none; }
           .rsvp-deadline { color: #94A3B8; font-size: 14px; }
           @media (max-width: 768px) {
             .details-grid { grid-template-columns: 1fr; gap: 20px; }
@@ -321,17 +329,25 @@ const ReusableInvitePage: React.FC<ReusableInvitePageProps> = ({
               Vui lòng cho chúng tôi biết bạn có thể tham dự sự kiện không?
             </p>
             <div className="rsvp-buttons">
-              <button className="rsvp-button rsvp-accept">
+              <button 
+                className="rsvp-button rsvp-accept"
+                onClick={onAccept}
+                disabled={guestData.rsvp_status === 'accepted' || guestData.rsvp_status === 'declined'}
+              >
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Tôi sẽ tham dự
+                {guestData.rsvp_status === 'accepted' ? 'Đã xác nhận tham dự' : 'Tôi sẽ tham dự'}
               </button>
-              <button className="rsvp-button rsvp-decline">
+              <button 
+                className="rsvp-button rsvp-decline"
+                onClick={onDecline}
+                disabled={guestData.rsvp_status === 'accepted' || guestData.rsvp_status === 'declined'}
+              >
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                Không thể tham dự
+                {guestData.rsvp_status === 'declined' ? 'Đã từ chối' : 'Không thể tham dự'}
               </button>
             </div>
             <div className="rsvp-deadline">Hạn chót xác nhận: {rsvpDeadline}</div>

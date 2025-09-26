@@ -15,6 +15,7 @@ from datetime import datetime
 import os
 import hashlib
 from batch_api import batch_bp
+from jwt_utils import generate_access_token, generate_refresh_token, verify_jwt_token, jwt_required, get_current_user
 
 
 def create_app() -> Flask:
@@ -40,7 +41,7 @@ def create_app() -> Flask:
     ]
     
     # Enable CORS for development
-    CORS(app, origins="*", supports_credentials=False, 
+    CORS(app, origins="*", supports_credentials=True, 
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     db.init_app(app)
@@ -82,16 +83,20 @@ def create_app() -> Flask:
 
     # CORS headers are handled by Flask-CORS, no need for manual headers
 
-    @app.get("/health")
+    @app.route("/health", methods=["GET"])
     def health() -> tuple[dict, int]:
         return {"status": "ok"}, 200
 
-    @app.get("/")
+    @app.route("/api/health", methods=["GET"])
+    def api_health() -> tuple[dict, int]:
+        return {"status": "ok", "service": "EXP Guest Backend"}, 200
+
+    @app.route("/", methods=["GET"])
     def root() -> tuple[dict, int]:
         return {"service": "EXP Guest Backend", "version": "0.1.0"}, 200
 
     # --- Auth: register/login (simple) ---
-    @app.post("/api/auth/register")
+    @app.route("/api/auth/register", methods=["POST"])
     def auth_register():
         try:
             data = request.get_json(silent=True)
@@ -113,7 +118,7 @@ def create_app() -> Flask:
             db.session.rollback()
             return {"message": f"register error: {str(e)}"}, 500
 
-    @app.post("/api/auth/login")
+    @app.route("/api/auth/login", methods=["POST"])
     def auth_login():
         try:
             body = request.get_json(silent=True)
@@ -128,25 +133,64 @@ def create_app() -> Flask:
             if not user or not user.verify_password(password):
                 return {"message": "invalid credentials"}, 401
 
-            # Tạo token đơn giản hơn để dễ verify
-            token_raw = f"{user.id}:{user.username}:{secrets.token_urlsafe(8)}"
-            token = hashlib.sha256(token_raw.encode()).hexdigest()
+            # Generate access and refresh tokens
+            access_token = generate_access_token(user.id, user.username, user.email)
+            refresh_token = generate_refresh_token(user.id, user.username)
             
-            # Lưu token vào database để verify sau này
-            token_obj = UserToken.query.filter_by(user_id=user.id).first()
-            if token_obj:
-                token_obj.token = token
-                token_obj.created_at = datetime.now()
-            else:
-                token_obj = UserToken(user_id=user.id, token=token)
-                db.session.add(token_obj)
-            db.session.commit()
+            response = jsonify({
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user": user.to_public_dict()
+            })
             
-            return {"token": token, "user": user.to_public_dict()}, 200
+            # Set refresh token as HttpOnly cookie
+            response.set_cookie(
+                'refresh-token',
+                refresh_token,
+                max_age=7*24*60*60,  # 7 days
+                httponly=True,
+                secure=False,  # Set to True in production with HTTPS
+                samesite='Strict'
+            )
+            
+            return response, 200
         except Exception as e:
             return {"message": f"login error: {str(e)}"}, 500
 
-    @app.get("/api/auth/users")
+    @app.route("/api/auth/refresh", methods=["POST"])
+    def refresh_token():
+        """Refresh access token using refresh token"""
+        try:
+            # Get refresh token from cookie
+            refresh_token = request.cookies.get('refresh-token')
+            
+            if not refresh_token:
+                return {"message": "Refresh token not found"}, 401
+            
+            # Verify refresh token
+            payload = verify_jwt_token(refresh_token)
+            if not payload or payload.get('type') != 'refresh':
+                return {"message": "Invalid refresh token"}, 401
+            
+            # Generate new access token
+            access_token = generate_access_token(
+                payload['user_id'], 
+                payload['username']
+            )
+            
+            return {"access_token": access_token}, 200
+            
+        except Exception as e:
+            return {"message": f"Refresh error: {str(e)}"}, 500
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def logout():
+        """Logout and clear refresh token"""
+        response = jsonify({"message": "Logged out successfully"})
+        response.set_cookie('refresh-token', '', expires=0)
+        return response, 200
+
+    @app.route("/api/auth/users", methods=["GET"])
     def auth_list_users():
         try:
             users = User.query.order_by(User.id.desc()).all()
@@ -154,7 +198,7 @@ def create_app() -> Flask:
         except Exception as e:
             return {"message": f"list users error: {str(e)}", "users": []}, 500
 
-    @app.get("/api/auth/me")
+    @app.route("/api/auth/me", methods=["GET"])
     def auth_get_current_user():
         try:
             # Lấy token từ header Authorization
@@ -179,7 +223,8 @@ def create_app() -> Flask:
         except Exception as e:
             return {"message": f"get current user error: {str(e)}"}, 500
 
-    @app.post("/api/guests/import")
+    @app.route("/api/guests/import", methods=["POST"])
+    @jwt_required
     def import_guests():
         # Accept JSON array of guests
         if not request.is_json:
@@ -251,7 +296,8 @@ def create_app() -> Flask:
         print(f"Import completed: {imported} imported, {failed} failed")
         return {"imported": imported, "failed": failed, "errors": errors}, 200
 
-    @app.post("/api/guests/import-csv")
+    @app.route("/api/guests/import-csv", methods=["POST"])
+    @jwt_required
     def import_guests_csv():
         # Accept CSV file upload
         if 'file' not in request.files:
@@ -268,8 +314,35 @@ def create_app() -> Flask:
             # Get event_id from form
             form_event_id = request.form.get('event_id', '').strip()
             
-            # Read CSV content
-            csv_content = file.read().decode('utf-8')
+            # Read CSV content with UTF-8 support
+            try:
+                # Try UTF-8 first
+                csv_content = file.read().decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    # Try UTF-8 with BOM
+                    file.seek(0)
+                    csv_content = file.read().decode('utf-8-sig')
+                except UnicodeDecodeError:
+                    try:
+                        # Try Windows-1252 (common for Excel exports)
+                        file.seek(0)
+                        csv_content = file.read().decode('windows-1252')
+                    except UnicodeDecodeError:
+                        # Fallback to latin-1
+                        file.seek(0)
+                        csv_content = file.read().decode('latin-1')
+            
+            # Check if CSV has proper headers
+            lines = csv_content.strip().split('\n')
+            first_line = lines[0] if lines else ""
+            
+            # If first line doesn't contain expected headers, add them
+            expected_headers = ['title', 'Name', 'Role', 'Organization', 'tags', 'host', 'message']
+            if not any(header in first_line for header in expected_headers):
+                print("No proper headers found, adding headers...")
+                csv_content = ','.join(expected_headers) + '\n' + csv_content
+            
             csv_reader = csv.DictReader(io.StringIO(csv_content))
             
             imported = 0
@@ -277,56 +350,65 @@ def create_app() -> Flask:
             errors = []
             
             for row in csv_reader:
-                name = row.get('name', '').strip()
-                title = row.get('title', '').strip()
-                position = row.get('role', '').strip()  # Map role to position
-                company = row.get('organization', '').strip()  # Map organization to company
-                tag = row.get('tag', '').strip()
-                email = row.get('email', '').strip()
-                phone = row.get('phone', '').strip()
-                event_id = row.get('event_id', '').strip()
+                print(f"Processing row: {row}")
+                
+                # Smart mapping to handle different CSV formats
+                # Check if data is shifted (Name contains Mr/Mrs instead of actual name)
+                name_field = row.get('Name', '').strip()
+                role_field = row.get('Role', '').strip()
+                
+                # If Name field contains title (Mr/Mrs/Ms) and Role contains actual name, swap them
+                if name_field in ['Mr', 'Mrs', 'Ms', 'Dr'] and role_field and role_field not in ['Mr', 'Mrs', 'Ms', 'Dr']:
+                    # Data is shifted: title is in Name, actual name is in Role
+                    title = name_field
+                    name = role_field
+                    role = row.get('Organization', '').strip() or None
+                    organization = row.get('tags', '').strip() or None
+                    tag = row.get('host', '').strip() or None
+                    host = None
+                    # Message might be in None key or message key
+                    message = row.get('message', '').strip() or None
+                    if not message and None in row:
+                        message = ' '.join(row[None]) if isinstance(row[None], list) else str(row[None])
+                else:
+                    # Normal mapping
+                    name = name_field
+                    title = row.get('title', '').strip() or None
+                    role = role_field or None
+                    organization = row.get('Organization', '').strip() or None
+                    tag = row.get('tags', '').strip() or None
+                    host = row.get('host', '').strip() or None
+                    message = row.get('message', '').strip() or None
+                
+                print(f"Parsed data: name='{name}', title='{title}', role='{role}', organization='{organization}', tag='{tag}', host='{host}', event_id='{form_event_id}'")
                 
                 if not name:
                     failed += 1
                     errors.append(f"Row {imported + failed + 1}: Missing name")
+                    print(f"Failed: Missing name")
                     continue
                 
                 try:
-                    # Set empty values to None to avoid UNIQUE constraint issues
-                    if not email or email.strip() == '':
-                        email = None
-                    if not phone or phone.strip() == '':
-                        phone = None
-                    
-                    # Check if email already exists (only if email is not None)
-                    if email and Guest.query.filter_by(email=email).first():
-                        failed += 1
-                        errors.append(f"Row {imported + failed + 1}: Email {email} already exists")
-                        continue
-                    
-                    # Check if phone already exists (only if phone is not None)
-                    if phone and Guest.query.filter_by(phone=phone).first():
-                        failed += 1
-                        errors.append(f"Row {imported + failed + 1}: Phone {phone} already exists")
-                        continue
-                    
                     g = Guest(
                         name=name,
-                        title=title if title else None,
-                        position=position if position else None,
-                        company=company if company else None,
-                        tag=tag if tag else None,
-                        email=email,
-                        phone=phone,
+                        title=title,
+                        role=role,
+                        organization=organization,
+                        tag=tag,
+                        email=None,  # Always None for CSV import
+                        phone=None,  # Always None for CSV import
+                        event_content=message,  # Store message in event_content
                         checkin_status="not_arrived",  # Default status for imported guests
                         rsvp_status="pending",  # Default RSVP status for imported guests
-                        event_id=int(form_event_id) if form_event_id and form_event_id.isdigit() else (int(event_id) if event_id and event_id.isdigit() else None)
+                        event_id=int(form_event_id) if form_event_id and form_event_id.isdigit() else None
                     )
                     db.session.add(g)
                     imported += 1
+                    print(f"Success: Added guest {name}")
                 except Exception as e:
                     failed += 1
                     errors.append(f"Row {imported + failed + 1}: {str(e)}")
+                    print(f"Error: {str(e)}")
                     continue
             
             db.session.commit()
@@ -335,7 +417,8 @@ def create_app() -> Flask:
         except Exception as e:
             return {"message": f"Error processing CSV: {str(e)}"}, 400
 
-    @app.post("/api/guests/cleanup-empty-phones")
+    @app.route("/api/guests/cleanup-empty-phones", methods=["POST"])
+    @jwt_required
     def cleanup_empty_phones():
         try:
             # Update all guests with empty phone to NULL
@@ -347,7 +430,7 @@ def create_app() -> Flask:
             print(f"Error cleaning up empty phones: {e}")
             return {"message": "Error cleaning up empty phones"}, 500
 
-    @app.get("/api/guests")
+    @app.route("/api/guests", methods=["GET"])
     def get_guests():
         try:
             guests = Guest.query.all()
@@ -358,7 +441,7 @@ def create_app() -> Flask:
             print(f"Error getting guests: {e}")
             return {"error": str(e), "guests": []}, 500
 
-    @app.get("/api/guests/checked-in")
+    @app.route("/api/guests/checked-in", methods=["GET"])
     def get_checked_in_guests():
         try:
             # Lấy tham số lọc theo sự kiện (tùy chọn)
@@ -441,6 +524,7 @@ def create_app() -> Flask:
             return {"message": f"Error creating guest: {str(e)}"}, 500
 
     @app.put("/api/guests/<int:guest_id>")
+    @jwt_required
     def update_guest(guest_id: int):
         try:
             guest = Guest.query.get(guest_id)
@@ -490,6 +574,7 @@ def create_app() -> Flask:
             return {"message": f"Error updating guest: {str(e)}"}, 500
 
     @app.delete("/api/guests/<int:guest_id>")
+    @jwt_required
     def delete_guest(guest_id: int):
         try:
             guest = Guest.query.get(guest_id)
@@ -665,6 +750,7 @@ def create_app() -> Flask:
 
     # --- Check-in ---
     @app.delete("/api/checkin/<int:guest_id>")
+    @jwt_required
     def delete_checkin(guest_id: int):
         try:
             # Always ensure guest status is updated to not_arrived
@@ -731,9 +817,9 @@ def create_app() -> Flask:
                 print(f"Guest {tok.guest_id} already checked in at {existing.time}")
                 # Ensure status consistency for guests list
                 guest_already = Guest.query.get(tok.guest_id)
-                if guest_already and guest_already.checkin_status != "arrived":
-                    print(f"Updating already checked-in guest {guest_already.id} ({guest_already.name}) checkin_status from '{guest_already.checkin_status}' to 'arrived'")
-                    guest_already.checkin_status = "arrived"
+                if guest_already and guest_already.checkin_status != "checked_in":
+                    print(f"Updating already checked-in guest {guest_already.id} ({guest_already.name}) checkin_status from '{guest_already.checkin_status}' to 'checked_in'")
+                    guest_already.checkin_status = "checked_in"
                     db.session.commit()
                     print(f"Already checked-in guest {guest_already.id} status updated to: '{guest_already.checkin_status}'")
                 return {
@@ -759,8 +845,8 @@ def create_app() -> Flask:
             # Update guest status so Guests list reflects immediately
             guest = Guest.query.get(tok.guest_id)
             if guest:
-                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'arrived'")
-                guest.checkin_status = "arrived"
+                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_in'")
+                guest.checkin_status = "checked_in"
                 print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
 
             db.session.commit()
@@ -905,6 +991,7 @@ def create_app() -> Flask:
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/events", methods=["POST"])
+    @jwt_required
     def create_event():
         """Tạo sự kiện mới"""
         try:
@@ -914,11 +1001,42 @@ def create_app() -> Flask:
             if not data.get("name"):
                 return jsonify({"error": "Event name is required"}), 400
             
+            # Parse time with flexible format
+            parsed_time = None
+            if data.get("time"):
+                time_val = data["time"]
+                try:
+                    # Try different time formats
+                    time_formats = ["%H:%M", "%H:%M:%S", "%H.%M", "%H.%M.%S"]
+                    
+                    for fmt in time_formats:
+                        try:
+                            parsed_time = datetime.strptime(time_val, fmt).time()
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if parsed_time is None:
+                        # If no format matches, try to parse manually
+                        if ":" in time_val:
+                            parts = time_val.split(":")
+                            if len(parts) >= 2:
+                                hour = int(parts[0])
+                                minute = int(parts[1])
+                                second = int(parts[2]) if len(parts) > 2 else 0
+                                parsed_time = datetime.time(hour, minute, second)
+                            else:
+                                raise ValueError("Invalid time format")
+                        else:
+                            raise ValueError("Invalid time format")
+                except ValueError as e:
+                    return jsonify({"error": f"Invalid time format: {str(e)}"}), 400
+            
             # Create new event
             event = Event(
                 name=data["name"],
                 date=datetime.strptime(data["date"], "%Y-%m-%d").date() if data.get("date") else None,
-                time=datetime.strptime(data["time"], "%H:%M").time() if data.get("time") else None,
+                time=parsed_time,
                 location=data.get("location", ""),
                 venue_address=data.get("venue_address", ""),
                 venue_map_url=data.get("venue_map_url", ""),
@@ -948,6 +1066,7 @@ def create_app() -> Flask:
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/events/<int:event_id>", methods=["PUT"])
+    @jwt_required
     def update_event(event_id):
         """Cập nhật sự kiện"""
         try:
@@ -971,7 +1090,32 @@ def create_app() -> Flask:
                 time_val = data.get("time")
                 if time_val:
                     try:
-                        event.time = datetime.strptime(time_val, "%H:%M").time()
+                        # Try different time formats
+                        time_formats = ["%H:%M", "%H:%M:%S", "%H.%M", "%H.%M.%S"]
+                        parsed_time = None
+                        
+                        for fmt in time_formats:
+                            try:
+                                parsed_time = datetime.strptime(time_val, fmt).time()
+                                break
+                            except ValueError:
+                                continue
+                        
+                        if parsed_time is None:
+                            # If no format matches, try to parse manually
+                            if ":" in time_val:
+                                parts = time_val.split(":")
+                                if len(parts) >= 2:
+                                    hour = int(parts[0])
+                                    minute = int(parts[1])
+                                    second = int(parts[2]) if len(parts) > 2 else 0
+                                    parsed_time = datetime.time(hour, minute, second)
+                                else:
+                                    raise ValueError("Invalid time format")
+                            else:
+                                raise ValueError("Invalid time format")
+                        
+                        event.time = parsed_time
                     except ValueError as e:
                         return jsonify({"error": f"Invalid time format: {str(e)}"}), 400
             if "location" in data:
@@ -1009,6 +1153,7 @@ def create_app() -> Flask:
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/events/<int:event_id>", methods=["DELETE"])
+    @jwt_required
     def delete_event(event_id):
         """Xóa sự kiện và tất cả khách mời thuộc sự kiện đó"""
         try:
@@ -1073,11 +1218,11 @@ def create_app() -> Flask:
                     checkin_count += 1
                     print(f"Created check-in record for guest {guest.id} ({guest.name})")
                     
-                    # Update guest checkin_status to "arrived"
-                    print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'arrived'")
-                    guest.checkin_status = "arrived"
+                    # Update guest checkin_status to "checked_in"
+                    print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_in'")
+                    guest.checkin_status = "checked_in"
                     status_updated_count += 1
-                    print(f"Updated guest {guest.id} ({guest.name}) status to arrived. Final status: '{guest.checkin_status}'")
+                    print(f"Updated guest {guest.id} ({guest.name}) status to checked_in. Final status: '{guest.checkin_status}'")
                 else:
                     # Guest already checked in
                     print(f"Guest {guest.id} ({guest.name}) already checked in with status: '{guest.checkin_status}'")
@@ -1128,20 +1273,16 @@ def create_app() -> Flask:
             if not guests:
                 return {"message": "No guests found"}, 404
             
-            # Remove check-in records and update status
+            # Update status to checked_out
             checkout_count = 0
             for guest in guests:
                 print(f"Processing guest {guest.id} ({guest.name}) with checkin_status: '{guest.checkin_status}'")
-                # Remove check-in record
-                checkin = Checkin.query.filter_by(guest_id=guest.id).first()
-                if checkin:
-                    db.session.delete(checkin)
-                    checkout_count += 1
                 
-                # Update guest checkin_status
-                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'not_arrived'")
-                guest.checkin_status = "not_arrived"
+                # Update guest checkin_status to checked_out
+                print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_out'")
+                guest.checkin_status = "checked_out"
                 print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
+                checkout_count += 1
             
             db.session.commit()
             
@@ -1244,6 +1385,11 @@ def create_app() -> Flask:
             if not event:
                 return {"error": "Event not found"}, 404
             
+            # Check if guest is still active in the event
+            # This prevents deleted guests from accessing invitations
+            if guest.event_id != event.id:
+                return {"error": "Guest is no longer associated with this event"}, 404
+            
             # Prepare response
             response = {
                 "token": token,
@@ -1268,6 +1414,41 @@ def create_app() -> Flask:
         except Exception as e:
             print(f"Error getting invite data: {e}")
             return {"error": f"Error getting invite data: {str(e)}"}, 500
+
+    @app.put("/api/invite/rsvp/<int:guest_id>")
+    def update_guest_rsvp_from_invite(guest_id: int):
+        """API endpoint để cập nhật RSVP từ thiệp mời (không cần JWT)"""
+        try:
+            guest = Guest.query.get(guest_id)
+            if not guest:
+                return {"message": "Guest not found"}, 404
+            
+            # Check if guest is still associated with an event
+            if not guest.event_id:
+                return {"message": "Guest is no longer associated with any event"}, 404
+            
+            # Check if event still exists
+            event = Event.query.get(guest.event_id)
+            if not event:
+                return {"message": "Event not found"}, 404
+            
+            data = request.get_json(silent=True) or {}
+            rsvp_status = data.get("rsvp_status", "pending")
+            
+            if rsvp_status not in ["pending", "accepted", "declined"]:
+                return {"message": "Invalid RSVP status"}, 400
+            
+            print(f"Updating guest {guest.name} RSVP from {guest.rsvp_status} to {rsvp_status}")
+            guest.rsvp_status = rsvp_status
+            
+            db.session.commit()
+            
+            print(f"Successfully updated guest {guest.name} RSVP to {rsvp_status}")
+            return {"message": "RSVP updated successfully", "guest": guest.to_dict()}, 200
+            
+        except Exception as e:
+            print(f"Error updating guest RSVP: {e}")
+            return {"message": f"Error updating guest RSVP: {str(e)}"}, 500
 
     # Register batch API blueprint
     app.register_blueprint(batch_bp)

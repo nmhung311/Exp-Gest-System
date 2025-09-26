@@ -16,6 +16,7 @@ interface CheckedInGuest {
   phone?: string
   checked_in_at: string
   checkin_method: string
+  checkin_status: string
   event_id?: number
   event_name?: string
 }
@@ -78,7 +79,7 @@ export default function CheckinPage() {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
 
   // cards
-  const [selectedCard, setSelectedCard] = useState<"total" | "scanned" | "notScanned" | null>(null)
+  const [selectedCard, setSelectedCard] = useState<"total" | "checkedIn" | "notCheckedIn" | "checkedOut" | null>(null)
   
   // Touch handlers for horizontal swipe navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -113,7 +114,7 @@ export default function CheckinPage() {
   }
 
   // Card types array for navigation
-  const cardTypes: ("total" | "scanned" | "notScanned")[] = ["total", "scanned", "notScanned"]
+  const cardTypes: ("total" | "checkedIn" | "notCheckedIn" | "checkedOut")[] = ["total", "checkedIn", "notCheckedIn", "checkedOut"]
   
   // Update selected card based on current index
   useEffect(() => {
@@ -181,11 +182,11 @@ export default function CheckinPage() {
       const guestsForEvent = allGuests.filter((g: any) =>
         selectedEventId ? g?.event_id === selectedEventId : true
       )
-      const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "arrived")
+      const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in")
       
-      // If there are checked-in guests and no card is selected, auto-select scanned view
+      // If there are checked-in guests and no card is selected, auto-select checkedIn view
       if (scanned.length > 0 && selectedCard === null) {
-        setSelectedCard("scanned")
+        setSelectedCard("checkedIn")
       }
     }
   }, [allGuests, selectedEventId, selectedCard])
@@ -255,6 +256,7 @@ export default function CheckinPage() {
           phone: data.guest.phone,
           checked_in_at: data.checked_in_at,
           checkin_method: "manual",
+          checkin_status: "checked_in",
           event_id: data.guest.event_id,
           event_name: data.guest.event_name
         }
@@ -269,8 +271,8 @@ export default function CheckinPage() {
         
         await loadGuests()
         
-        // Auto switch to scanned view after successful check-in
-        setSelectedCard("scanned")
+        // Auto switch to checkedIn view after successful check-in
+        setSelectedCard("checkedIn")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
@@ -298,6 +300,7 @@ export default function CheckinPage() {
             phone: data.guest.phone,
             checked_in_at: data.checked_in_at,
             checkin_method: "qr",
+            checkin_status: "checked_in",
             event_id: data.guest.event_id,
             event_name: data.guest.event_name
           }
@@ -400,6 +403,7 @@ export default function CheckinPage() {
           phone: data.guest.phone,
           checked_in_at: data.checked_in_at,
           checkin_method: "qr",
+          checkin_status: "checked_in",
           event_id: data.guest.event_id,
           event_name: data.guest.event_name
         }
@@ -439,8 +443,8 @@ export default function CheckinPage() {
         
         await loadGuests()
         
-        // Auto switch to scanned view after successful check-in
-        setSelectedCard("scanned")
+        // Auto switch to checkedIn view after successful check-in
+        setSelectedCard("checkedIn")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
@@ -468,6 +472,7 @@ export default function CheckinPage() {
             phone: data.guest.phone,
             checked_in_at: data.checked_in_at,
             checkin_method: "qr",
+            checkin_status: "checked_in",
             event_id: data.guest.event_id,
             event_name: data.guest.event_name
           }
@@ -545,7 +550,7 @@ export default function CheckinPage() {
         tag: guest.tag || "",
         email: guest.email || "",
         phone: guest.phone || "",
-        checkin_status: "arrived",
+        checkin_status: "checked_in",
         checked_in_at: guest.checked_in_at
       })
       
@@ -573,7 +578,7 @@ export default function CheckinPage() {
         tag: guest.tag || "",
         email: guest.email || "",
         phone: guest.phone || "",
-        checkin_status: "not_arrived",
+        checkin_status: "checked_out",
       })
       
       if (!res.ok) throw new Error("Checkout failed")
@@ -613,15 +618,16 @@ export default function CheckinPage() {
       selectedEventId ? g?.event_id === selectedEventId : true
     )
     const acceptedForEvent = guestsForEvent.filter((g: any) => g?.rsvp_status === "accepted")
-    const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "arrived")
-    const notScanned = guestsForEvent.filter((g: any) => g?.checkin_status !== "arrived")
+    const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in")
+    const checkedOut = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_out")
+    const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived")
 
-
-    if (selectedCard === "scanned") return scanned.map(mapGuest)
-    if (selectedCard === "notScanned") return notScanned.map(mapGuestWithoutCheckinTime)
-    if (selectedCard === "total") return acceptedForEvent.map(mapGuest)
-    // Default: show all checked-in guests (scanned)
-    return scanned.map(mapGuest)
+    if (selectedCard === "checkedIn") return checkedIn.map(mapGuest)
+    if (selectedCard === "notCheckedIn") return notCheckedIn.map(mapGuestWithoutCheckinTime)
+    if (selectedCard === "checkedOut") return checkedOut.map(mapGuest)
+    if (selectedCard === "total") return [...checkedIn, ...checkedOut].map(mapGuest)
+    // Default: show all checked-in guests (both checked_in and checked_out)
+    return [...checkedIn, ...checkedOut].map(mapGuest)
   }, [selectedCard, allGuests, selectedEventId])
 
   // stats
@@ -630,10 +636,12 @@ export default function CheckinPage() {
       selectedEventId ? g?.event_id === selectedEventId : true
     )
     const acceptedForEvent = guestsForEvent.filter((g: any) => g?.rsvp_status === "accepted")
-    const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "arrived").length
+    const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in").length
+    const checkedOut = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_out").length
+    const totalCheckedIn = checkedIn + checkedOut
     const total = acceptedForEvent.length
-    const notScanned = Math.max(total - scanned, 0)
-    return { total, scanned, notScanned }
+    const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived").length
+    return { total, checkedIn, checkedOut, totalCheckedIn, notCheckedIn }
   }, [allGuests, selectedEventId])
 
   // search + pagination
@@ -670,6 +678,7 @@ export default function CheckinPage() {
       phone: g.phone,
       checked_in_at: g.checked_in_at || "",
       checkin_method: g.checkin_method || "manual",
+      checkin_status: g.checkin_status || "not_arrived", // Add checkin_status
       event_id: g.event_id,
       event_name: g.event_name,
     }
@@ -686,6 +695,7 @@ export default function CheckinPage() {
       phone: g.phone,
       checked_in_at: "",
       checkin_method: g.checkin_method || "manual",
+      checkin_status: g.checkin_status || "not_arrived", // Add checkin_status
       event_id: g.event_id,
       event_name: g.event_name,
     }
@@ -818,18 +828,122 @@ export default function CheckinPage() {
         </div>
       </div>
 
-      {/* Cards - Horizontal Scrollable */}
+      {/* Cards - Desktop Grid Layout, Mobile Horizontal Scroll */}
       <div className="relative mb-8 mt-4">
+      {/* Desktop: Grid Layout */}
+      <div className="hidden md:grid md:grid-cols-4 gap-4 lg:gap-6 py-4">
+          {/* Total */}
+          <div
+            className={`checkin-card-total group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+              selectedCard === "total"
+                ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+                : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
+            }`}
+            onClick={() => setSelectedCard(selectedCard === "total" ? null : "total")}
+          >
+            <div className="relative flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 lg:p-3 bg-cyan-500/20 rounded-xl">
+                  <svg className="w-5 h-5 lg:w-6 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="text-sm lg:text-base text-cyan-300/80 font-medium">Tổng (RSVP)</div>
+              </div>
+              <div className="text-2xl lg:text-3xl font-bold text-white">{stats.total}</div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full" style={{ width: "100%" }} />
+            </div>
+          </div>
+
+          {/* Checked In */}
+          <div
+            className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+              selectedCard === "checkedIn"
+                ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
+                : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
+            }`}
+            onClick={() => setSelectedCard(selectedCard === "checkedIn" ? null : "checkedIn")}
+          >
+            <div className="relative flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 lg:p-3 bg-green-500/20 rounded-xl">
+                  <svg className="w-5 h-5 lg:w-6 lg:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <div className="text-sm lg:text-base text-green-300/80 font-medium">Đã check-in</div>
+              </div>
+              <div className="text-2xl lg:text-3xl font-bold text-white">{stats.checkedIn}</div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedIn / stats.total) * 100 : 0}%` }} />
+            </div>
+          </div>
+
+          {/* Not Checked In */}
+          <div
+            className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+              selectedCard === "notCheckedIn"
+                ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
+                : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+            }`}
+            onClick={() => setSelectedCard(selectedCard === "notCheckedIn" ? null : "notCheckedIn")}
+          >
+            <div className="relative flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 lg:p-3 bg-orange-500/20 rounded-xl">
+                  <svg className="w-5 h-5 lg:w-6 lg:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-sm lg:text-base text-orange-300/80 font-medium">Chưa check-in</div>
+              </div>
+              <div className="text-2xl lg:text-3xl font-bold text-white">{stats.notCheckedIn}</div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{ width: `${stats.total ? (stats.notCheckedIn / stats.total) * 100 : 0}%` }} />
+            </div>
+          </div>
+
+          {/* Checked Out */}
+          <div
+            className={`checkin-card-checkedOut group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
+              selectedCard === "checkedOut"
+                ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+                : "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20"
+            }`}
+            onClick={() => setSelectedCard(selectedCard === "checkedOut" ? null : "checkedOut")}
+          >
+            <div className="relative flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 lg:p-3 bg-blue-500/20 rounded-xl">
+                  <svg className="w-5 h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-sm lg:text-base text-blue-300/80 font-medium">Đã check-out</div>
+              </div>
+              <div className="text-2xl lg:text-3xl font-bold text-white">{stats.checkedOut}</div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedOut / stats.total) * 100 : 0}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile: Horizontal Scrollable */}
         <div 
-          className="overflow-x-auto scrollbar-hide py-4"
+          className="md:hidden overflow-x-auto scrollbar-hide py-4"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div className="flex gap-3 sm:gap-4 md:gap-6 min-w-max px-2">
+          <div className="flex gap-3 min-w-max px-2">
             {/* Total */}
             <div
-              className={`checkin-card-total group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
+              className={`checkin-card-total group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
                 selectedCard === "total"
                   ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
                   : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
@@ -838,74 +952,99 @@ export default function CheckinPage() {
             >
               <div className="relative flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-xl">
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 bg-cyan-500/20 rounded-xl">
+                    <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng (RSVP)</div>
+                  <div className="text-xs text-cyan-300/80 font-medium">Tổng (RSVP)</div>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.total}</div>
+                <div className="text-2xl font-bold text-white">{stats.total}</div>
               </div>
               <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full" style={{ width: "100%" }} />
               </div>
             </div>
 
-            {/* Scanned */}
+            {/* Checked In */}
             <div
-              className={`checkin-card-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
-                selectedCard === "scanned"
+              className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
+                selectedCard === "checkedIn"
                   ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
                   : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
               }`}
-              onClick={() => setSelectedCard(selectedCard === "scanned" ? null : "scanned")}
+              onClick={() => setSelectedCard(selectedCard === "checkedIn" ? null : "checkedIn")}
             >
               <div className="relative flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 sm:p-3 bg-green-500/20 rounded-xl">
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 bg-green-500/20 rounded-xl">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                   </div>
-                  <div className="text-xs sm:text-sm text-green-300/80 font-medium">Đã quét</div>
+                  <div className="text-xs text-green-300/80 font-medium">Đã check-in</div>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.scanned}</div>
+                <div className="text-2xl font-bold text-white">{stats.checkedIn}</div>
               </div>
               <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{ width: `${stats.total ? (stats.scanned / stats.total) * 100 : 0}%` }} />
+                <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedIn / stats.total) * 100 : 0}%` }} />
               </div>
             </div>
 
-            {/* Not scanned */}
+            {/* Not Checked In */}
             <div
-              className={`checkin-card-not-scanned group relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 sm:w-72 ${
-                selectedCard === "notScanned"
+              className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
+                selectedCard === "notCheckedIn"
                   ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
                   : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
               }`}
-              onClick={() => setSelectedCard(selectedCard === "notScanned" ? null : "notScanned")}
+              onClick={() => setSelectedCard(selectedCard === "notCheckedIn" ? null : "notCheckedIn")}
             >
               <div className="relative flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 sm:p-3 bg-orange-500/20 rounded-xl">
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <div className="p-2 bg-orange-500/20 rounded-xl">
+                    <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <div className="text-xs sm:text-sm text-orange-300/80 font-medium">Chưa quét</div>
+                  <div className="text-xs text-orange-300/80 font-medium">Chưa check-in</div>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white">{stats.notScanned}</div>
+                <div className="text-2xl font-bold text-white">{stats.notCheckedIn}</div>
               </div>
               <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{ width: `${stats.total ? (stats.notScanned / stats.total) * 100 : 0}%` }} />
+                <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{ width: `${stats.total ? (stats.notCheckedIn / stats.total) * 100 : 0}%` }} />
+              </div>
+            </div>
+
+            {/* Checked Out */}
+            <div
+              className={`checkin-card-checkedOut group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
+                selectedCard === "checkedOut"
+                  ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+                  : "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20"
+              }`}
+              onClick={() => setSelectedCard(selectedCard === "checkedOut" ? null : "checkedOut")}
+            >
+              <div className="relative flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-xl">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs text-blue-300/80 font-medium">Đã check-out</div>
+                </div>
+                <div className="text-2xl font-bold text-white">{stats.checkedOut}</div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedOut / stats.total) * 100 : 0}%` }} />
               </div>
             </div>
           </div>
         </div>
         
-        {/* Navigation Indicators - Fixed Position */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full flex justify-center gap-2 mt-6">
+        {/* Navigation Indicators - Mobile Only */}
+        <div className="md:hidden absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full flex justify-center gap-2 mt-6">
           {cardTypes.map((_, index) => (
             <button
               key={index}
@@ -954,9 +1093,10 @@ export default function CheckinPage() {
         {pageGuests.length === 0 ? (
           <div className="col-span-full text-center py-8">
             <div className="text-white/60 text-lg mb-2">
-              {selectedCard === "scanned" ? "Chưa có khách nào đã check-in" : 
-               selectedCard === "notScanned" ? "Tất cả khách đã check-in" :
-               selectedCard === "total" ? "Chưa có khách nào" : "Chưa có dữ liệu"}
+              {selectedCard === "checkedIn" ? "Chưa có khách nào đã check-in" : 
+               selectedCard === "notCheckedIn" ? "Chưa có khách nào chưa check-in" :
+               selectedCard === "checkedOut" ? "Chưa có khách nào đã check-out" :
+               selectedCard === "total" ? "Chưa có khách nào đã check-in hoặc check-out" : "Chưa có dữ liệu"}
             </div>
             <div className="text-white/40 text-sm">
               {selectedEventId ? `Event ID: ${selectedEventId}` : "Vui lòng chọn sự kiện"}
@@ -976,9 +1116,23 @@ export default function CheckinPage() {
                 <div className="flex items-center gap-2">
                   <div className="font-semibold text-white text-sm sm:text-base truncate">{guest.name}</div>
                   {guest.checked_in_at && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded-full">
-                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                      <span className="text-xs text-green-300 font-medium">Đã check-in</span>
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                      guest.checkin_status === "checked_out" 
+                        ? "bg-blue-500/20 border border-blue-500/30"
+                        : "bg-green-500/20 border border-green-500/30"
+                    }`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        guest.checkin_status === "checked_out" 
+                          ? "bg-blue-400" 
+                          : "bg-green-400"
+                      }`}></div>
+                      <span className={`text-xs font-medium ${
+                        guest.checkin_status === "checked_out" 
+                          ? "text-blue-300" 
+                          : "text-green-300"
+                      }`}>
+                        {guest.checkin_status === "checked_out" ? "Đã check-out" : "Đã check-in"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1672,7 +1826,7 @@ async function bulk(
   addNotification: (message: string, type: Notification["type"]) => void,
   loadGuests: () => Promise<void>,
   setIsBulkProcessing: (loading: boolean) => void,
-  setSelectedCard: (card: "total" | "scanned" | "notScanned" | null) => void,
+  setSelectedCard: (card: "total" | "checkedIn" | "notCheckedIn" | "checkedOut" | null) => void,
   selectedEventId: number | null
 ) {
   if (selectedGuests.size === 0) {
@@ -1750,9 +1904,9 @@ async function bulk(
       // Force refresh data
       await loadGuests()
       
-      // Auto switch to scanned view after check-in
+      // Auto switch to checkedIn view after check-in
       if (kind === "checkin") {
-        setSelectedCard("scanned")
+        setSelectedCard("checkedIn")
       }
       
       console.log(`Bulk ${kind} successful for guests:`, guestIds)

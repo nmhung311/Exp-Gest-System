@@ -11,7 +11,7 @@ export interface Guest {
   email?: string
   phone?: string
   rsvp_status: 'pending' | 'accepted' | 'declined'
-  checkin_status: 'not_arrived' | 'arrived' | 'checked_in'
+  checkin_status: 'not_arrived' | 'checked_in' | 'checked_out'
   created_at: string
   event_id?: number
   event_name?: string
@@ -27,7 +27,7 @@ export interface GuestForm {
   email: string
   phone: string
   rsvp_status: 'pending' | 'accepted' | 'declined'
-  checkin_status: 'not_arrived' | 'arrived' | 'checked_in'
+  checkin_status: 'not_arrived' | 'checked_in' | 'checked_out'
   event_content: string
 }
 
