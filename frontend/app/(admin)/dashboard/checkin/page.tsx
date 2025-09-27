@@ -79,7 +79,7 @@ export default function CheckinPage() {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
 
   // cards
-  const [selectedCard, setSelectedCard] = useState<"total" | "checkedIn" | "notCheckedIn" | "checkedOut" | null>(null)
+  const [selectedCard, setSelectedCard] = useState<"total" | "checkedIn" | "notCheckedIn" | null>(null)
   
   // Touch handlers for horizontal swipe navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -114,7 +114,7 @@ export default function CheckinPage() {
   }
 
   // Card types array for navigation
-  const cardTypes: ("total" | "checkedIn" | "notCheckedIn" | "checkedOut")[] = ["total", "checkedIn", "notCheckedIn", "checkedOut"]
+  const cardTypes: ("total" | "checkedIn" | "notCheckedIn")[] = ["total", "checkedIn", "notCheckedIn"]
   
   // Update selected card based on current index
   useEffect(() => {
@@ -619,15 +619,13 @@ export default function CheckinPage() {
     )
     const acceptedForEvent = guestsForEvent.filter((g: any) => g?.rsvp_status === "accepted")
     const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in")
-    const checkedOut = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_out")
     const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived")
 
     if (selectedCard === "checkedIn") return checkedIn.map(mapGuest)
     if (selectedCard === "notCheckedIn") return notCheckedIn.map(mapGuestWithoutCheckinTime)
-    if (selectedCard === "checkedOut") return checkedOut.map(mapGuest)
-    if (selectedCard === "total") return [...checkedIn, ...checkedOut].map(mapGuest)
-    // Default: show all checked-in guests (both checked_in and checked_out)
-    return [...checkedIn, ...checkedOut].map(mapGuest)
+    if (selectedCard === "total") return checkedIn.map(mapGuest)
+    // Default: show all checked-in guests
+    return checkedIn.map(mapGuest)
   }, [selectedCard, allGuests, selectedEventId])
 
   // stats
@@ -637,11 +635,9 @@ export default function CheckinPage() {
     )
     const acceptedForEvent = guestsForEvent.filter((g: any) => g?.rsvp_status === "accepted")
     const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in").length
-    const checkedOut = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_out").length
-    const totalCheckedIn = checkedIn + checkedOut
     const total = acceptedForEvent.length
     const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived").length
-    return { total, checkedIn, checkedOut, totalCheckedIn, notCheckedIn }
+    return { total, checkedIn, notCheckedIn }
   }, [allGuests, selectedEventId])
 
   // search + pagination
@@ -831,7 +827,7 @@ export default function CheckinPage() {
       {/* Cards - Desktop Grid Layout, Mobile Horizontal Scroll */}
       <div className="relative mb-8 mt-4">
       {/* Desktop: Grid Layout */}
-      <div className="hidden md:grid md:grid-cols-4 gap-4 lg:gap-6 py-4">
+      <div className="hidden md:grid md:grid-cols-3 gap-4 lg:gap-6 py-4">
           {/* Total */}
           <div
             className={`checkin-card-total group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
@@ -907,30 +903,6 @@ export default function CheckinPage() {
             </div>
           </div>
 
-          {/* Checked Out */}
-          <div
-            className={`checkin-card-checkedOut group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-              selectedCard === "checkedOut"
-                ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
-                : "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20"
-            }`}
-            onClick={() => setSelectedCard(selectedCard === "checkedOut" ? null : "checkedOut")}
-          >
-            <div className="relative flex items-center justify-between w-full">
-              <div className="flex items-center gap-3">
-                <div className="p-2 lg:p-3 bg-blue-500/20 rounded-xl">
-                  <svg className="w-5 h-5 lg:w-6 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="text-sm lg:text-base text-blue-300/80 font-medium">Đã check-out</div>
-              </div>
-              <div className="text-2xl lg:text-3xl font-bold text-white">{stats.checkedOut}</div>
-            </div>
-            <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedOut / stats.total) * 100 : 0}%` }} />
-            </div>
-          </div>
         </div>
 
         {/* Mobile: Horizontal Scrollable */}
@@ -1016,30 +988,6 @@ export default function CheckinPage() {
               </div>
             </div>
 
-            {/* Checked Out */}
-            <div
-              className={`checkin-card-checkedOut group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
-                selectedCard === "checkedOut"
-                  ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
-                  : "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20"
-              }`}
-              onClick={() => setSelectedCard(selectedCard === "checkedOut" ? null : "checkedOut")}
-            >
-              <div className="relative flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-xl">
-                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-xs text-blue-300/80 font-medium">Đã check-out</div>
-                </div>
-                <div className="text-2xl font-bold text-white">{stats.checkedOut}</div>
-              </div>
-              <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" style={{ width: `${stats.total ? (stats.checkedOut / stats.total) * 100 : 0}%` }} />
-              </div>
-            </div>
           </div>
         </div>
         
@@ -1071,9 +1019,9 @@ export default function CheckinPage() {
           />
         </div>
         
-        {/* Scanner Button - Mobile Inline */}
+        {/* Scanner Button - Mobile Only */}
         <button
-          className={`scanner-btn px-3 py-2 rounded-lg border transition-all duration-300 flex items-center gap-1 text-sm font-medium ${
+          className={`scanner-btn px-3 py-2 rounded-lg border transition-all duration-300 flex items-center gap-1 text-sm font-medium sm:hidden ${
             isScannerActive 
               ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
               : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
@@ -1084,7 +1032,7 @@ export default function CheckinPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span className="hidden sm:inline">{isScannerActive ? "Tắt camera" : "Bật camera"}</span>
+          <span>{isScannerActive ? "Tắt camera" : "Bật camera"}</span>
         </button>
       </div>
 
@@ -1095,8 +1043,7 @@ export default function CheckinPage() {
             <div className="text-white/60 text-lg mb-2">
               {selectedCard === "checkedIn" ? "Chưa có khách nào đã check-in" : 
                selectedCard === "notCheckedIn" ? "Chưa có khách nào chưa check-in" :
-               selectedCard === "checkedOut" ? "Chưa có khách nào đã check-out" :
-               selectedCard === "total" ? "Chưa có khách nào đã check-in hoặc check-out" : "Chưa có dữ liệu"}
+               selectedCard === "total" ? "Chưa có khách nào đã check-in" : "Chưa có dữ liệu"}
             </div>
             <div className="text-white/40 text-sm">
               {selectedEventId ? `Event ID: ${selectedEventId}` : "Vui lòng chọn sự kiện"}
@@ -1116,22 +1063,10 @@ export default function CheckinPage() {
                 <div className="flex items-center gap-2">
                   <div className="font-semibold text-white text-sm sm:text-base truncate">{guest.name}</div>
                   {guest.checked_in_at && (
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${
-                      guest.checkin_status === "checked_out" 
-                        ? "bg-blue-500/20 border border-blue-500/30"
-                        : "bg-green-500/20 border border-green-500/30"
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        guest.checkin_status === "checked_out" 
-                          ? "bg-blue-400" 
-                          : "bg-green-400"
-                      }`}></div>
-                      <span className={`text-xs font-medium ${
-                        guest.checkin_status === "checked_out" 
-                          ? "text-blue-300" 
-                          : "text-green-300"
-                      }`}>
-                        {guest.checkin_status === "checked_out" ? "Đã check-out" : "Đã check-in"}
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                      <span className="text-xs font-medium text-green-300">
+                        Đã check-in
                       </span>
                     </div>
                   )}
@@ -1826,7 +1761,7 @@ async function bulk(
   addNotification: (message: string, type: Notification["type"]) => void,
   loadGuests: () => Promise<void>,
   setIsBulkProcessing: (loading: boolean) => void,
-  setSelectedCard: (card: "total" | "checkedIn" | "notCheckedIn" | "checkedOut" | null) => void,
+  setSelectedCard: (card: "total" | "checkedIn" | "notCheckedIn" | null) => void,
   selectedEventId: number | null
 ) {
   if (selectedGuests.size === 0) {

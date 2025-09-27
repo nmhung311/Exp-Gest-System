@@ -4,7 +4,7 @@ import { useEffect } from "react"
 
 export default function HomePage() {
   useEffect(() => {
-    // Redirect homepage to main site
+    // Redirect to main site homepage
     window.location.href = "https://expsolution.io/"
   }, [])
 

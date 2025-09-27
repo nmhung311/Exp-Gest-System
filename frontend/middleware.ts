@@ -72,10 +72,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // For all other routes, redirect to main site
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('https://event.expsolution.io/', request.url))
-  }
+  // For root path, allow access (no redirect needed)
+  // The redirect was causing infinite loop
   
   return NextResponse.next()
 }

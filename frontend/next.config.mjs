@@ -4,8 +4,22 @@ export default /** @type {import('next').NextConfig} */ ({
   output: 'standalone',
   // Disable static export for GitHub Pages deployment
   // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
-  trailingSlash: process.env.NODE_ENV === 'production' ? true : false,
+  trailingSlash: false,
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  // Disable HTTPS redirect
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+        ],
+      },
+    ]
+  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -22,6 +36,15 @@ export default /** @type {import('next').NextConfig} */ ({
         pathname: '/api/**',
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: 'https://expsolution.io/',
+        permanent: false,
+      },
+    ]
   },
   async rewrites() {
     return [
