@@ -37,16 +37,10 @@ export default /** @type {import('next').NextConfig} */ ({
       },
     ],
   },
-  async redirects() {
-    return [
-      // Temporarily disabled for testing
-      // {
-      //   source: '/',
-      //   destination: 'https://expsolution.io/',
-      //   permanent: false,
-      // },
-    ]
-  },
+  // Removed redirects() to prevent any redirect conflicts
+  // async redirects() {
+  //   return []
+  // },
   async rewrites() {
     return [
       {

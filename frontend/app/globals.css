@@ -154,9 +154,19 @@ body {
 /* Mobile card container styles */
 .mobile-card-container {
   scroll-snap-type: x mandatory;
+  margin: 0 -20px; /* Extend to screen edges */
 }
 
 .mobile-card-container > * {
   scroll-snap-align: start;
   flex-shrink: 0;
+}
+
+/* First and last card padding for edge effect */
+.mobile-card-container > *:first-child {
+  margin-left: 20px;
+}
+
+.mobile-card-container > *:last-child {
+  margin-right: 20px;
 }

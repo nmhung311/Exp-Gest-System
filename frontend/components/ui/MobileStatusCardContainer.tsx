@@ -33,9 +33,9 @@ export default function MobileStatusCardContainer({
 
   // Padding classes
   const paddingClasses = {
-    sm: 'p-2',
-    md: 'p-3 sm:p-4',
-    lg: 'p-4 sm:p-6'
+    sm: 'px-0 py-2',
+    md: 'px-0 py-3 sm:py-4',
+    lg: 'px-0 py-4 sm:py-6'
   }
 
   // Scrollbar style classes
@@ -95,22 +95,6 @@ export default function MobileStatusCardContainer({
 
   return (
     <div className={`relative ${className}`}>
-      {/* Scroll indicators */}
-      {canScrollLeft && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-          <div className="w-8 h-16 bg-gradient-to-r from-black/80 to-transparent rounded-r-lg flex items-center justify-center">
-            <div className="w-1 h-8 bg-white/30 rounded-full"></div>
-          </div>
-        </div>
-      )}
-      
-      {canScrollRight && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-          <div className="w-8 h-16 bg-gradient-to-l from-black/80 to-transparent rounded-l-lg flex items-center justify-center">
-            <div className="w-1 h-8 bg-white/30 rounded-full"></div>
-          </div>
-        </div>
-      )}
 
       {/* Scrollable container */}
       <div
@@ -126,7 +110,9 @@ export default function MobileStatusCardContainer({
         `}
         style={{
           scrollBehavior: 'smooth',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          paddingLeft: '20px',
+          paddingRight: '20px'
         }}
       >
         {children}

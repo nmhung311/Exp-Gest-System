@@ -460,7 +460,7 @@ export default function DashboardPage(){
           gap="sm"
           padding="sm"
         >
-          <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-3 min-w-[140px] hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
+          <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 min-w-[160px] hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-blue-500/20 rounded-lg">
                 <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -474,7 +474,7 @@ export default function DashboardPage(){
             </div>
           </a>
           
-          <a className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl p-3 min-w-[140px] hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300" href="/dashboard/checkin">
+          <a className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl p-4 min-w-[160px] hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300" href="/dashboard/checkin">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-green-500/20 rounded-lg">
                 <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
@@ -488,7 +488,7 @@ export default function DashboardPage(){
             </div>
           </a>
           
-          <a className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl p-3 min-w-[140px] hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300" href="/dashboard/stats">
+          <a className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl p-4 min-w-[160px] hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300" href="/dashboard/stats">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-purple-500/20 rounded-lg">
                 <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
@@ -502,7 +502,7 @@ export default function DashboardPage(){
             </div>
           </a>
           
-          <a className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-amber-500/20 rounded-xl p-3 min-w-[140px] hover:from-amber-500/20 hover:to-amber-500/20 hover:border-amber-400/40 transition-all duration-300" href="/dashboard/events">
+          <a className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-amber-500/20 rounded-xl p-4 min-w-[160px] hover:from-amber-500/20 hover:to-amber-500/20 hover:border-amber-400/40 transition-all duration-300" href="/dashboard/events">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-amber-500/20 rounded-lg">
                 <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -516,19 +516,22 @@ export default function DashboardPage(){
             </div>
           </a>
           
-          <a className="group relative bg-gradient-to-br from-red-500/10 to-pink-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-3 min-w-[140px] hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 transition-all duration-300" href="/dashboard/settings">
+          <button 
+            onClick={() => setShowBackupModal(true)}
+            className="group relative bg-gradient-to-br from-red-500/10 to-pink-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-4 min-w-[160px] hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 transition-all duration-300"
+          >
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-red-500/20 rounded-lg">
-                <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-xs truncate">Cài đặt</div>
-                <div className="text-xs text-red-300/80 truncate">Hệ thống</div>
+                <div className="font-semibold text-white text-xs truncate">Backup</div>
+                <div className="text-xs text-red-300/80 truncate">Sao lưu, khôi phục</div>
               </div>
             </div>
-          </a>
+          </button>
         </MobileStatusCardContainer>
       </div>
 

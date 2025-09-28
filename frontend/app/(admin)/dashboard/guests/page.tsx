@@ -1549,9 +1549,10 @@ export default function GuestsPage(){
         newGuests = jsonData.map((guest: any) => ({
           id: guest.id || 0, // Temporary ID, will be assigned by backend
           name: guest.name || '',
-          title: guest.title || '',
+          title: '', // No longer used
           role: guest.role || '',
           organization: guest.organization || '',
+          host: guest.host || '',
           tag: guest.tag || '',
           email: guest.email || '',
           phone: guest.phone || '',
@@ -1594,9 +1595,10 @@ export default function GuestsPage(){
         newGuests = csvData.map((guest: any) => ({
           id: 0, // Temporary ID, will be assigned by backend
           name: guest.name || '',
-          title: guest.title || '',
+          title: '', // No longer used
           role: guest.role || '',
           organization: guest.organization || '',
+          host: guest.host || '',
           tag: guest.tag || '',
           email: guest.email || '',
           phone: guest.phone || '',
@@ -1822,7 +1824,7 @@ export default function GuestsPage(){
   const roleFilterOptions = useMemo(() => {
     const uniqueHosts = [...new Set(guests.map(guest => guest.host).filter(Boolean))]
     return [
-      { value: "all", label: "Tất cả lễ tân" },
+      { value: "all", label: "Tất cả Host" },
       ...uniqueHosts.map(host => ({ value: host, label: host }))
     ]
   }, [guests])
@@ -1830,7 +1832,7 @@ export default function GuestsPage(){
   const hostFilterOptions = useMemo(() => {
     const uniqueHosts = [...new Set(guests.map(guest => guest.host).filter(Boolean))]
     return [
-      { value: "all", label: "Tất cả lễ tân" },
+      { value: "all", label: "Tất cả Host" },
       ...uniqueHosts.map(host => ({ value: host, label: host }))
     ]
   }, [guests])
@@ -1949,16 +1951,15 @@ export default function GuestsPage(){
   const exportToExcel = async (guests: Guest[], filename: string) => {
     // Tạo dữ liệu Excel
     const headers = [
-      'STT', 'Danh xưng', 'Họ và tên', 'Vai trò', 'Tổ chức', 'Tag', 
+      'STT', 'Họ và tên', 'Vai trò', 'Host', 'Tag', 
       'Email', 'Số điện thoại', 'Trạng thái RSVP', 'Trạng thái Check-in', 'Sự kiện', 'Ngày tạo'
     ]
     
     const data = guests.map((guest, index) => [
       index + 1,
-      guest.title || '',
-      guest.name,
+      guest.title ? `${guest.title} ${guest.name}` : guest.name,
       guest.role || '',
-      guest.organization || '',
+      guest.host || '',
       guest.tag || '',
       guest.email || '',
       guest.phone || '',
@@ -1973,19 +1974,18 @@ export default function GuestsPage(){
       SheetNames: ['Danh sách khách mời'],
       Sheets: {
         'Danh sách khách mời': {
-          '!ref': `A1:L${data.length + 1}`,
+          '!ref': `A1:K${data.length + 1}`,
           A1: { v: 'STT' },
-          B1: { v: 'Danh xưng' },
-          C1: { v: 'Họ và tên' },
-          D1: { v: 'Vai trò' },
-          E1: { v: 'Tổ chức' },
-          F1: { v: 'Tag' },
-          G1: { v: 'Email' },
-          H1: { v: 'Số điện thoại' },
-          I1: { v: 'Trạng thái RSVP' },
-          J1: { v: 'Trạng thái Check-in' },
-          K1: { v: 'Sự kiện' },
-          L1: { v: 'Ngày tạo' },
+          B1: { v: 'Họ và tên' },
+          C1: { v: 'Vai trò' },
+          D1: { v: 'Host' },
+          E1: { v: 'Tag' },
+          F1: { v: 'Email' },
+          G1: { v: 'Số điện thoại' },
+          H1: { v: 'Trạng thái RSVP' },
+          I1: { v: 'Trạng thái Check-in' },
+          J1: { v: 'Sự kiện' },
+          K1: { v: 'Ngày tạo' },
           ...data.reduce((acc, row, rowIndex) => {
             row.forEach((cell, colIndex) => {
               const cellRef = String.fromCharCode(65 + colIndex) + (rowIndex + 2)
@@ -2032,16 +2032,15 @@ export default function GuestsPage(){
 
   const exportToCSV = async (guests: Guest[], filename: string) => {
     const headers = [
-      'STT', 'Danh xưng', 'Họ và tên', 'Vai trò', 'Tổ chức', 'Tag', 
+      'STT', 'Họ và tên', 'Vai trò', 'Host', 'Tag', 
       'Email', 'Số điện thoại', 'Trạng thái RSVP', 'Trạng thái Check-in', 'Sự kiện', 'Ngày tạo'
     ]
     
     const data = guests.map((guest, index) => [
       index + 1,
-      guest.title || '',
-      guest.name,
+      guest.title ? `${guest.title} ${guest.name}` : guest.name,
       guest.role || '',
-      guest.organization || '',
+      guest.host || '',
       guest.tag || '',
       guest.email || '',
       guest.phone || '',
@@ -2670,34 +2669,6 @@ export default function GuestsPage(){
           </div>
         </div>
 
-        {/* Checked-in Card */}
-        <div 
-          onClick={() => setStatusFilter("checked_in")}
-          className={`guests-card-checked-in group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
-            statusFilter === "checked_in" 
-              ? "bg-gradient-to-br from-purple-500/25 to-indigo-500/25 border border-purple-400/50" 
-              : "bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20"
-          }`}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 bg-purple-500/20 rounded-md">
-                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="text-right">
-                <div className="text-lg sm:text-xl font-bold text-white">{stats.checked_in}</div>
-                <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Đã check-in</div>
-              </div>
-            </div>
-            <div className="mt-2 h-1 bg-gradient-to-r from-purple-500/30 to-indigo-500/30 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
-            </div>
-          </div>
-        </div>
-
         {/* Not Checked-in Card */}
         <div 
           onClick={() => setStatusFilter("not_checked_in")}
@@ -2725,6 +2696,34 @@ export default function GuestsPage(){
             </div>
           </div>
         </div>
+
+        {/* Checked-in Card */}
+        <div 
+          onClick={() => setStatusFilter("checked_in")}
+          className={`guests-card-checked-in group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
+            statusFilter === "checked_in" 
+              ? "bg-gradient-to-br from-purple-500/25 to-indigo-500/25 border border-purple-400/50" 
+              : "bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20"
+          }`}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-purple-500/20 rounded-md">
+                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.checked_in}</div>
+                <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Đã check-in</div>
+              </div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-purple-500/30 to-indigo-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Mobile Statistics Cards - Horizontal Scroll */}
@@ -2738,7 +2737,7 @@ export default function GuestsPage(){
           {/* Total Guests Card */}
           <div 
             onClick={() => setStatusFilter("all")}
-            className={`guests-card-total group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+            className={`guests-card-total group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
               statusFilter === "all" 
                 ? "bg-gradient-to-br from-cyan-500/25 to-blue-500/25 border border-cyan-400/50" 
                 : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
@@ -2766,7 +2765,7 @@ export default function GuestsPage(){
           {/* Pending Card */}
           <div 
             onClick={() => setStatusFilter("pending")}
-            className={`guests-card-pending group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+            className={`guests-card-pending group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
               statusFilter === "pending" 
                 ? "bg-gradient-to-br from-yellow-500/25 to-orange-500/25 border border-yellow-400/50" 
                 : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
@@ -2794,7 +2793,7 @@ export default function GuestsPage(){
           {/* Accepted Card */}
           <div 
             onClick={() => setStatusFilter("accepted")}
-            className={`guests-card-accepted group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+            className={`guests-card-accepted group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
               statusFilter === "accepted" 
                 ? "bg-gradient-to-br from-green-500/25 to-emerald-500/25 border border-green-400/50" 
                 : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
@@ -2822,7 +2821,7 @@ export default function GuestsPage(){
           {/* Declined Card */}
           <div 
             onClick={() => setStatusFilter("declined")}
-            className={`guests-card-declined group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+            className={`guests-card-declined group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
               statusFilter === "declined" 
                 ? "bg-gradient-to-br from-red-500/25 to-pink-500/25 border border-red-400/50" 
                 : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"
@@ -2847,38 +2846,10 @@ export default function GuestsPage(){
             </div>
           </div>
 
-          {/* Checked-in Card */}
-          <div 
-            onClick={() => setStatusFilter("checked_in")}
-            className={`guests-card-checked-in group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
-              statusFilter === "checked_in" 
-                ? "bg-gradient-to-br from-blue-500/25 to-indigo-500/25 border border-blue-400/50" 
-                : "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20"
-            }`}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 bg-blue-500/20 rounded-md">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-white">{stats.checked_in}</div>
-                  <div className="text-xs text-blue-300/80 font-medium">Đã check-in</div>
-                </div>
-              </div>
-              <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
-              </div>
-            </div>
-          </div>
-
           {/* Not Checked-in Card */}
           <div 
             onClick={() => setStatusFilter("not_checked_in")}
-            className={`guests-card-not-checked-in group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+            className={`guests-card-not-checked-in group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
               statusFilter === "not_checked_in" 
                 ? "bg-gradient-to-br from-orange-500/25 to-red-500/25 border border-orange-400/50" 
                 : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
@@ -2899,6 +2870,34 @@ export default function GuestsPage(){
               </div>
               <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.not_checked_in / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Checked-in Card */}
+          <div 
+            onClick={() => setStatusFilter("checked_in")}
+            className={`guests-card-checked-in group relative rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[160px] ${
+              statusFilter === "checked_in" 
+                ? "bg-gradient-to-br from-blue-500/25 to-indigo-500/25 border border-blue-400/50" 
+                : "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-blue-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.checked_in}</div>
+                  <div className="text-xs text-blue-300/80 font-medium">Đã check-in</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
               </div>
             </div>
           </div>
@@ -2995,12 +2994,12 @@ export default function GuestsPage(){
               <button
                 onClick={() => setShowBulkHostModal(true)}
                 className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 rounded-lg hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-purple-500/20"
-                title="Chọn lễ tân cho tất cả khách đã chọn"
+                title="Chọn Host cho tất cả khách đã chọn"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                <span className="text-sm font-medium">Chọn lễ tân</span>
+                <span className="text-sm font-medium">Chọn Host</span>
               </button>
               
               <button
@@ -3090,7 +3089,7 @@ export default function GuestsPage(){
                 options={roleFilterOptions}
                 value={roleFilter}
                 onChange={(value) => setRoleFilter(value)}
-                placeholder="Chọn lễ tân"
+                placeholder="Chọn Host"
                 className="w-40"
               />
               <button
@@ -3219,12 +3218,12 @@ export default function GuestsPage(){
                               />
                             </div>
                               <div>
-                                <label className="block text-white/70 text-sm font-medium mb-2">Lễ tân</label>
+                                <label className="block text-white/70 text-sm font-medium mb-2">Host</label>
                                 <CustomDropdown
                                   options={hostFilterOptions}
                                   value={hostFilter}
                                   onChange={(value) => setHostFilter(value)}
-                                  placeholder="Chọn lễ tân"
+                                  placeholder="Chọn Host"
                                   className="w-full"
                                 />
                               </div>
@@ -3301,11 +3300,10 @@ export default function GuestsPage(){
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-4 py-3 w-16">STT</th>
-                    <th className="px-4 py-3 w-20">Danh xưng</th>
-                    <th className="px-4 py-3 w-40">Họ và tên</th>
-                    <th className="px-4 py-3 w-24">Vai trò</th>
-                    <th className="px-4 py-3 w-32">Tổ chức</th>
+                    <th className="px-4 py-3 w-12">STT</th>
+                    <th className="px-4 py-3 w-32">Họ và tên</th>
+                    <th className="px-4 py-3 w-40">Vai trò</th>
+                    <th className="px-4 py-3 w-32">Host</th>
                     <th className="px-4 py-3 w-24">Tag</th>
                     <th className="px-4 py-3 w-32">Trạng thái RSVP</th>
                     <th className="px-4 py-3 w-32">Check-in</th>
@@ -3321,16 +3319,20 @@ export default function GuestsPage(){
                         onChange={() => toggleGuestSelection(guest.id)}
                       />
                     </td>
-                    <td className="px-4 py-4 text-white/80">{startIndex + index + 1}</td>
-                    <td className="px-4 py-4 text-white/80">{guest.title || '-'}</td>
-                    <td className="px-4 py-4">
-                      <div className="text-white font-medium">{guest.name}</div>
+                    <td className="px-2 py-4 text-white/80 text-center">{startIndex + index + 1}</td>
+                    <td className="px-3 py-4">
+                      <div className="text-white font-medium text-sm">{guest.title ? `${guest.title} ${guest.name}` : guest.name}</div>
                       {guest.email && (
                         <div className="text-white/60 text-xs">{guest.email}</div>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-white/80">{guest.role || '-'}</td>
-                    <td className="px-4 py-4 text-white/80">{guest.organization || '-'}</td>
+                    <td className="px-4 py-4">
+                      <div className="text-white/80 text-sm">{guest.role || '-'}</div>
+                      {guest.organization && (
+                        <div className="text-white/60 text-xs">{guest.organization}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-white/80">{guest.host || '-'}</td>
                     <td className="px-4 py-4">
                       {guest.tag ? (
                         <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
@@ -3466,7 +3468,7 @@ export default function GuestsPage(){
                         onChange={() => toggleGuestSelection(guest.id)}
                       />
                       <div>
-                        <div className="text-white font-medium text-sm">{guest.name}</div>
+                        <div className="text-white font-medium text-sm">{guest.title ? `${guest.title} ${guest.name}` : guest.name}</div>
                         {guest.email && (
                           <div className="text-white/60 text-xs">{guest.email}</div>
                         )}
@@ -3501,10 +3503,10 @@ export default function GuestsPage(){
                   
                   <div className="grid grid-cols-2 gap-2 text-xs text-white/80 mb-3">
                     <div>
-                      <span className="text-white/60">Danh xưng:</span> {guest.title || '-'}
+                      <span className="text-white/60">Vai trò:</span> {guest.role || '-'}
                     </div>
                     <div>
-                      <span className="text-white/60">Vai trò:</span> {guest.role || '-'}
+                      <span className="text-white/60">Host:</span> {guest.host || '-'}
                     </div>
                     <div>
                       <span className="text-white/60">Tổ chức:</span> {guest.organization || '-'}
@@ -3747,7 +3749,7 @@ export default function GuestsPage(){
                     className="w-full h-40 bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 font-mono text-sm" 
                     value={text} 
                     onChange={e=>setText(e.target.value)}
-                    placeholder='[{"title":"Mr","name":"Tên khách","role":"CEO","organization":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
+                    placeholder='[{"name":"Mr Tên khách","role":"CEO","host":"Host ABC","organization":"Công ty ABC","tag":"VIP","email":"email@example.com","phone":"0900000000"}]'
                   />
                 </div>
               )}
@@ -3789,8 +3791,8 @@ export default function GuestsPage(){
                   </div>
                   <div className="text-xs text-white/60">
                     <p className="mb-2">Mẫu CSV:</p>
-                    <pre className="bg-black/40 p-3 rounded-lg text-white/80 overflow-x-auto">title,name,role,organization,tag,email,phone
-Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
+                    <pre className="bg-black/40 p-3 rounded-lg text-white/80 overflow-x-auto">name,role,host,organization,tag,email,phone
+Mr Tên khách,CEO,Host ABC,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   </div>
                 </div>
               )}
@@ -3896,7 +3898,7 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                   </svg>
-                  Chọn lễ tân cho {selectedGuests.size} khách
+                  Chọn Host cho {selectedGuests.size} khách
                 </h2>
                 <button
                   onClick={() => setShowBulkHostModal(false)}
@@ -3909,12 +3911,12 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
               </div>
               
               <div className="mb-6">
-                <label className="block text-sm font-medium text-white/80 mb-2">Chọn lễ tân</label>
+                <label className="block text-sm font-medium text-white/80 mb-2">Chọn Host</label>
                 <div className="space-y-3">
                   {/* Existing hosts list */}
                   {roleFilterOptions.length > 1 && (
                     <div>
-                      <div className="text-xs text-white/60 mb-2">Lễ tân hiện có:</div>
+                      <div className="text-xs text-white/60 mb-2">Host hiện có:</div>
                       <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                         {roleFilterOptions.slice(1).map((option) => (
                           <button
@@ -4018,17 +4020,8 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   required
                 />
               </div>
+              {/* Tag và Vai trò inline */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Danh xưng</label>
-                  <input
-                    type="text"
-                    value={guestForm.title}
-                    onChange={(e) => updateGuestForm('title', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-xs"
-                    placeholder="Nhập danh xưng (VD: Ông, Bà, Anh, Chị...)"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">Tag</label>
                   <input
@@ -4039,9 +4032,6 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                     placeholder="Nhập tag (VD: VIP, Speaker, Sponsor...)"
                   />
                 </div>
-              </div>
-              {/* Vai trò và Host inline */}
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
                   <input
@@ -4052,14 +4042,28 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                     placeholder="CEO, Manager, etc."
                   />
                 </div>
+              </div>
+              
+              {/* Danh xưng và Host inline */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Lễ tân</label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Danh xưng</label>
+                  <input
+                    type="text"
+                    value={guestForm.title}
+                    onChange={(e) => updateGuestForm('title', e.target.value)}
+                    className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                    placeholder="Ông, Bà, Anh, Chị..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Host</label>
                   <input
                     type="text"
                     value={guestForm.host}
                     onChange={(e) => updateGuestForm('host', e.target.value)}
                     className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
-                    placeholder="Người tiếp khách"
+                    placeholder="Tên Host"
                   />
                 </div>
               </div>
