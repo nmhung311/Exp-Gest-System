@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react"
 import { API_ENDPOINTS } from '@/lib/api'
 import CustomDropdown from '../../components/CustomDropdown'
+import MobileStatusCardContainer from '../../../components/ui/MobileStatusCardContainer'
 
 interface DashboardStats {
   totalGuests: number
@@ -376,7 +377,7 @@ export default function DashboardPage(){
       <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Bảng điều khiển</h1>
 
       {/* Quick Actions - Auto-spread inline */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-5">
+      <div className="hidden md:grid gap-3 sm:gap-4 grid-cols-5">
         <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-2 sm:p-4 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
@@ -451,7 +452,85 @@ export default function DashboardPage(){
         </button>
       </div>
 
-
+      {/* Mobile Quick Actions - Horizontal Scroll */}
+      <div className="md:hidden">
+        <MobileStatusCardContainer 
+          className="mobile-card-container"
+          scrollbarStyle="default"
+          gap="sm"
+          padding="sm"
+        >
+          <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-3 min-w-[140px] hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-blue-500/20 rounded-lg">
+                <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-xs truncate">Quản lý khách mời</div>
+                <div className="text-xs text-blue-300/80 truncate">Import, phát QR</div>
+              </div>
+            </div>
+          </a>
+          
+          <a className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 rounded-xl p-3 min-w-[140px] hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-400/40 transition-all duration-300" href="/dashboard/checkin">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-green-500/20 rounded-lg">
+                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 2V5h1v1h-1zM13 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3zm2 2v-1h1v1h-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-xs truncate">Check-in</div>
+                <div className="text-xs text-green-300/80 truncate">Quét QR, ghi nhận</div>
+              </div>
+            </div>
+          </a>
+          
+          <a className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/20 rounded-xl p-3 min-w-[140px] hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/40 transition-all duration-300" href="/dashboard/stats">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-purple-500/20 rounded-lg">
+                <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-xs truncate">Thống kê</div>
+                <div className="text-xs text-purple-300/80 truncate">Tổng hợp, báo cáo</div>
+              </div>
+            </div>
+          </a>
+          
+          <a className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-amber-500/20 rounded-xl p-3 min-w-[140px] hover:from-amber-500/20 hover:to-amber-500/20 hover:border-amber-400/40 transition-all duration-300" href="/dashboard/events">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-amber-500/20 rounded-lg">
+                <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-xs truncate">Sự kiện</div>
+                <div className="text-xs text-amber-300/80 truncate">Tạo, quản lý</div>
+              </div>
+            </div>
+          </a>
+          
+          <a className="group relative bg-gradient-to-br from-red-500/10 to-pink-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-3 min-w-[140px] hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 transition-all duration-300" href="/dashboard/settings">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-red-500/20 rounded-lg">
+                <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-xs truncate">Cài đặt</div>
+                <div className="text-xs text-red-300/80 truncate">Hệ thống</div>
+              </div>
+            </div>
+          </a>
+        </MobileStatusCardContainer>
+      </div>
 
       {/* Upcoming Events with Period Filter */}
       <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 md:p-6">

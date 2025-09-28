@@ -5,6 +5,7 @@ import CustomCheckbox from "../../../components/CustomCheckbox"
 import Portal from "../../../components/Portal"
 import SystemModal from "../../../components/SystemModal"
 import CopyLinkModal from "../../../components/CopyLinkModal"
+import MobileStatusCardContainer from "../../../../components/ui/MobileStatusCardContainer"
 import { api, API_ENDPOINTS } from "@/lib/api"
 import { authApi } from "@/lib/auth"
 interface Guest {
@@ -2555,8 +2556,8 @@ export default function GuestsPage(){
       </div>
 
         
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-6 gap-3 sm:gap-4 pb-2 py-2">
+      {/* Statistics Cards - Desktop */}
+      <div className="hidden md:grid grid-cols-6 gap-3 sm:gap-4 pb-2 py-2">
         {/* Total Guests Card */}
         <div 
           onClick={() => setStatusFilter("all")}
@@ -2724,6 +2725,184 @@ export default function GuestsPage(){
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Statistics Cards - Horizontal Scroll */}
+      <div className="md:hidden">
+        <MobileStatusCardContainer 
+          className="mobile-card-container"
+          scrollbarStyle="default"
+          gap="sm"
+          padding="sm"
+        >
+          {/* Total Guests Card */}
+          <div 
+            onClick={() => setStatusFilter("all")}
+            className={`guests-card-total group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "all" 
+                ? "bg-gradient-to-br from-cyan-500/25 to-blue-500/25 border border-cyan-400/50" 
+                : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-cyan-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.total}</div>
+                  <div className="text-xs text-cyan-300/80 font-medium">Tổng</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full w-full"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Card */}
+          <div 
+            onClick={() => setStatusFilter("pending")}
+            className={`guests-card-pending group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "pending" 
+                ? "bg-gradient-to-br from-yellow-500/25 to-orange-500/25 border border-yellow-400/50" 
+                : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-yellow-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.pending}</div>
+                  <div className="text-xs text-yellow-300/80 font-medium">Chờ phản hồi</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-yellow-500/30 to-orange-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Accepted Card */}
+          <div 
+            onClick={() => setStatusFilter("accepted")}
+            className={`guests-card-accepted group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "accepted" 
+                ? "bg-gradient-to-br from-green-500/25 to-emerald-500/25 border border-green-400/50" 
+                : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-green-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.accepted}</div>
+                  <div className="text-xs text-green-300/80 font-medium">Đã chấp nhận</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Declined Card */}
+          <div 
+            onClick={() => setStatusFilter("declined")}
+            className={`guests-card-declined group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "declined" 
+                ? "bg-gradient-to-br from-red-500/25 to-pink-500/25 border border-red-400/50" 
+                : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-red-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.declined}</div>
+                  <div className="text-xs text-red-300/80 font-medium">Đã từ chối</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-red-500/30 to-pink-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-red-400 to-pink-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.declined / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Checked-in Card */}
+          <div 
+            onClick={() => setStatusFilter("checked_in")}
+            className={`guests-card-checked-in group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "checked_in" 
+                ? "bg-gradient-to-br from-blue-500/25 to-indigo-500/25 border border-blue-400/50" 
+                : "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-blue-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.checked_in}</div>
+                  <div className="text-xs text-blue-300/80 font-medium">Đã check-in</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Not Checked-in Card */}
+          <div 
+            onClick={() => setStatusFilter("not_checked_in")}
+            className={`guests-card-not-checked-in group relative rounded-xl p-3 transition-all duration-300 cursor-pointer overflow-hidden shadow-none min-w-[120px] ${
+              statusFilter === "not_checked_in" 
+                ? "bg-gradient-to-br from-orange-500/25 to-red-500/25 border border-orange-400/50" 
+                : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+            }`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-orange-500/20 rounded-md">
+                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-white">{stats.not_checked_in}</div>
+                  <div className="text-xs text-orange-300/80 font-medium">Chưa check-in</div>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.not_checked_in / stats.total) * 100 : 0}%`}}></div>
+              </div>
+            </div>
+          </div>
+        </MobileStatusCardContainer>
       </div>
 
       {/* Bulk Actions Bar */}

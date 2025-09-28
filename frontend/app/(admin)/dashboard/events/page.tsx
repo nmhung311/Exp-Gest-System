@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import CustomDropdown from '../../../components/CustomDropdown'
 import CustomCheckbox from '../../../components/CustomCheckbox'
 import DateTimePicker from '../../../components/DateTimePicker'
+import MobileStatusCardContainer from '../../../../components/ui/MobileStatusCardContainer'
 
 import { api } from "@/lib/api"
 interface Event {
@@ -878,6 +879,180 @@ function EventsPageContent() {
         </div>
       </div>
 
+      {/* Mobile Statistics Cards - Horizontal Scroll */}
+      <div className="md:hidden mb-6">
+        <MobileStatusCardContainer 
+          className="mobile-card-container"
+          scrollbarStyle="default"
+          gap="sm"
+          padding="sm"
+        >
+          {/* Total Events */}
+          <div 
+            onClick={() => setStatusFilter('all')}
+            className={`status-card-all group relative backdrop-blur-sm rounded-xl p-3 transition-all duration-300 overflow-hidden cursor-pointer min-w-[120px] ${
+              statusFilter === 'all' 
+                ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/50 shadow-lg shadow-blue-500/20' 
+                : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg transition-all duration-300 ${
+                statusFilter === 'all' ? 'bg-blue-500/30' : 'bg-blue-500/20'
+              }`}>
+                <svg className={`w-4 h-4 transition-all duration-300 ${
+                  statusFilter === 'all' ? 'text-blue-300' : 'text-blue-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold transition-all duration-300 mb-1 ${
+                  statusFilter === 'all' ? 'text-blue-200' : 'text-white'
+                }`}>{stats.total}</div>
+                <div className={`text-xs font-medium transition-all duration-300 ${
+                  statusFilter === 'all' ? 'text-blue-200' : 'text-blue-300/80'
+                }`}>Tổng</div>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full w-full"></div>
+            </div>
+          </div>
+
+          {/* Upcoming */}
+          <div 
+            onClick={() => setStatusFilter('upcoming')}
+            className={`status-card-upcoming group relative backdrop-blur-sm rounded-xl p-3 transition-all duration-300 overflow-hidden cursor-pointer min-w-[120px] ${
+              statusFilter === 'upcoming' 
+                ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/50 shadow-lg shadow-yellow-500/20' 
+                : 'bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg transition-all duration-300 ${
+                statusFilter === 'upcoming' ? 'bg-yellow-500/30' : 'bg-yellow-500/20'
+              }`}>
+                <svg className={`w-4 h-4 transition-all duration-300 ${
+                  statusFilter === 'upcoming' ? 'text-yellow-300' : 'text-yellow-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold transition-all duration-300 mb-1 ${
+                  statusFilter === 'upcoming' ? 'text-yellow-200' : 'text-white'
+                }`}>{stats.upcoming}</div>
+                <div className={`text-xs font-medium transition-all duration-300 ${
+                  statusFilter === 'upcoming' ? 'text-yellow-200' : 'text-yellow-300/80'
+                }`}>Sắp diễn ra</div>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.upcoming / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+
+          {/* Ongoing */}
+          <div 
+            onClick={() => setStatusFilter('ongoing')}
+            className={`status-card-ongoing group relative backdrop-blur-sm rounded-xl p-3 transition-all duration-300 overflow-hidden cursor-pointer min-w-[120px] ${
+              statusFilter === 'ongoing' 
+                ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/50 shadow-lg shadow-green-500/20' 
+                : 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg transition-all duration-300 ${
+                statusFilter === 'ongoing' ? 'bg-green-500/30' : 'bg-green-500/20'
+              }`}>
+                <svg className={`w-4 h-4 transition-all duration-300 ${
+                  statusFilter === 'ongoing' ? 'text-green-300' : 'text-green-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold transition-all duration-300 mb-1 ${
+                  statusFilter === 'ongoing' ? 'text-green-200' : 'text-white'
+                }`}>{stats.ongoing}</div>
+                <div className={`text-xs font-medium transition-all duration-300 ${
+                  statusFilter === 'ongoing' ? 'text-green-200' : 'text-green-300/80'
+                }`}>Đang diễn ra</div>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.ongoing / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+
+          {/* Completed */}
+          <div 
+            onClick={() => setStatusFilter('completed')}
+            className={`status-card-completed group relative backdrop-blur-sm rounded-xl p-3 transition-all duration-300 overflow-hidden cursor-pointer min-w-[120px] ${
+              statusFilter === 'completed' 
+                ? 'bg-gradient-to-br from-gray-500/20 to-slate-500/20 border border-gray-400/50 shadow-lg shadow-gray-500/20' 
+                : 'bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg transition-all duration-300 ${
+                statusFilter === 'completed' ? 'bg-gray-500/30' : 'bg-gray-500/20'
+              }`}>
+                <svg className={`w-4 h-4 transition-all duration-300 ${
+                  statusFilter === 'completed' ? 'text-gray-300' : 'text-gray-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold transition-all duration-300 mb-1 ${
+                  statusFilter === 'completed' ? 'text-gray-200' : 'text-white'
+                }`}>{stats.completed}</div>
+                <div className={`text-xs font-medium transition-all duration-300 ${
+                  statusFilter === 'completed' ? 'text-gray-200' : 'text-gray-300/80'
+                }`}>Hoàn thành</div>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-gray-500/30 to-slate-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-gray-400 to-slate-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+
+          {/* Cancelled */}
+          <div 
+            onClick={() => setStatusFilter('cancelled')}
+            className={`status-card-cancelled group relative backdrop-blur-sm rounded-xl p-3 transition-all duration-300 overflow-hidden cursor-pointer min-w-[120px] ${
+              statusFilter === 'cancelled' 
+                ? 'bg-gradient-to-br from-red-500/20 to-rose-500/20 border border-red-400/50 shadow-lg shadow-red-500/20' 
+                : 'bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg transition-all duration-300 ${
+                statusFilter === 'cancelled' ? 'bg-red-500/30' : 'bg-red-500/20'
+              }`}>
+                <svg className={`w-4 h-4 transition-all duration-300 ${
+                  statusFilter === 'cancelled' ? 'text-red-300' : 'text-red-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold transition-all duration-300 mb-1 ${
+                  statusFilter === 'cancelled' ? 'text-red-200' : 'text-white'
+                }`}>{stats.cancelled}</div>
+                <div className={`text-xs font-medium transition-all duration-300 ${
+                  statusFilter === 'cancelled' ? 'text-red-200' : 'text-red-300/80'
+                }`}>Đã hủy</div>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-red-400 to-rose-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.cancelled / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+        </MobileStatusCardContainer>
+      </div>
 
       {/* Events List Section - Desktop Optimized */}
       <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 md:p-6">
