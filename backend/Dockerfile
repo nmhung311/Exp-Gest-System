@@ -47,7 +47,7 @@ WORKDIR /app
 COPY --chown=appuser:appuser . .
 
 # Create necessary directories
-RUN mkdir -p instance logs && \
+RUN mkdir -p instance logs backups && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user

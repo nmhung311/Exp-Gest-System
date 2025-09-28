@@ -10,6 +10,7 @@ export interface Guest {
   tag?: string
   email?: string
   phone?: string
+  host?: string
   rsvp_status: 'pending' | 'accepted' | 'declined'
   checkin_status: 'not_arrived' | 'checked_in' | 'checked_out'
   created_at: string
@@ -26,6 +27,7 @@ export interface GuestForm {
   tag: string
   email: string
   phone: string
+  host: string
   rsvp_status: 'pending' | 'accepted' | 'declined'
   checkin_status: 'not_arrived' | 'checked_in' | 'checked_out'
   event_content: string
@@ -246,6 +248,7 @@ export const DEFAULT_GUEST_FORM: GuestForm = {
   tag: '',
   email: '',
   phone: '',
+  host: '',
   rsvp_status: 'pending',
   checkin_status: 'not_arrived',
   event_content: ''

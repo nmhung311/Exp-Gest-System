@@ -161,6 +161,11 @@ export default function GuestsList({
             <span className="text-white/60">SĐT:</span> {guest.phone}
           </div>
         )}
+        {guest.host && (
+          <div className="text-white/80 text-xs">
+            <span className="text-white/60">Host:</span> {guest.host}
+          </div>
+        )}
       </div>
       
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">

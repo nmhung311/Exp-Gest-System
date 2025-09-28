@@ -14,6 +14,7 @@ interface CheckedInGuest {
   tag?: string
   email?: string
   phone?: string
+  host?: string
   checked_in_at: string
   checkin_method: string
   checkin_status: string
@@ -157,10 +158,13 @@ export default function CheckinPage() {
   const loadGuests = async () => {
     setLoading(true)
     try {
+      console.log("=== LOADING GUESTS FOR CHECKIN PAGE ===")
       const response = await api.getGuests()
       if (!response.ok) throw new Error(`API error: ${response.status}`)
       const payload = await response.json()
       const list = Array.isArray(payload?.guests) ? payload.guests : []
+      console.log("Loaded guests:", list.length)
+      console.log("Sample guest:", list[0])
       setAllGuests(list)
     } catch (e) {
       console.error('Error loading guests:', e)
@@ -635,8 +639,19 @@ export default function CheckinPage() {
     )
     const acceptedForEvent = guestsForEvent.filter((g: any) => g?.rsvp_status === "accepted")
     const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in").length
-    const total = acceptedForEvent.length
-    const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived").length
+    const total = guestsForEvent.length  // Tổng tất cả guests của sự kiện
+    const notCheckedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "not_arrived").length  // Tất cả guests chưa check-in
+    
+    // Debug logs
+    console.log("=== CHECKIN PAGE STATS ===")
+    console.log("Selected event ID:", selectedEventId)
+    console.log("All guests:", allGuests.length)
+    console.log("Guests for event:", guestsForEvent.length)
+    console.log("Accepted for event:", acceptedForEvent.length)
+    console.log("Checked in:", checkedIn)
+    console.log("Not checked in:", notCheckedIn)
+    console.log("Stats:", { total, checkedIn, notCheckedIn })
+    
     return { total, checkedIn, notCheckedIn }
   }, [allGuests, selectedEventId])
 
@@ -1649,6 +1664,10 @@ export default function CheckinPage() {
                       <div>
                         <label className="block text-white/70 text-sm font-medium mb-2">Tag</label>
                         <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.tag || 'Chưa có'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-white/70 text-sm font-medium mb-2">Host (Người tiếp khách)</label>
+                        <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.host || 'Chưa có'}</div>
                       </div>
                     </div>
                     

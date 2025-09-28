@@ -3,6 +3,7 @@ import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import UserProfileDropdown from "../components/UserProfileDropdown"
+import AuthGuard from "../../lib/auth-guard"
 
 export default function AdminLayout({
   children,
@@ -89,7 +90,7 @@ export default function AdminLayout({
   }, [isMobileMenuOpen, menuAnimation])
 
   return (
-    <>
+    <AuthGuard>
       <header className="sticky top-0 z-50 border-b border-white/20 bg-black backdrop-blur-md">
         <div className="w-full py-3 flex items-center">
           {/* Logo - Sát trái */}
@@ -270,6 +271,6 @@ export default function AdminLayout({
       </header>
       <main className="w-full px-4 md:px-14 py-4 md:py-8 space-y-4 md:space-y-6">{children}</main>
       <footer className="mx-auto max-w-6xl px-4 py-10 text-xs text-white/60 text-left">© 2025 EXP Technology Company Limited</footer>
-    </>
+    </AuthGuard>
   )
 }

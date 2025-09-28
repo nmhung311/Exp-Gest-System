@@ -39,11 +39,12 @@ export default /** @type {import('next').NextConfig} */ ({
   },
   async redirects() {
     return [
-      {
-        source: '/',
-        destination: 'https://expsolution.io/',
-        permanent: false,
-      },
+      // Temporarily disabled for testing
+      // {
+      //   source: '/',
+      //   destination: 'https://expsolution.io/',
+      //   permanent: false,
+      // },
     ]
   },
   async rewrites() {

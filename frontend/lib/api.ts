@@ -74,6 +74,10 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  bulkUpdateHost: (data: any) => apiCall(API_ENDPOINTS.GUEST_BULK_HOST, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
   importGuests: (data: any) => apiCall(API_ENDPOINTS.GUEST_IMPORT, {
     method: 'POST',
     body: JSON.stringify(data),

@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 // API Base URLs - Always use Next.js API routes for frontend calls
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (isDevelopment ? 'http://localhost:3000' : 'https://event.expsolution.io')
+  (isDevelopment ? 'http://localhost:5008' : 'https://event.expsolution.io')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   GUEST_BULK_CHECKOUT: `/api/guests/bulk-checkout`,
   GUEST_BULK_DELETE: `/api/guests/bulk-delete`,
   GUEST_BULK_RSVP: `/api/guests/bulk-rsvp`,
+  GUEST_BULK_HOST: `/api/guests/bulk-host`,
   GUEST_IMPORT: `/api/guests/import`,
   GUEST_IMPORT_CSV: `/api/guests/import-csv`,
   GUESTS_CHECKED_IN: `/api/guests/checked-in`,

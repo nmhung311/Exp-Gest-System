@@ -42,10 +42,22 @@ export default function DashboardPage(){
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | '3days' | '7days' | 'month'>('all')
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
+  const [showBackupModal, setShowBackupModal] = useState(false)
+  const [backups, setBackups] = useState<any[]>([])
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadLoading, setUploadLoading] = useState(false)
 
   useEffect(() => {
     loadDashboardStats()
   }, [])
+
+  useEffect(() => {
+    if (showBackupModal) {
+      loadBackups()
+    }
+  }, [showBackupModal])
 
   useEffect(() => {
     loadUpcomingEvents()
@@ -171,6 +183,183 @@ export default function DashboardPage(){
     }
   }
 
+  const loadBackups = async () => {
+    try {
+      console.log('=== LOADING BACKUPS ===')
+      const response = await fetch('/api/backup/list', {
+        credentials: 'include'
+      })
+      console.log('Load backups response status:', response.status)
+      console.log('Load backups response ok:', response.ok)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Backups data:', data)
+        setBackups(data.backups || [])
+      } else {
+        const error = await response.json()
+        console.error('Failed to load backups:', error)
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error)
+    }
+  }
+
+  const createBackup = async () => {
+    setBackupLoading(true)
+    try {
+      const response = await fetch('/api/backup/create', {
+        method: 'POST',
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        alert(`Backup created successfully: ${data.filename}`)
+        loadBackups()
+      } else {
+        const error = await response.json()
+        alert(`Error creating backup: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('Error creating backup:', error)
+      alert('Error creating backup')
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const downloadBackup = async (filename: string) => {
+    try {
+      const response = await fetch(`/api/backup/download/${filename}`, {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Error downloading backup')
+      }
+    } catch (error) {
+      console.error('Error downloading backup:', error)
+      alert('Error downloading backup')
+    }
+  }
+
+  const deleteBackup = async (filename: string) => {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/backup/delete/${filename}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (response.ok) {
+        alert('Backup deleted successfully')
+        loadBackups()
+      } else {
+        const error = await response.json()
+        alert(`Error deleting backup: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('Error deleting backup:', error)
+      alert('Error deleting backup')
+    }
+  }
+
+  const restoreBackup = async (filename: string) => {
+    if (!confirm(`Are you sure you want to restore ${filename}? This will replace the current database.`)) {
+      return
+    }
+    
+    try {
+      console.log('=== RESTORING BACKUP ===')
+      console.log('Filename:', filename)
+      
+      const response = await fetch('/api/backup/restore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ filename })
+      })
+      
+      console.log('Restore response status:', response.status)
+      console.log('Restore response ok:', response.ok)
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Restore result:', result)
+        alert('Backup restored successfully')
+        loadBackups()
+      } else {
+        const error = await response.json()
+        console.error('Restore error:', error)
+        alert(`Error restoring backup: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('Error restoring backup:', error)
+      alert('Error restoring backup')
+    }
+  }
+
+  const uploadBackup = async () => {
+    if (!uploadFile) {
+      alert('Please select a file to upload')
+      return
+    }
+    
+    if (!uploadFile.name.endsWith('.zip')) {
+      alert('Only ZIP files are allowed')
+      return
+    }
+    
+    setUploadLoading(true)
+    try {
+      console.log('=== UPLOADING BACKUP ===')
+      console.log('File:', uploadFile.name, uploadFile.size)
+      
+      const formData = new FormData()
+      formData.append('file', uploadFile)
+      
+      const response = await fetch('/api/backup/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      })
+      
+      console.log('Upload response status:', response.status)
+      console.log('Upload response ok:', response.ok)
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Upload result:', result)
+        alert('Backup uploaded successfully')
+        setShowUploadModal(false)
+        setUploadFile(null)
+        loadBackups()
+      } else {
+        const error = await response.json()
+        console.error('Upload error:', error)
+        alert(`Error uploading backup: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('Error uploading backup:', error)
+      alert('Error uploading backup')
+    } finally {
+      setUploadLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -186,8 +375,8 @@ export default function DashboardPage(){
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Bảng điều khiển</h1>
 
-      {/* Quick Actions - Mobile Optimized */}
-      <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Quick Actions - Auto-spread inline */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-5">
         <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-2 sm:p-4 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
@@ -243,6 +432,23 @@ export default function DashboardPage(){
             </div>
           </div>
         </a>
+        
+        <button 
+          onClick={() => setShowBackupModal(true)}
+          className="group relative bg-gradient-to-br from-red-500/10 to-pink-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-2 sm:p-4 hover:from-red-500/20 hover:to-pink-500/20 hover:border-red-400/40 transition-all duration-300"
+        >
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-red-500/20 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <div className="font-semibold text-white text-xs sm:text-sm truncate">Backup</div>
+              <div className="text-xs text-red-300/80 truncate">Sao lưu, khôi phục</div>
+            </div>
+          </div>
+        </button>
       </div>
 
 
@@ -418,6 +624,191 @@ export default function DashboardPage(){
           </div>
         )}
       </div>
+
+      {/* Backup Modal */}
+      {showBackupModal && (
+        <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowBackupModal(false)}></div>
+          <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Quản lý Backup Database
+              </h2>
+              <button
+                onClick={() => setShowBackupModal(false)}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Create Backup and Upload Buttons */}
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={createBackup}
+                disabled={backupLoading}
+                className="group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-400 hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 hover:shadow-lg hover:shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {backupLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                )}
+                <span>{backupLoading ? 'Đang tạo backup...' : 'Tạo backup mới'}</span>
+              </button>
+              
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span>Tải lên backup</span>
+              </button>
+            </div>
+
+            {/* Backup List */}
+            <div>
+              <h3 className="text-lg font-medium text-white mb-4">Danh sách backup</h3>
+              {backups.length === 0 ? (
+                <div className="text-center py-8 text-white/60">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <p>Chưa có backup nào</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {backups.map((backup) => (
+                    <div key={backup.filename} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-white text-sm">{backup.filename}</div>
+                          <div className="text-xs text-white/60 mt-1">
+                            Tạo lúc: {new Date(backup.created).toLocaleString('vi-VN')}
+                          </div>
+                          <div className="text-xs text-white/60">
+                            Kích thước: {(backup.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => downloadBackup(backup.filename)}
+                            className="p-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                            title="Tải xuống"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => restoreBackup(backup.filename)}
+                            className="p-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-colors"
+                            title="Khôi phục"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteBackup(backup.filename)}
+                            className="p-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                            title="Xóa"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Backup Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowUploadModal(false)}></div>
+          <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Tải lên Backup
+              </h2>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Chọn file backup (ZIP)
+              </label>
+              <input
+                type="file"
+                accept=".zip"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30"
+              />
+              {uploadFile && (
+                <div className="mt-2 text-sm text-white/60">
+                  <p>File: {uploadFile.name}</p>
+                  <p>Size: {(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={uploadBackup}
+                disabled={!uploadFile || uploadLoading}
+                className="flex-1 group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                )}
+                <span>{uploadLoading ? 'Đang tải lên...' : 'Tải lên'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false)
+                  setUploadFile(null)
+                }}
+                className="group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 hover:shadow-lg hover:shadow-gray-500/20"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Hủy</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

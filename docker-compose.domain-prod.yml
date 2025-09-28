@@ -5,8 +5,7 @@ services:
   frontend:
     build: 
       context: ./frontend
-      dockerfile: Dockerfile
-      target: deps
+      dockerfile: Dockerfile.simple
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
@@ -14,11 +13,6 @@ services:
       - NEXT_PUBLIC_FRONTEND_URL=https://event.expsolution.io
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
     networks:
       - app-network
     restart: unless-stopped

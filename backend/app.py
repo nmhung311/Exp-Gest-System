@@ -14,6 +14,8 @@ from io import BytesIO
 from datetime import datetime
 import os
 import hashlib
+import shutil
+import zipfile
 from batch_api import batch_bp
 from jwt_utils import generate_access_token, generate_refresh_token, verify_jwt_token, jwt_required, get_current_user
 
@@ -191,6 +193,7 @@ def create_app() -> Flask:
         return response, 200
 
     @app.route("/api/auth/users", methods=["GET"])
+    @jwt_required
     def auth_list_users():
         try:
             users = User.query.order_by(User.id.desc()).all()
@@ -430,7 +433,202 @@ def create_app() -> Flask:
             print(f"Error cleaning up empty phones: {e}")
             return {"message": "Error cleaning up empty phones"}, 500
 
+    @app.route("/api/backup/create", methods=["POST"])
+    @jwt_required
+    def create_backup():
+        try:
+            # Create backup directory if it doesn't exist
+            backup_dir = "/app/backups"
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Generate backup filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_filename = f"exp_guest_backup_{timestamp}.zip"
+            backup_path = os.path.join(backup_dir, backup_filename)
+            
+            # Create zip file with database and logs
+            with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add database file
+                db_path = "/app/instance/exp_guest.db"
+                if os.path.exists(db_path):
+                    zipf.write(db_path, "exp_guest.db")
+                
+                # Add logs if they exist
+                logs_dir = "/app/logs"
+                if os.path.exists(logs_dir):
+                    for root, dirs, files in os.walk(logs_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, "/app")
+                            zipf.write(file_path, arcname)
+                
+                # Add backup metadata
+                metadata = {
+                    "backup_date": datetime.now().isoformat(),
+                    "database_file": "exp_guest.db",
+                    "version": "1.0"
+                }
+                zipf.writestr("backup_metadata.json", json.dumps(metadata, indent=2))
+            
+            # Get file size
+            file_size = os.path.getsize(backup_path)
+            
+            return {
+                "message": "Backup created successfully",
+                "filename": backup_filename,
+                "size": file_size,
+                "path": backup_path
+            }, 200
+            
+        except Exception as e:
+            print(f"Error creating backup: {e}")
+            return {"message": f"Error creating backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/list", methods=["GET"])
+    @jwt_required
+    def list_backups():
+        try:
+            backup_dir = "/app/backups"
+            if not os.path.exists(backup_dir):
+                return {"backups": []}, 200
+            
+            backups = []
+            for filename in os.listdir(backup_dir):
+                if filename.endswith('.zip'):
+                    file_path = os.path.join(backup_dir, filename)
+                    stat = os.stat(file_path)
+                    backups.append({
+                        "filename": filename,
+                        "size": stat.st_size,
+                        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    })
+            
+            # Sort by creation time (newest first)
+            backups.sort(key=lambda x: x['created'], reverse=True)
+            
+            return {"backups": backups}, 200
+            
+        except Exception as e:
+            print(f"Error listing backups: {e}")
+            return {"message": f"Error listing backups: {str(e)}"}, 500
+
+    @app.route("/api/backup/download/<filename>", methods=["GET"])
+    @jwt_required
+    def download_backup(filename):
+        try:
+            backup_dir = "/app/backups"
+            file_path = os.path.join(backup_dir, filename)
+            
+            if not os.path.exists(file_path):
+                return {"message": "Backup file not found"}, 404
+            
+            return send_file(
+                file_path,
+                as_attachment=True,
+                download_name=filename,
+                mimetype='application/zip'
+            )
+            
+        except Exception as e:
+            print(f"Error downloading backup: {e}")
+            return {"message": f"Error downloading backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/restore", methods=["POST"])
+    @jwt_required
+    def restore_backup():
+        try:
+            data = request.get_json()
+            filename = data.get('filename')
+            
+            if not filename:
+                return {"message": "Filename is required"}, 400
+            
+            backup_dir = "/app/backups"
+            file_path = os.path.join(backup_dir, filename)
+            
+            if not os.path.exists(file_path):
+                return {"message": "Backup file not found"}, 404
+            
+            # Extract backup
+            with zipfile.ZipFile(file_path, 'r') as zipf:
+                # Restore database
+                if 'exp_guest.db' in zipf.namelist():
+                    # Backup current database
+                    current_db = "/app/instance/exp_guest.db"
+                    if os.path.exists(current_db):
+                        backup_current = f"{current_db}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        shutil.copy2(current_db, backup_current)
+                    
+                    # Extract new database
+                    zipf.extract('exp_guest.db', '/app/instance/')
+            
+            return {"message": "Backup restored successfully"}, 200
+            
+        except Exception as e:
+            print(f"Error restoring backup: {e}")
+            return {"message": f"Error restoring backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/upload", methods=["POST"])
+    @jwt_required
+    def upload_backup():
+        try:
+            if 'file' not in request.files:
+                return {"message": "No file provided"}, 400
+            
+            file = request.files['file']
+            if file.filename == '':
+                return {"message": "No file selected"}, 400
+            
+            # Validate file extension
+            if not file.filename.endswith('.zip'):
+                return {"message": "Only ZIP files are allowed"}, 400
+            
+            # Create backup directory if it doesn't exist
+            backup_dir = "/app/backups"
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Generate unique filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"uploaded_backup_{timestamp}.zip"
+            file_path = os.path.join(backup_dir, filename)
+            
+            # Save uploaded file
+            file.save(file_path)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            
+            return {
+                "message": "Backup uploaded successfully",
+                "filename": filename,
+                "size": file_size,
+                "path": file_path
+            }, 200
+            
+        except Exception as e:
+            print(f"Error uploading backup: {e}")
+            return {"message": f"Error uploading backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/delete/<filename>", methods=["DELETE"])
+    @jwt_required
+    def delete_backup(filename):
+        try:
+            backup_dir = "/app/backups"
+            file_path = os.path.join(backup_dir, filename)
+            
+            if not os.path.exists(file_path):
+                return {"message": "Backup file not found"}, 404
+            
+            os.remove(file_path)
+            return {"message": "Backup deleted successfully"}, 200
+            
+        except Exception as e:
+            print(f"Error deleting backup: {e}")
+            return {"message": f"Error deleting backup: {str(e)}"}, 500
+
     @app.route("/api/guests", methods=["GET"])
+    @jwt_required
     def get_guests():
         try:
             guests = Guest.query.all()
@@ -442,6 +640,7 @@ def create_app() -> Flask:
             return {"error": str(e), "guests": []}, 500
 
     @app.route("/api/guests/checked-in", methods=["GET"])
+    @jwt_required
     def get_checked_in_guests():
         try:
             # Lấy tham số lọc theo sự kiện (tùy chọn)
@@ -507,6 +706,7 @@ def create_app() -> Flask:
                 tag=data.get("tag", "").strip() or None,
                 email=email or None,
                 phone=data.get("phone", "").strip() or None,
+                host=data.get("host", "").strip() or None,
                 checkin_status=checkin_status,
                 rsvp_status=data.get("rsvp_status", "pending"),
                 event_content=data.get("event_content", "").strip() or None,
@@ -552,6 +752,7 @@ def create_app() -> Flask:
             guest.tag = data.get("tag", "").strip() or None
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
+            guest.host = data.get("host", "").strip() or None
             guest.event_content = data.get("event_content", "").strip() or None
             new_checkin_status = data.get("checkin_status", "not_arrived")
             print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to '{new_checkin_status}'")
@@ -776,6 +977,7 @@ def create_app() -> Flask:
             return {"message": f"Error deleting check-in: {str(e)}"}, 500
 
     @app.post("/api/checkin")
+    @jwt_required
     def checkin():
         try:
             print(f"Checkin Request received: {request.method} {request.url}")
@@ -820,8 +1022,10 @@ def create_app() -> Flask:
                 if guest_already and guest_already.checkin_status != "checked_in":
                     print(f"Updating already checked-in guest {guest_already.id} ({guest_already.name}) checkin_status from '{guest_already.checkin_status}' to 'checked_in'")
                     guest_already.checkin_status = "checked_in"
+                    # Update check-in time to existing check-in time
+                    guest_already.checked_in_at = existing.time
                     db.session.commit()
-                    print(f"Already checked-in guest {guest_already.id} status updated to: '{guest_already.checkin_status}'")
+                    print(f"Already checked-in guest {guest_already.id} status updated to: '{guest_already.checkin_status}' at {guest_already.checked_in_at}")
                 return {
                     "message": "already checked in", 
                     "checked_in_at": existing.time.isoformat(),
@@ -847,7 +1051,9 @@ def create_app() -> Flask:
             if guest:
                 print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_in'")
                 guest.checkin_status = "checked_in"
-                print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
+                # Update check-in time to current time in Hanoi timezone
+                guest.checked_in_at = datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
+                print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}' at {guest.checked_in_at}")
 
             db.session.commit()
             print(f"Database committed. Guest {guest.id} final status: '{guest.checkin_status}'")
@@ -882,6 +1088,7 @@ def create_app() -> Flask:
             return {"message": f"Internal error: {str(e)}"}, 500
 
     @app.post("/api/checkin/undo")
+    @jwt_required
     def checkin_undo():
         body = request.get_json(silent=True) or {}
         token_str = body.get("token")
@@ -940,6 +1147,7 @@ def create_app() -> Flask:
 
     # Events API
     @app.route("/api/events", methods=["GET"])
+    @jwt_required
     def get_events():
         """Lấy danh sách tất cả sự kiện"""
         try:
@@ -949,6 +1157,7 @@ def create_app() -> Flask:
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/events/upcoming", methods=["GET"])
+    @jwt_required
     def get_upcoming_events():
         """Lấy sự kiện sắp tới theo khoảng thời gian"""
         try:
@@ -1180,6 +1389,7 @@ def create_app() -> Flask:
 
     # Bulk Operations
     @app.post("/api/guests/bulk-checkin")
+    @jwt_required
     def bulk_checkin():
         try:
             data = request.get_json(silent=True) or {}
@@ -1217,21 +1427,25 @@ def create_app() -> Flask:
                     db.session.add(checkin)
                     checkin_count += 1
                     print(f"Created check-in record for guest {guest.id} ({guest.name})")
-                    
-                    # Update guest checkin_status to "checked_in"
-                    print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_in'")
-                    guest.checkin_status = "checked_in"
-                    status_updated_count += 1
-                    print(f"Updated guest {guest.id} ({guest.name}) status to checked_in. Final status: '{guest.checkin_status}'")
                 else:
-                    # Guest already checked in
-                    print(f"Guest {guest.id} ({guest.name}) already checked in with status: '{guest.checkin_status}'")
+                    # Guest already has check-in record
+                    print(f"Guest {guest.id} ({guest.name}) already has check-in record at {existing_checkin.time}")
                     already_checked_in.append({
                         "id": guest.id,
                         "name": guest.name,
                         "checkin_time": existing_checkin.time.isoformat()
                     })
-                    print(f"Guest {guest.id} ({guest.name}) already checked in at {existing_checkin.time} with status: '{guest.checkin_status}'")
+                
+                # Always update guest checkin_status to "checked_in" for bulk check-in
+                if guest.checkin_status != "checked_in":
+                    print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_in'")
+                    guest.checkin_status = "checked_in"
+                    # Update check-in time to current time in Hanoi timezone
+                    guest.checked_in_at = datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
+                    status_updated_count += 1
+                    print(f"Updated guest {guest.id} ({guest.name}) status to checked_in at {guest.checked_in_at}. Final status: '{guest.checkin_status}'")
+                else:
+                    print(f"Guest {guest.id} ({guest.name}) already has checkin_status: 'checked_in'")
             
             db.session.commit()
             
@@ -1260,6 +1474,7 @@ def create_app() -> Flask:
             return {"message": f"Error in bulk check-in: {str(e)}"}, 500
 
     @app.post("/api/guests/bulk-checkout")
+    @jwt_required
     def bulk_checkout():
         try:
             data = request.get_json(silent=True) or {}
@@ -1297,6 +1512,7 @@ def create_app() -> Flask:
             return {"message": f"Error in bulk check-out: {str(e)}"}, 500
 
     @app.delete("/api/guests/bulk-delete")
+    @jwt_required
     def bulk_delete():
         try:
             data = request.get_json(silent=True) or {}
@@ -1331,6 +1547,7 @@ def create_app() -> Flask:
             return {"message": f"Error in bulk delete: {str(e)}"}, 500
 
     @app.put("/api/guests/bulk-rsvp")
+    @jwt_required
     def bulk_update_rsvp():
         try:
             data = request.get_json(silent=True) or {}
@@ -1363,6 +1580,42 @@ def create_app() -> Flask:
         except Exception as e:
             print(f"Error in bulk RSVP update: {e}")
             return {"message": f"Error in bulk RSVP update: {str(e)}"}, 500
+
+    @app.put("/api/guests/bulk-host")
+    @jwt_required
+    def bulk_update_host():
+        try:
+            data = request.get_json(silent=True) or {}
+            guest_ids = data.get("guest_ids", [])
+            host = data.get("host", "").strip()
+            
+            if not guest_ids:
+                return {"message": "No guests selected"}, 400
+            
+            if not host:
+                return {"message": "Host name is required"}, 400
+            
+            # Get guests
+            guests = Guest.query.filter(Guest.id.in_(guest_ids)).all()
+            if not guests:
+                return {"message": "No guests found"}, 404
+            
+            # Update host
+            update_count = 0
+            for guest in guests:
+                print(f"Updating guest {guest.name}: host from '{guest.host}' to '{host}'")
+                guest.host = host
+                update_count += 1
+            
+            db.session.commit()
+            
+            print(f"Bulk host update: {update_count} guests updated to host '{host}'")
+            return {"message": f"Successfully updated {update_count} guests to host '{host}'", "count": update_count}, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in bulk host update: {e}")
+            return {"message": str(e)}, 500
 
     @app.get("/api/invite/<token>")
     def get_invite_data(token):

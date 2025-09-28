@@ -16,6 +16,7 @@ interface Guest {
   tag?: string
   email?: string
   phone?: string
+  host?: string
   rsvp_status: string
   checkin_status: string
   created_at: string
@@ -67,10 +68,11 @@ export default function GuestsPage(){
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "declined">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "declined" | "checked_in" | "not_checked_in">("all")
   const [eventFilter, setEventFilter] = useState<string>("")
   const [tagFilter, setTagFilter] = useState<string>("all")
   const [organizationFilter, setOrganizationFilter] = useState<string>("all")
+  const [hostFilter, setHostFilter] = useState<string>("all")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [copyMessage, setCopyMessage] = useState("")
   const [copyType, setCopyType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
@@ -244,6 +246,7 @@ export default function GuestsPage(){
     tag: "",
     email: "",
     phone: "",
+    host: "",
     event_id: "",
     checkin_status: "not_arrived",
     rsvp_status: "pending",
@@ -258,6 +261,8 @@ export default function GuestsPage(){
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
+  const [showBulkHostModal, setShowBulkHostModal] = useState(false)
+  const [bulkHostName, setBulkHostName] = useState("")
   
   // Export states
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel')
@@ -296,14 +301,16 @@ export default function GuestsPage(){
       if (res.ok) {
         const data = await res.json()
         console.log("Guests data received:", data)
-        console.log("Guests with rsvp_status:", data.guests?.map((g: any) => ({
+        console.log("Guests with status:", data.guests?.map((g: any) => ({
           id: g.id,
           name: g.name,
-          position: g.position,
-          company: g.company,
           rsvp_status: g.rsvp_status,
           checkin_status: g.checkin_status
         })))
+        console.log("Check-in stats:", {
+          checked_in: data.guests?.filter((g: any) => g.checkin_status === 'checked_in').length || 0,
+          not_checked_in: data.guests?.filter((g: any) => g.checkin_status !== 'checked_in').length || 0
+        })
         setGuests(data.guests || [])
         console.log("Guests state updated with", data.guests?.length || 0, "guests")
       } else {
@@ -468,6 +475,14 @@ export default function GuestsPage(){
         showToast(`Check-in ${selectedGuests.size}!`, "success")
         clearSelection()
         loadGuests()
+        
+        // Trigger storage event to notify other pages about check-in updates
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -499,6 +514,14 @@ export default function GuestsPage(){
         showToast(`Check-out ${selectedGuests.size}!`, "success")
         clearSelection()
         loadGuests()
+        
+        // Trigger storage event to notify other pages about check-out updates
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
         setTimeout(() => {
           setPopupVisible(false)
           setTimeout(() => {
@@ -604,6 +627,51 @@ export default function GuestsPage(){
     }
   }
 
+  // Bulk Host Update Function
+  const bulkUpdateHost = async (hostName: string) => {
+    if (!eventFilter) {
+      setResult("Vui lòng chọn sự kiện trước khi thực hiện hành động")
+      return
+    }
+    if (selectedGuests.size === 0) return
+    
+    if (!confirm(`Bạn có chắc chắn muốn cập nhật ${selectedGuests.size} khách với lễ tân "${hostName}"?`)) {
+      return
+    }
+    
+    try {
+      const response = await api.bulkUpdateHost({
+        guest_ids: Array.from(selectedGuests),
+        host: hostName
+      })
+      
+      if (response.ok) {
+        showToast(`Cập nhật ${selectedGuests.size} khách với lễ tân "${hostName}"!`, "success")
+        clearSelection()
+        loadGuests()
+        
+        // Thông báo cho trang check-in về thay đổi dữ liệu
+        localStorage.setItem('exp_guests_updated', Date.now().toString())
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'exp_guests_updated',
+          newValue: Date.now().toString()
+        }))
+        
+        setTimeout(() => {
+          setPopupVisible(false)
+          setTimeout(() => {
+            setShowPopup(false)
+          }, 300)
+        }, 2000)
+      } else {
+        const error = await response.text()
+        setResult(`Lỗi: ${error}`)
+      }
+    } catch (error) {
+      setResult(`Lỗi: ${error}`)
+    }
+  }
+
   // CRUD Functions
   const openGuestModal = useCallback((guest?: Guest) => {
     console.log("Opening guest modal...")
@@ -635,6 +703,7 @@ export default function GuestsPage(){
         tag: guest.tag || "",
         email: guest.email || "",
         phone: guest.phone || "",
+        host: guest.host || "",
         event_id: guest.event_id?.toString() || "",
         checkin_status: guest.checkin_status, // Sử dụng trạng thái thực tế của khách
         rsvp_status: guest.rsvp_status || "pending",
@@ -653,6 +722,7 @@ export default function GuestsPage(){
         tag: "",
         email: "",
         phone: "",
+        host: "",
         event_id: defaultEventId,
         checkin_status: "not_arrived", // Mặc định chưa đến khi thêm mới
         rsvp_status: "pending", // Mặc định chưa phản hồi khi thêm mới
@@ -738,6 +808,7 @@ export default function GuestsPage(){
         tag: guestForm.tag,
         email: guestForm.email,
         phone: guestForm.phone,
+        host: guestForm.host,
         event_id: eventId,
         checkin_status: guestForm.checkin_status,
         rsvp_status: guestForm.rsvp_status,
@@ -997,6 +1068,19 @@ export default function GuestsPage(){
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
+  }, [loadGuests])
+
+  // Listen for storage events to update guest data when check-in status changes
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'exp_guests_updated') {
+        console.log('=== STORAGE CHECKIN EVENT ===')
+        loadGuests()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [loadGuests])
 
   // Function để copy link thiệp mời từ modal
@@ -1653,10 +1737,14 @@ export default function GuestsPage(){
                            guest.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            guest.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesStatus = statusFilter === "all" || guest.rsvp_status === statusFilter
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "checked_in" ? guest.checkin_status === "checked_in" : 
+         statusFilter === "not_checked_in" ? guest.checkin_status !== "checked_in" : 
+         guest.rsvp_status === statusFilter)
       const matchesTag = tagFilter === "all" || guest.tag === tagFilter
       const matchesOrganization = organizationFilter === "all" || guest.organization === organizationFilter
-      const matchesRole = roleFilter === "all" || guest.role === roleFilter
+      const matchesHost = hostFilter === "all" || guest.host === hostFilter
+      const matchesRole = roleFilter === "all" || guest.host === roleFilter
       // Hiển thị khách của sự kiện được chọn, hoặc tất cả khách nếu không chọn sự kiện
       const matchesEvent = !eventFilter || eventFilter === "" || guest.event_id?.toString() === eventFilter
       
@@ -1668,15 +1756,15 @@ export default function GuestsPage(){
         matchesSearch,
         matchesTag,
         matchesOrganization,
-        matchesRole
+        matchesHost
       })
       
-      return matchesSearch && matchesStatus && matchesTag && matchesOrganization && matchesRole && matchesEvent
+      return matchesSearch && matchesStatus && matchesTag && matchesOrganization && matchesHost && matchesRole && matchesEvent
     })
     
     console.log("Filtered guests:", filtered.length)
     return filtered
-  }, [guests, searchTerm, statusFilter, tagFilter, organizationFilter, roleFilter, eventFilter])
+  }, [guests, searchTerm, statusFilter, tagFilter, organizationFilter, hostFilter, roleFilter, eventFilter])
 
   // Memoized form update functions
   const updateGuestForm = useCallback((field: string, value: string) => {
@@ -1731,10 +1819,18 @@ export default function GuestsPage(){
   }, [guests])
 
   const roleFilterOptions = useMemo(() => {
-    const uniqueRoles = [...new Set(guests.map(guest => guest.role).filter(Boolean))]
+    const uniqueHosts = [...new Set(guests.map(guest => guest.host).filter(Boolean))]
     return [
-      { value: "all", label: "Tất cả vai trò" },
-      ...uniqueRoles.map(role => ({ value: role, label: role }))
+      { value: "all", label: "Tất cả lễ tân" },
+      ...uniqueHosts.map(host => ({ value: host, label: host }))
+    ]
+  }, [guests])
+
+  const hostFilterOptions = useMemo(() => {
+    const uniqueHosts = [...new Set(guests.map(guest => guest.host).filter(Boolean))]
+    return [
+      { value: "all", label: "Tất cả lễ tân" },
+      ...uniqueHosts.map(host => ({ value: host, label: host }))
     ]
   }, [guests])
 
@@ -2062,8 +2158,18 @@ export default function GuestsPage(){
     total: eventGuests.length,
     pending: eventGuests.filter(g => g.rsvp_status === 'pending').length,
     accepted: eventGuests.filter(g => g.rsvp_status === 'accepted').length,
-    declined: eventGuests.filter(g => g.rsvp_status === 'declined').length
+    declined: eventGuests.filter(g => g.rsvp_status === 'declined').length,
+    checked_in: eventGuests.filter(g => g.checkin_status === 'checked_in').length,
+    not_checked_in: eventGuests.filter(g => g.checkin_status !== 'checked_in').length
   }
+  
+  // Debug log for stats calculation
+  console.log("=== STATS CALCULATION ===")
+  console.log("Event filter:", eventFilter)
+  console.log("Total guests:", guests.length)
+  console.log("Event guests:", eventGuests.length)
+  console.log("Stats:", stats)
+  console.log("Check-in statuses:", eventGuests.map(g => ({ id: g.id, name: g.name, checkin_status: g.checkin_status })))
 
   return (
     <div className="space-y-6">
@@ -2071,7 +2177,9 @@ export default function GuestsPage(){
         .guests-card-total,
         .guests-card-pending,
         .guests-card-accepted,
-        .guests-card-declined {
+        .guests-card-declined,
+        .guests-card-checked-in,
+        .guests-card-not-checked-in {
           box-shadow: none !important;
           filter: none !important;
           backdrop-filter: none !important;
@@ -2080,7 +2188,9 @@ export default function GuestsPage(){
         .guests-card-total:active,
         .guests-card-pending:active,
         .guests-card-accepted:active,
-        .guests-card-declined:active {
+        .guests-card-declined:active,
+        .guests-card-checked-in:active,
+        .guests-card-not-checked-in:active {
           box-shadow: none !important;
           filter: none !important;
           backdrop-filter: none !important;
@@ -2090,7 +2200,9 @@ export default function GuestsPage(){
         .guests-card-total:focus,
         .guests-card-pending:focus,
         .guests-card-accepted:focus,
-        .guests-card-declined:focus {
+        .guests-card-declined:focus,
+        .guests-card-checked-in:focus,
+        .guests-card-not-checked-in:focus {
           box-shadow: none !important;
           filter: none !important;
           backdrop-filter: none !important;
@@ -2100,11 +2212,14 @@ export default function GuestsPage(){
         .guests-card-total:hover,
         .guests-card-pending:hover,
         .guests-card-accepted:hover,
-        .guests-card-declined:hover {
+        .guests-card-declined:hover,
+        .guests-card-checked-in:hover,
+        .guests-card-not-checked-in:hover {
           box-shadow: none !important;
           filter: none !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
+          transform: none !important;
         }
 
         /* Mobile Filter Bubble Animations */
@@ -2385,23 +2500,35 @@ export default function GuestsPage(){
             const currentEvent = events.find(e => e.id === parseInt(eventFilter))
             const currentGuestCount = guests.filter(g => g.event_id === parseInt(eventFilter)).length
             const isMaxGuestsReached = currentEvent && currentGuestCount >= currentEvent.max_guests
+            const isNoEvents = events.length === 0
+            const isNoEventSelected = !eventFilter || eventFilter === ""
             
             return (
               <button 
                 onClick={() => setShowImportModal(true)}
-                disabled={isMaxGuestsReached}
+                disabled={isMaxGuestsReached || isNoEventSelected || isNoEvents}
                 className={`group relative px-3 py-2 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm text-sm ${
-                  isMaxGuestsReached
+                  isMaxGuestsReached || isNoEventSelected || isNoEvents
                     ? 'bg-gray-500/20 border-gray-500/30 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 text-green-400 hover:from-green-500/30 hover:to-emerald-500/30 hover:border-green-400/50 hover:shadow-lg hover:shadow-green-500/20'
                 }`}
-                title={isMaxGuestsReached ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` : ''}
+                title={
+                  isNoEvents
+                    ? 'Vui lòng tạo sự kiện trước khi import khách'
+                    : isNoEventSelected 
+                      ? 'Vui lòng chọn sự kiện trước khi import khách' 
+                      : isMaxGuestsReached 
+                        ? `Số lượng khách đã đạt tối đa (${currentEvent?.max_guests} khách)` 
+                        : ''
+                }
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
                 <span className="text-sm font-medium">
-                  {isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Import'}
+                  {isNoEvents ? 'Cần sự kiện' : 
+                   isNoEventSelected ? 'Chọn sự kiện' :
+                   isMaxGuestsReached ? `Đã đạt tối đa (${currentGuestCount}/${currentEvent?.max_guests})` : 'Import'}
                 </span>
               </button>
             )
@@ -2429,33 +2556,30 @@ export default function GuestsPage(){
 
         
       {/* Statistics Cards */}
-      <div className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 pb-2 py-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent scroll-smooth snap-x snap-mandatory md:grid md:grid-cols-4 md:overflow-x-visible md:snap-none">
+      <div className="grid grid-cols-6 gap-3 sm:gap-4 pb-2 py-2">
         {/* Total Guests Card */}
         <div 
           onClick={() => setStatusFilter("all")}
-          className={`guests-card-total group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
+          className={`guests-card-total group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
             statusFilter === "all" 
               ? "bg-gradient-to-br from-cyan-500/25 to-blue-500/25 border border-cyan-400/50" 
               : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
           }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-xl sm:rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-cyan-500/20 rounded-md">
+                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.total}</div>
-                <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">
-                  <span className="sm:hidden">Tổng</span>
-                  <span className="hidden sm:inline">Tổng khách mời</span>
-                </div>
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.total}</div>
+                <div className="text-xs sm:text-sm text-cyan-300/80 font-medium">Tổng khách mời</div>
               </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full w-full"></div>
             </div>
           </div>
@@ -2464,26 +2588,26 @@ export default function GuestsPage(){
         {/* Pending Card */}
         <div 
           onClick={() => setStatusFilter("pending")}
-          className={`guests-card-pending group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
+          className={`guests-card-pending group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
             statusFilter === "pending" 
               ? "bg-gradient-to-br from-yellow-500/25 to-orange-500/25 border border-yellow-400/50" 
               : "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
           }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-yellow-500/20 rounded-md">
+                <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.pending}</div>
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.pending}</div>
                 <div className="text-xs sm:text-sm text-yellow-300/80 font-medium">Chờ phản hồi</div>
               </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-yellow-500/30 to-orange-500/30 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 bg-gradient-to-r from-yellow-500/30 to-orange-500/30 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%`}}></div>
             </div>
           </div>
@@ -2492,26 +2616,26 @@ export default function GuestsPage(){
         {/* Accepted Card */}
         <div 
           onClick={() => setStatusFilter("accepted")}
-          className={`guests-card-accepted group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
+          className={`guests-card-accepted group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
             statusFilter === "accepted" 
               ? "bg-gradient-to-br from-green-500/25 to-emerald-500/25 border border-green-400/50" 
               : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
           }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-green-500/20 rounded-md">
+                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.accepted}</div>
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.accepted}</div>
                 <div className="text-xs sm:text-sm text-green-300/80 font-medium">Đã xác nhận</div>
               </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%`}}></div>
             </div>
           </div>
@@ -2520,27 +2644,83 @@ export default function GuestsPage(){
         {/* Declined Card */}
         <div 
           onClick={() => setStatusFilter("declined")}
-          className={`guests-card-declined group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-7 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 md:flex-shrink w-[140px] sm:w-[160px] md:w-full h-[100px] sm:h-[120px] md:h-[140px] snap-start md:snap-none shadow-none ${
+          className={`guests-card-declined group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
             statusFilter === "declined" 
               ? "bg-gradient-to-br from-red-500/25 to-pink-500/25 border border-red-400/50" 
               : "bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20"
           }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-red-500/20 rounded-lg sm:rounded-xl">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-red-500/20 rounded-md">
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
               <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{stats.declined}</div>
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.declined}</div>
                 <div className="text-xs sm:text-sm text-red-300/80 font-medium">Đã từ chối</div>
               </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-red-500/30 to-pink-500/30 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 bg-gradient-to-r from-red-500/30 to-pink-500/30 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-red-400 to-pink-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.declined / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Checked-in Card */}
+        <div 
+          onClick={() => setStatusFilter("checked_in")}
+          className={`guests-card-checked-in group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
+            statusFilter === "checked_in" 
+              ? "bg-gradient-to-br from-purple-500/25 to-indigo-500/25 border border-purple-400/50" 
+              : "bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20"
+          }`}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-purple-500/20 rounded-md">
+                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.checked_in}</div>
+                <div className="text-xs sm:text-sm text-purple-300/80 font-medium">Đã check-in</div>
+              </div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-purple-500/30 to-indigo-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.checked_in / stats.total) * 100 : 0}%`}}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Not Checked-in Card */}
+        <div 
+          onClick={() => setStatusFilter("not_checked_in")}
+          className={`guests-card-not-checked-in group relative rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-none ${
+            statusFilter === "not_checked_in" 
+              ? "bg-gradient-to-br from-orange-500/25 to-red-500/25 border border-orange-400/50" 
+              : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+          }`}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-orange-500/20 rounded-md">
+                <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold text-white">{stats.not_checked_in}</div>
+                <div className="text-xs sm:text-sm text-orange-300/80 font-medium">Chưa check-in</div>
+              </div>
+            </div>
+            <div className="mt-2 h-1 bg-gradient-to-r from-orange-500/30 to-red-500/30 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full" style={{width: `${stats.total > 0 ? (stats.not_checked_in / stats.total) * 100 : 0}%`}}></div>
             </div>
           </div>
         </div>
@@ -2634,6 +2814,17 @@ export default function GuestsPage(){
               </button>
               
               <button
+                onClick={() => setShowBulkHostModal(true)}
+                className="group relative px-3 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 rounded-lg hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-purple-500/20"
+                title="Chọn lễ tân cho tất cả khách đã chọn"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+                <span className="text-sm font-medium">Chọn lễ tân</span>
+              </button>
+              
+              <button
                 onClick={exportSelectedGuests}
                 className="group relative px-3 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 hover:border-indigo-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg text-sm hover:shadow-indigo-500/20"
                 title="Xuất danh sách khách đã chọn"
@@ -2720,7 +2911,7 @@ export default function GuestsPage(){
                 options={roleFilterOptions}
                 value={roleFilter}
                 onChange={(value) => setRoleFilter(value)}
-                placeholder="Chọn vai trò"
+                placeholder="Chọn lễ tân"
                 className="w-40"
               />
               <button
@@ -2729,6 +2920,7 @@ export default function GuestsPage(){
                   setStatusFilter("all")
                   setTagFilter("all")
                   setOrganizationFilter("all")
+                  setHostFilter("all")
                   setRoleFilter("all")
                 }}
                 className="group relative px-3 py-2 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 rounded-lg hover:from-red-500/30 hover:to-red-600/30 hover:border-red-400/50 hover:text-red-300 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-xl hover:shadow-red-500/30 text-sm whitespace-nowrap"
@@ -2847,16 +3039,16 @@ export default function GuestsPage(){
                                 className="w-full"
                               />
                             </div>
-                            <div>
-                              <label className="block text-white/70 text-sm font-medium mb-2">Vai trò</label>
-                              <CustomDropdown
-                                options={roleFilterOptions}
-                                value={roleFilter}
-                                onChange={(value) => setRoleFilter(value)}
-                                placeholder="Chọn vai trò"
-                                className="w-full"
-                              />
-                            </div>
+                              <div>
+                                <label className="block text-white/70 text-sm font-medium mb-2">Lễ tân</label>
+                                <CustomDropdown
+                                  options={hostFilterOptions}
+                                  value={hostFilter}
+                                  onChange={(value) => setHostFilter(value)}
+                                  placeholder="Chọn lễ tân"
+                                  className="w-full"
+                                />
+                              </div>
                           </div>
                           
                           {/* Clear Filters Button */}
@@ -2866,7 +3058,7 @@ export default function GuestsPage(){
                               setStatusFilter("all")
                               setTagFilter("all")
                               setOrganizationFilter("all")
-                              setRoleFilter("all")
+                              setHostFilter("all")
                               triggerHaptic('medium')
                             }}
                             className="w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400 rounded-xl hover:from-red-500/30 hover:to-pink-500/30 hover:border-red-400/50 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
@@ -2936,7 +3128,8 @@ export default function GuestsPage(){
                     <th className="px-4 py-3 w-24">Vai trò</th>
                     <th className="px-4 py-3 w-32">Tổ chức</th>
                     <th className="px-4 py-3 w-24">Tag</th>
-                    <th className="px-4 py-3 w-32">Trạng thái</th>
+                    <th className="px-4 py-3 w-32">Trạng thái RSVP</th>
+                    <th className="px-4 py-3 w-32">Check-in</th>
                     <th className="px-4 py-3 w-40">Thao tác</th>
                   </tr>
                 </thead>
@@ -2990,6 +3183,25 @@ export default function GuestsPage(){
                         <span className="hidden sm:inline">
                           {guest.rsvp_status === 'accepted' ? 'Đã xác nhận' :
                            guest.rsvp_status === 'declined' ? 'Đã từ chối' : 'Chờ phản hồi'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 w-fit ${
+                        guest.checkin_status === 'checked_in' ? 'bg-purple-500/20 text-purple-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {guest.checkin_status === 'checked_in' ? (
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        <span className="hidden sm:inline">
+                          {guest.checkin_status === 'checked_in' ? 'Đã check-in' : 'Chưa check-in'}
                         </span>
                       </span>
                     </td>
@@ -3494,6 +3706,104 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
         </Portal>
       )}
 
+      {/* Bulk Host Selection Modal */}
+      {showBulkHostModal && (
+        <Portal>
+          <div className="fixed inset-0 h-[100dvh] w-[100dvw] z-[9998] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowBulkHostModal(false)}></div>
+            <div className="relative bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                  Chọn lễ tân cho {selectedGuests.size} khách
+                </h2>
+                <button
+                  onClick={() => setShowBulkHostModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-white/80 mb-2">Chọn lễ tân</label>
+                <div className="space-y-3">
+                  {/* Existing hosts list */}
+                  {roleFilterOptions.length > 1 && (
+                    <div>
+                      <div className="text-xs text-white/60 mb-2">Lễ tân hiện có:</div>
+                      <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                        {roleFilterOptions.slice(1).map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => setBulkHostName(option.value)}
+                            className={`p-2 rounded-lg text-sm transition-all duration-200 ${
+                              bulkHostName === option.value
+                                ? 'bg-purple-500/30 border border-purple-400/50 text-purple-300'
+                                : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Custom input */}
+                  <div>
+                    <div className="text-xs text-white/60 mb-2">Hoặc nhập tên mới:</div>
+                    <input
+                      type="text"
+                      value={bulkHostName}
+                      onChange={(e) => setBulkHostName(e.target.value)}
+                      className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                      placeholder="Nhập tên lễ tân mới"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (bulkHostName.trim()) {
+                      bulkUpdateHost(bulkHostName.trim())
+                      setShowBulkHostModal(false)
+                      setBulkHostName("")
+                    }
+                  }}
+                  disabled={!bulkHostName.trim()}
+                  className="flex-1 group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                  <span>Cập nhật</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBulkHostModal(false)
+                    setBulkHostName("")
+                  }}
+                  className="group relative py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 text-gray-400 hover:from-gray-500/30 hover:to-slate-500/30 hover:border-gray-400/50 hover:shadow-lg hover:shadow-gray-500/20"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Hủy</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {/* Guest Modal */}
       {showGuestModal && (
         <Portal>
@@ -3551,16 +3861,31 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
-                <input
-                  type="text"
-                  value={guestForm.role}
-                  onChange={(e) => updateGuestForm('role', e.target.value)}
-                  className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
-                  placeholder="CEO, Manager, etc."
-                />
+              {/* Vai trò và Host inline */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Vai trò</label>
+                  <input
+                    type="text"
+                    value={guestForm.role}
+                    onChange={(e) => updateGuestForm('role', e.target.value)}
+                    className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                    placeholder="CEO, Manager, etc."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Lễ tân</label>
+                  <input
+                    type="text"
+                    value={guestForm.host}
+                    onChange={(e) => updateGuestForm('host', e.target.value)}
+                    className="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                    placeholder="Người tiếp khách"
+                  />
+                </div>
               </div>
+              
+              {/* Tổ chức riêng 1 dòng */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Tổ chức</label>
                 <input
@@ -3571,6 +3896,7 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
                   placeholder="Tên công ty hoặc trường học"
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Email</label>
                 <input
@@ -3866,13 +4192,33 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
           {/* Hiển thị trang thiệp mời chính */}
           {inviteLink && (
             <div className="w-full h-[80vh] border border-white/20 rounded-xl overflow-hidden">
-              <iframe
-                src={`${window.location.origin}/invite/${inviteLink.split('/').pop()}`}
-                className="w-full h-full"
-                title="Xem trước thiệp mời"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation allow-popups allow-modals"
-                allow="fullscreen"
-              />
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-2">Xem trước thiệp mời</h3>
+                  <p className="text-white/70 text-sm mb-4">Nhấn nút bên dưới để mở thiệp mời trong tab mới</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <button
+                    onClick={() => window.open(inviteLink, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes')}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Mở thiệp mời
+                  </button>
+                  
+                  <div className="text-center">
+                    <p className="text-white/60 text-xs mb-2">Hoặc copy link:</p>
+                    <div className="bg-black/20 rounded-lg p-3 border border-white/10">
+                      <code className="text-blue-300 text-sm break-all">
+                        {inviteLink}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -4200,7 +4546,9 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
         .guests-card-total::before,
         .guests-card-pending::before,
         .guests-card-accepted::before,
-        .guests-card-declined::before {
+        .guests-card-declined::before,
+        .guests-card-checked-in::before,
+        .guests-card-not-checked-in::before {
           content: '';
           position: absolute;
           top: 0;
@@ -4214,7 +4562,9 @@ Mr,Tên khách,CEO,Công ty ABC,Tag,email@example.com,0900000000</pre>
         .guests-card-total:hover::before,
         .guests-card-pending:hover::before,
         .guests-card-accepted:hover::before,
-        .guests-card-declined:hover::before {
+        .guests-card-declined:hover::before,
+        .guests-card-checked-in:hover::before,
+        .guests-card-not-checked-in:hover::before {
           left: 100%;
         }
       `}</style>

@@ -12,7 +12,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --only=production && npm audit fix --force || true && npm cache clean --force
+RUN npm ci && npm audit fix --force || true && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder

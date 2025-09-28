@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+
+
+
+
 export async function GET(request: Request) {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008';
+  const backendUrl = process.env.NODE_ENV === 'production' 
+    ? 'http://backend:5008' 
+    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
   
   try {
     // Forward authentication headers
@@ -26,7 +35,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://backend:5008';
+  const backendUrl = process.env.NODE_ENV === 'production' 
+    ? 'http://backend:5008' 
+    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
   const body = await request.json();
 
   try {
