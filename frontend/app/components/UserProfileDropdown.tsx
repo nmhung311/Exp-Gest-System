@@ -70,8 +70,9 @@ export default function UserProfileDropdown({ isInMobileMenu = false }: UserProf
     localStorage.removeItem('auth_token')
     localStorage.removeItem('current_user')
     
-    // Chuyển hướng về trang đăng nhập
-    router.push('/login')
+    // 🚫 CHẶN REDIRECT - Không redirect về login sau khi logout
+    // Chỉ log logout thay vì redirect
+    console.log('User logged out, staying on current page (no redirect)')
     
     // Đóng dropdown
     setIsOpen(false)
@@ -92,7 +93,7 @@ export default function UserProfileDropdown({ isInMobileMenu = false }: UserProf
   if (!user) {
     return (
       <button
-        onClick={() => router.push('/login')}
+        onClick={() => console.log('Login button clicked, but no redirect (disabled)')}
         className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-white/80 hover:text-white"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

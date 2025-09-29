@@ -2,15 +2,10 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get('host') || ''
-  const { pathname } = new URL(req.url)
-
-  // Chỉ redirect đúng trang chủ của subdomain
-  if (host === 'event.expsolution.io' && pathname === '/') {
-    return NextResponse.redirect('https://expsolution.io/', 308)
-  }
-
-  // Mọi route khác giữ nguyên
+  // 🚫 CHẶN REDIRECT - Tắt hoàn toàn middleware redirects
+  // Không redirect, không rewrite, không làm gì cả
+  // Chỉ pass through tất cả requests
+  
   return NextResponse.next()
 }
 

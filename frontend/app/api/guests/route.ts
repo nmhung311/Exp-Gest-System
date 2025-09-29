@@ -13,13 +13,17 @@ export async function GET(request: Request) {
     : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
   
   try {
-    // Forward authentication headers
+    // Forward authentication headers and cookies
     const authHeader = request.headers.get('authorization')
+    const cookieHeader = request.headers.get('cookie')
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
     if (authHeader) {
       headers['authorization'] = authHeader
+    }
+    if (cookieHeader) {
+      headers['cookie'] = cookieHeader
     }
     
     const response = await fetch(`${backendUrl}/api/guests`, {
@@ -41,13 +45,17 @@ export async function POST(request: Request) {
   const body = await request.json();
 
   try {
-    // Forward authentication headers
+    // Forward authentication headers and cookies
     const authHeader = request.headers.get('authorization')
+    const cookieHeader = request.headers.get('cookie')
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
     if (authHeader) {
       headers['authorization'] = authHeader
+    }
+    if (cookieHeader) {
+      headers['cookie'] = cookieHeader
     }
     
     const response = await fetch(`${backendUrl}/api/guests`, {

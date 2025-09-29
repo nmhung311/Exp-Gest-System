@@ -50,12 +50,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Clear any existing auth data
+      // 🚫 CHẶN REDIRECT - Không redirect về login nữa
+      // Clear any existing auth data nhưng giữ nguyên trang hiện tại
       localStorage.removeItem('current_user')
       localStorage.removeItem('auth_token')
       
-      // Redirect to login
-      router.push('/login')
+      // KHÔNG LÀM GÌ - KHÔNG REDIRECT
+      console.log('User not authenticated, but staying on current page (no redirect)')
     }
   }, [isAuthenticated, isLoading, router])
 

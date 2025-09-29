@@ -41,17 +41,8 @@ export default /** @type {import('next').NextConfig} */ ({
   // async redirects() {
   //   return []
   // },
-  async rewrites() {
-    return [
-      {
-        source: '/dashboard/:path*',
-        destination: '/:path*',
-      },
-      // Remove the API rewrite rule as it interferes with Next.js API routes
-      // {
-      //   source: '/api/:path*',
-      //   destination: 'http://localhost:5008/api/:path*',
-      // },
-    ]
-  },
+  // 🚫 CHẶN REDIRECT - Tắt tất cả rewrites để tránh redirect behavior
+  // async rewrites() {
+  //   return []
+  // },
 });

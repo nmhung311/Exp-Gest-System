@@ -27,8 +27,9 @@ export default function LoginPage() {
           
           console.log('Login successful, user saved:', data.user.username)
           
-          // Redirect ngay lập tức
-          window.location.href = '/dashboard'
+          // 🚫 CHẶN REDIRECT - Không redirect sau khi login thành công
+          // Chỉ log success thay vì redirect
+          console.log('Login successful, staying on login page (no redirect)')
         } else {
           setError(data.message || 'Đăng nhập thất bại')
         }

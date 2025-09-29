@@ -42,8 +42,19 @@ def create_app() -> Flask:
         "http://192.168.1.135:9009"
     ]
     
-    # Enable CORS for development
-    CORS(app, origins="*", supports_credentials=True, 
+    # SEPARATED SERVICES: Add production domains cho event frontend
+    production_origins = [
+        "https://event.expsolution.io",
+        "https://www.event.expsolution.io",
+        "http://event.expsolution.io",
+        "http://www.event.expsolution.io"
+    ]
+    
+    # Combine all origins
+    all_origins = list(set(default_origins + production_origins))
+    
+    # Enable CORS for development and production
+    CORS(app, origins=all_origins, supports_credentials=True, 
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     db.init_app(app)
@@ -200,6 +211,27 @@ def create_app() -> Flask:
             return {"users": [u.to_public_dict() for u in users]}, 200
         except Exception as e:
             return {"message": f"list users error: {str(e)}", "users": []}, 500
+
+    @app.route("/api/debug/users/count", methods=["GET"])
+    def debug_user_count():
+        """Debug endpoint để đếm số lượng users không cần auth"""
+        try:
+            user_count = User.query.count()
+            users = User.query.all()
+            user_list = [{"id": u.id, "username": u.username, "email": u.email, "created_at": u.created_at} for u in users]
+            return {
+                "total_users": user_count,
+                "users": user_list,
+                "database_file": "/app/instance/exp_guest.db",
+                "status": "success"
+            }, 200
+        except Exception as e:
+            return {
+                "total_users": 0,
+                "users": [],
+                "status": "error",
+                "error": str(e)
+            }, 500
 
     @app.route("/api/auth/me", methods=["GET"])
     def auth_get_current_user():
@@ -756,6 +788,14 @@ def create_app() -> Flask:
             guest.event_content = data.get("event_content", "").strip() or None
             new_checkin_status = data.get("checkin_status", "not_arrived")
             print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to '{new_checkin_status}'")
+            
+            # If changing to checked_out, remove existing checkin records
+            if new_checkin_status == "checked_out":
+                existing_checkins = Checkin.query.filter_by(guest_id=guest.id).all()
+                for checkin in existing_checkins:
+                    print(f"Removing checkin record {checkin.id} for guest {guest.id}")
+                    db.session.delete(checkin)
+            
             guest.checkin_status = new_checkin_status
             print(f"Guest {guest.id} checkin_status is now: '{guest.checkin_status}'")
             guest.rsvp_status = data.get("rsvp_status", "pending")
@@ -1488,10 +1528,16 @@ def create_app() -> Flask:
             if not guests:
                 return {"message": "No guests found"}, 404
             
-            # Update status to checked_out
+            # Update status to checked_out and remove checkin records
             checkout_count = 0
             for guest in guests:
                 print(f"Processing guest {guest.id} ({guest.name}) with checkin_status: '{guest.checkin_status}'")
+                
+                # Remove existing checkin records for this guest
+                existing_checkins = Checkin.query.filter_by(guest_id=guest.id).all()
+                for checkin in existing_checkins:
+                    print(f"Removing checkin record {checkin.id} for guest {guest.id}")
+                    db.session.delete(checkin)
                 
                 # Update guest checkin_status to checked_out
                 print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to 'checked_out'")

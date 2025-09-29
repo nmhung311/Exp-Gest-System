@@ -1052,7 +1052,7 @@ export default function CheckinPage() {
       </div>
 
       {/* Guests list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {pageGuests.length === 0 ? (
           <div className="col-span-full text-center py-8">
             <div className="text-white/60 text-lg mb-2">

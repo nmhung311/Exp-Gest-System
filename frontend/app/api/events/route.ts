@@ -4,11 +4,22 @@ const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 
 
 export async function GET(request: NextRequest) {
   try {
+    // Forward authentication headers and cookies
+    const authHeader = request.headers.get('authorization')
+    const cookieHeader = request.headers.get('cookie')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    if (cookieHeader) {
+      headers['cookie'] = cookieHeader
+    }
+    
     const backendResponse = await fetch(`${backendUrl}/api/events`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!backendResponse.ok) {
