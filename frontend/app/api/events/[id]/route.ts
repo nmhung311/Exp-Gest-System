@@ -6,10 +6,10 @@ const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
       method: 'GET',
       headers: {
@@ -32,10 +32,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
@@ -61,10 +61,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
       method: 'DELETE',

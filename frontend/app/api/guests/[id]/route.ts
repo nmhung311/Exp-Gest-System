@@ -9,9 +9,9 @@ const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params
+  const { id } = await params
   try {
     const body = await request.json()
     const backendResponse = await fetch(`${backendUrl}/api/guests/${id}`, {
@@ -37,9 +37,9 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params
+  const { id } = await params
   console.log('🔍 Frontend API DELETE request for guest ID:', id)
   console.log('🌐 Backend URL:', backendUrl)
   console.log('🔗 Full URL:', `${backendUrl}/api/guests/${id}`)

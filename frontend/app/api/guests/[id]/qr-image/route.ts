@@ -6,10 +6,10 @@ const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const guestId = params.id
+    const { id: guestId } = await params
     
     console.log(`Getting QR image for guest ${guestId}`)
     
