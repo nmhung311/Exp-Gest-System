@@ -4,9 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'http://event-backend:5008' 
-      : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008')
+    const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
     const response = await fetch(`${backendUrl}/api/auth/login`, {
       method: 'POST',
       headers: {
