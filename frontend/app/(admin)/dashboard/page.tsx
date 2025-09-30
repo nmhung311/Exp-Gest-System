@@ -168,11 +168,8 @@ export default function DashboardPage(){
             return eventDate >= now && eventDate <= nextMonth
           })
         } else {
-          // 'all' - show all upcoming events
-          filteredEvents = allEvents.filter((event: any) => {
-            const eventDate = new Date(event.date)
-            return eventDate >= now
-          })
+          // 'all' - show all events (past and future)
+          filteredEvents = allEvents
         }
         
         setUpcomingEvents(filteredEvents)
