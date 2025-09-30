@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
 
 // Removed generateStaticParams to make this a dynamic API route
 
@@ -14,10 +14,13 @@ export async function PUT(
   const { id } = await params
   try {
     const body = await request.json()
+    const auth = request.headers.get('authorization') || ''
+    
     const backendResponse = await fetch(`${backendUrl}/api/guests/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { authorization: auth }),
       },
       body: JSON.stringify(body),
     })
@@ -40,15 +43,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  console.log('🔍 Frontend API DELETE request for guest ID:', id)
-  console.log('🌐 Backend URL:', backendUrl)
-  console.log('🔗 Full URL:', `${backendUrl}/api/guests/${id}`)
+  const auth = request.headers.get('authorization') || ''
   
   try {
     const backendResponse = await fetch(`${backendUrl}/api/guests/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { authorization: auth }),
       },
     })
 

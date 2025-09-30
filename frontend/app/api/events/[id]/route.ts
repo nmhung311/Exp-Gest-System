@@ -10,10 +10,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const auth = request.headers.get('authorization') || ''
+    
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { authorization: auth }),
       },
     })
 
@@ -37,11 +40,13 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
+    const auth = request.headers.get('authorization') || ''
     
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { authorization: auth }),
       },
       body: JSON.stringify(body),
     })
@@ -65,11 +70,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const auth = request.headers.get('authorization') || ''
     
     const backendResponse = await fetch(`${backendUrl}/api/events/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { authorization: auth }),
       },
     })
 
