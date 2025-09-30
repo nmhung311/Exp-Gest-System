@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import { API_ENDPOINTS } from '@/lib/api'
+import { asItems, logOnce } from '@/lib/asItems'
 import CustomDropdown from '../../components/CustomDropdown'
 import MobileStatusCardContainer from '../../../components/ui/MobileStatusCardContainer'
 
@@ -92,11 +93,9 @@ export default function DashboardPage(){
       if (checkinRes.ok) {
         const checkinData = await checkinRes.json()
         if (checkinData?.error) {
-          console.warn('checked-in proxy says:', checkinData)
-          checkedInGuests = []
-        } else {
-          checkedInGuests = checkinData.guests || checkinData || []
+          logOnce('checkedin-err', 'checked-in proxy says:', checkinData)
         }
+        checkedInGuests = asItems(checkinData)
         console.log('Checked-in guests data:', checkedInGuests)
       } else {
         console.error('Failed to fetch checked-in guests:', checkinRes.status, await checkinRes.text())
@@ -110,11 +109,9 @@ export default function DashboardPage(){
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json()
         if (eventsData?.error) {
-          console.warn('events proxy says:', eventsData)
-          events = []
-        } else {
-          events = eventsData.events || eventsData || []
+          logOnce('events-err', 'events proxy says:', eventsData)
         }
+        events = asItems(eventsData)
         console.log('Events data:', events)
       } else {
         console.error('Failed to fetch events:', eventsRes.status, await eventsRes.text())
@@ -158,19 +155,12 @@ export default function DashboardPage(){
       if (response.ok) {
         const eventsData = await response.json()
         if (eventsData?.error) {
-          console.warn('upcoming events proxy says:', eventsData)
+          logOnce('upcoming-err', 'upcoming events proxy says:', eventsData)
           setUpcomingEvents([])
           return
         }
         
-        const allEvents = eventsData.events || eventsData || []
-        
-        // Ensure allEvents is an array before filtering
-        if (!Array.isArray(allEvents)) {
-          console.warn('Events data is not an array:', allEvents)
-          setUpcomingEvents([])
-          return
-        }
+        const allEvents = asItems(eventsData)
         
         // Filter events based on selected period
         const now = new Date()
