@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
 
 export async function POST(request: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 15000) // 15 second timeout
+
   try {
     const body = await request.json()
+    
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const backendResponse = await fetch(`${backendUrl}/api/checkin`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     })
 
     if (!backendResponse.ok) {
@@ -22,21 +34,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error proxying checkin request:', error)
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ message: "Check-in request timeout" }, { status: 504 });
+    }
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+  } finally {
+    clearTimeout(id)
   }
 }
 
 export async function GET(request: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 15000) // 15 second timeout
+
   try {
     const { searchParams } = new URL(request.url)
     const queryString = searchParams.toString()
     const backendUrlWithQuery = queryString ? `${backendUrl}/api/checkin?${queryString}` : `${backendUrl}/api/checkin`
     
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const backendResponse = await fetch(backendUrlWithQuery, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      signal: ctrl.signal,
     })
 
     if (!backendResponse.ok) {
@@ -48,19 +76,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error proxying checkin GET request:', error)
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ message: "Check-in GET request timeout" }, { status: 504 });
+    }
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+  } finally {
+    clearTimeout(id)
   }
 }
 
 export async function PUT(request: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 15000) // 15 second timeout
+
   try {
     const body = await request.json()
+    
+    // Forward authentication headers
+    const authHeader = request.headers.get('authorization')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) {
+      headers['authorization'] = authHeader
+    }
+    
     const backendResponse = await fetch(`${backendUrl}/api/checkin`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     })
 
     if (!backendResponse.ok) {
@@ -72,6 +117,11 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error proxying checkin update request:', error)
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ message: "Check-in update request timeout" }, { status: 504 });
+    }
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+  } finally {
+    clearTimeout(id)
   }
 }
