@@ -7,9 +7,12 @@ export const dynamic = 'force-dynamic'
 
 
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
 
 export async function POST(request: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 10000) // 10 second timeout
+  
   try {
     // Forward cookies for logout
     const cookieHeader = request.headers.get('cookie')
@@ -23,6 +26,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${backendUrl}/api/auth/logout`, {
       method: 'POST',
       headers,
+      signal: ctrl.signal,
     })
 
     if (!response.ok) {
@@ -44,6 +48,9 @@ export async function POST(request: NextRequest) {
     return response_data
   } catch (error: any) {
     console.error('Error proxying auth logout request:', error)
-    return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+    // Return success even if backend fails to clear cookies
+    return NextResponse.json({ message: 'Logged out successfully' }, { status: 200 })
+  } finally {
+    clearTimeout(id)
   }
 }

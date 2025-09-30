@@ -65,14 +65,23 @@ export default function UserProfileDropdown({ isInMobileMenu = false }: UserProf
     }
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Gọi logout API
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      // Ignore logout API errors
+    }
+    
     // Xóa token và user info khỏi localStorage
     localStorage.removeItem('auth_token')
     localStorage.removeItem('current_user')
     
-    // 🚫 CHẶN REDIRECT - Không redirect về login sau khi logout
-    // Chỉ log logout thay vì redirect
-    console.log('User logged out, staying on current page (no redirect)')
+    // Redirect về login page
+    router.push('/login')
     
     // Đóng dropdown
     setIsOpen(false)
