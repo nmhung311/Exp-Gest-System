@@ -109,7 +109,12 @@ export default function DashboardPage(){
       let events = []
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json()
-        events = eventsData.events || eventsData || []
+        if (eventsData?.error) {
+          console.warn('events proxy says:', eventsData)
+          events = []
+        } else {
+          events = eventsData.events || eventsData || []
+        }
         console.log('Events data:', events)
       } else {
         console.error('Failed to fetch events:', eventsRes.status, await eventsRes.text())
@@ -152,7 +157,20 @@ export default function DashboardPage(){
       const response = await fetch(API_ENDPOINTS.EVENTS)
       if (response.ok) {
         const eventsData = await response.json()
+        if (eventsData?.error) {
+          console.warn('upcoming events proxy says:', eventsData)
+          setUpcomingEvents([])
+          return
+        }
+        
         const allEvents = eventsData.events || eventsData || []
+        
+        // Ensure allEvents is an array before filtering
+        if (!Array.isArray(allEvents)) {
+          console.warn('Events data is not an array:', allEvents)
+          setUpcomingEvents([])
+          return
+        }
         
         // Filter events based on selected period
         const now = new Date()
@@ -188,6 +206,7 @@ export default function DashboardPage(){
       }
     } catch (error) {
       console.error("Error loading upcoming events:", error)
+      setUpcomingEvents([])
     }
   }
 

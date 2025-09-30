@@ -64,15 +64,28 @@ export default function StatsPage() {
       const response = await fetch('/api/guests')
       if (response.ok) {
         const data = await response.json()
-        // Handle both array and object response formats
-        const guestsData = Array.isArray(data) ? data : (data.guests || data)
-        setGuests(guestsData)
-        console.log('Loaded guests:', guestsData.length)
+        if (data?.error) {
+          console.warn('guests proxy says:', data)
+          setGuests([])
+        } else {
+          // Handle both array and object response formats
+          const guestsData = Array.isArray(data) ? data : (data.guests || data)
+          // Ensure guestsData is an array
+          if (!Array.isArray(guestsData)) {
+            console.warn('Guests data is not an array:', guestsData)
+            setGuests([])
+          } else {
+            setGuests(guestsData)
+            console.log('Loaded guests:', guestsData.length)
+          }
+        }
       } else {
         console.error('Failed to load guests:', response.status)
+        setGuests([])
       }
     } catch (error) {
       console.error('Error loading guests:', error)
+      setGuests([])
     }
   }
 
@@ -89,14 +102,22 @@ export default function StatsPage() {
         } else {
           // Handle both array and object response formats
           const checkedInData = Array.isArray(data) ? data : (data.guests || data)
-          setCheckedInGuests(checkedInData)
-          console.log('Loaded checked-in guests:', checkedInData.length)
+          // Ensure checkedInData is an array
+          if (!Array.isArray(checkedInData)) {
+            console.warn('Checked-in data is not an array:', checkedInData)
+            setCheckedInGuests([])
+          } else {
+            setCheckedInGuests(checkedInData)
+            console.log('Loaded checked-in guests:', checkedInData.length)
+          }
         }
       } else {
         console.error('Failed to load checked-in guests:', response.status)
+        setCheckedInGuests([])
       }
     } catch (error) {
       console.error('Error loading checked-in guests:', error)
+      setCheckedInGuests([])
     } finally {
       setLoading(false)
     }
