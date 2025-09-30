@@ -83,13 +83,20 @@ export default function DashboardPage(){
       }
       
       // Load checked-in guests
-      console.log('Fetching checked-in guests from:', API_ENDPOINTS.GUESTS_CHECKED_IN)
-      const checkinRes = await fetch(API_ENDPOINTS.GUESTS_CHECKED_IN)
+      const eventId = 1 // Default event ID - should be dynamic in real app
+      const qs = `?event_id=${encodeURIComponent(eventId)}&limit=100`
+      console.log('Fetching checked-in guests from:', `${API_ENDPOINTS.GUESTS_CHECKED_IN}${qs}`)
+      const checkinRes = await fetch(`${API_ENDPOINTS.GUESTS_CHECKED_IN}${qs}`)
       console.log('Checked-in guests response status:', checkinRes.status)
       let checkedInGuests = []
       if (checkinRes.ok) {
         const checkinData = await checkinRes.json()
-        checkedInGuests = checkinData.guests || checkinData || []
+        if (checkinData?.error) {
+          console.warn('checked-in proxy says:', checkinData)
+          checkedInGuests = []
+        } else {
+          checkedInGuests = checkinData.guests || checkinData || []
+        }
         console.log('Checked-in guests data:', checkedInGuests)
       } else {
         console.error('Failed to fetch checked-in guests:', checkinRes.status, await checkinRes.text())

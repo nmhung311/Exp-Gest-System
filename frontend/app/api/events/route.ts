@@ -6,7 +6,8 @@ export async function GET(req: Request) {
   const offset = searchParams.get('offset') ?? '0'
   const auth = req.headers.get('authorization') || ''
   const base = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
-  const url = `${base}/api/events?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
+  const prefix = process.env.BACKEND_PATH_PREFIX || ''
+  const url = `${base}${prefix}/events?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
 
   const ctrl = new AbortController()
   const id = setTimeout(() => ctrl.abort(), 15000)
@@ -18,19 +19,20 @@ export async function GET(req: Request) {
       cache: 'no-store',
     })
     
-    const body = await r.text()
+    const text = await r.text()
+    const jsonOrText = (() => { try { return JSON.parse(text) } catch { return { raw: text } } })()
     
     if (!r.ok) {
-      console.error('[proxy] /events upstream', r.status, body?.slice(0,500))
-      return NextResponse.json({ message: 'Upstream error', status: r.status }, { status: 502 })
+      console.error('[proxy] /events upstream', r.status, text?.slice(0,500))
+      // Tránh CF 5xx page: trả 200 + payload lỗi cho UI xử lý
+      return NextResponse.json({ error: 'upstream_error', upstreamStatus: r.status, data: jsonOrText }, { status: 200 })
     }
     
-    return new NextResponse(body, {
-      headers: { 'content-type': r.headers.get('content-type') || 'application/json' }
-    })
+    return NextResponse.json(jsonOrText, { status: 200 })
   } catch (e: any) {
     console.error('[proxy] /events fetch failed:', e?.message || e)
-    return NextResponse.json({ message: 'Proxy events error: fetch failed' }, { status: 500 })
+    // Tránh CF 5xx
+    return NextResponse.json({ error: 'proxy_fetch_failed', detail: e?.message || String(e) }, { status: 200 })
   } finally { 
     clearTimeout(id) 
   }

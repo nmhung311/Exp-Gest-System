@@ -78,13 +78,20 @@ export default function StatsPage() {
 
   const loadCheckedInGuests = async () => {
     try {
-      const response = await fetch('/api/guests/checked-in')
+      const eventId = 1 // Default event ID - should be dynamic in real app
+      const qs = `?event_id=${encodeURIComponent(eventId)}&limit=100`
+      const response = await fetch(`/api/guests/checked-in${qs}`)
       if (response.ok) {
         const data = await response.json()
-        // Handle both array and object response formats
-        const checkedInData = Array.isArray(data) ? data : (data.guests || data)
-        setCheckedInGuests(checkedInData)
-        console.log('Loaded checked-in guests:', checkedInData.length)
+        if (data?.error) {
+          console.warn('checked-in proxy says:', data)
+          setCheckedInGuests([])
+        } else {
+          // Handle both array and object response formats
+          const checkedInData = Array.isArray(data) ? data : (data.guests || data)
+          setCheckedInGuests(checkedInData)
+          console.log('Loaded checked-in guests:', checkedInData.length)
+        }
       } else {
         console.error('Failed to load checked-in guests:', response.status)
       }
