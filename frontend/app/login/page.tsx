@@ -25,11 +25,17 @@ export default function LoginPage() {
           // Lưu thông tin user vào localStorage
           localStorage.setItem('current_user', JSON.stringify(data.user))
           
+          // Save access token if available
+          if (data.access_token) {
+            localStorage.setItem('accessToken', data.access_token)
+            console.log('Access token saved')
+          }
+          
           console.log('Login successful, user saved:', data.user.username)
           
-          // 🚫 CHẶN REDIRECT - Không redirect sau khi login thành công
-          // Chỉ log success thay vì redirect
-          console.log('Login successful, staying on login page (no redirect)')
+          // ✅ REDIRECT TO ADMIN DASHBOARD after successful login
+          console.log('Login successful, redirecting to admin dashboard')
+          window.location.href = '/admin'
         } else {
           setError(data.message || 'Đăng nhập thất bại')
         }

@@ -22,7 +22,7 @@ from jwt_utils import generate_access_token, generate_refresh_token, verify_jwt_
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///exp_guest.db"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../exp_guest.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     
     # CORS configuration with environment variable support

@@ -63,6 +63,7 @@ This folder contains the event services that will be integrated with your main n
 - `backend_logs` - Application logs
 - `backend_backups` - Database backups
 - `backend_data` - Application data
+- `../exp_guest.db:/app/exp_guest.db` - Root database file mounted to container
 
 ## Network
 

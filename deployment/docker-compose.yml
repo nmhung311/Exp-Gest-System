@@ -90,6 +90,7 @@ services:
       - backend_logs:/app/logs
       - backend_backups:/app/backups
       - backend_data:/app/instance
+      - ../exp_guest.db:/app/exp_guest.db
 
 networks:
   exp-tech-nexus_exp-network:
