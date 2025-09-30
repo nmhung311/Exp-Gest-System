@@ -7,9 +7,12 @@ export const dynamic = 'force-dynamic'
 
 
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
 
 export async function POST(request: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 30000) // 30 second timeout
+
   try {
     const formData = await request.formData()
     
@@ -24,6 +27,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers,
       body: formData,
+      signal: ctrl.signal,
     })
 
     if (!backendResponse.ok) {
@@ -35,6 +39,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error proxying guest CSV import request:', error)
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ message: "CSV import request timeout" }, { status: 504 });
+    }
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 })
+  } finally {
+    clearTimeout(id)
   }
 }
