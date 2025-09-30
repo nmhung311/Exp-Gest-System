@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
 
 // Removed generateStaticParams to make this a dynamic API route
 
@@ -10,11 +10,15 @@ export async function GET(
 ) {
   try {
     const { id: guestId } = await params
+    const auth = request.headers.get('authorization') || ''
     
     console.log(`Getting QR image for guest ${guestId}`)
     
     const response = await fetch(`${backendUrl}/api/guests/${guestId}/qr-image`, {
       method: 'GET',
+      headers: {
+        ...(auth && { authorization: auth }),
+      },
     })
     
     if (!response.ok) {
