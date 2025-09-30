@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { fetchWithFallback, toListShape } from '../_lib/proxy'
 
 export async function GET(req: Request) {
@@ -30,6 +30,41 @@ export async function GET(req: Request) {
     return NextResponse.json({ items, meta }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ items: [], meta: {}, error: 'proxy_fetch_failed', detail: e?.message || String(e) }, { status: 200 })
+  } finally { 
+    clearTimeout(id) 
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), 15000)
+  
+  try {
+    const body = await req.json()
+    const auth = req.headers.get('authorization') || ''
+    const base = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+    const paths = ['/api/events', '/events']
+
+    const r = await fetchWithFallback(base, paths, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        authorization: auth 
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    })
+    
+    console.info('[proxy] POST /api/events ->', r.url, r.status)
+    
+    if (!r.ok) {
+      return NextResponse.json({ error: 'upstream_error', upstreamStatus: r.status, data: r.data }, { status: r.status })
+    }
+    
+    return NextResponse.json(r.data, { status: r.status })
+  } catch (e: any) {
+    console.error('[proxy] POST /api/events failed:', e?.message || e)
+    return NextResponse.json({ error: 'proxy_fetch_failed', detail: e?.message || String(e) }, { status: 500 })
   } finally { 
     clearTimeout(id) 
   }
