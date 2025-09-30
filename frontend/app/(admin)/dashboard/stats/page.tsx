@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { asItems, logOnce } from '@/lib/asItems'
+import { asItems, logOnce } from '@/src/lib/asItems'
 
 interface Guest {
   id: number

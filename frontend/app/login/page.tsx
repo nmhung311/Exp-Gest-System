@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { api } from '@/lib/api'
+import { api } from '@/src/lib/api'
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")

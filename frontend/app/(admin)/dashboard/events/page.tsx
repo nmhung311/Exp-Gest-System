@@ -3,12 +3,12 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createPortal } from 'react-dom'
-import CustomDropdown from '../../../components/CustomDropdown'
-import CustomCheckbox from '../../../components/CustomCheckbox'
-import DateTimePicker from '../../../components/DateTimePicker'
-import MobileStatusCardContainer from '../../../../components/ui/MobileStatusCardContainer'
+import CustomDropdown from '@/src/components/CustomDropdown'
+import CustomCheckbox from '@/src/components/CustomCheckbox'
+import DateTimePicker from '@/src/components/DateTimePicker'
+import MobileStatusCardContainer from '@/src/components/ui/MobileStatusCardContainer'
 
-import { api } from "@/lib/api"
+import { api } from "@/src/lib/api"
 interface Event {
   id: number
   name: string

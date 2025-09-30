@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { API_ENDPOINTS } from '@/lib/api'
+import { API_ENDPOINTS } from '@/src/lib/api'
 
 // Password validation function
 const validatePassword = (password: string) => {

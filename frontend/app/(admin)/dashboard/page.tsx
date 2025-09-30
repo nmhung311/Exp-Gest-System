@@ -1,9 +1,9 @@
 "use client"
 import React, { useState, useEffect } from "react"
-import { API_ENDPOINTS } from '@/lib/api'
-import { asItems, logOnce } from '@/lib/asItems'
-import CustomDropdown from '../../components/CustomDropdown'
-import MobileStatusCardContainer from '../../../components/ui/MobileStatusCardContainer'
+import { API_ENDPOINTS } from '@/src/lib/api'
+import { asItems, logOnce } from '@/src/lib/asItems'
+import CustomDropdown from '@/src/components/CustomDropdown'
+import MobileStatusCardContainer from '@/src/components/ui/MobileStatusCardContainer'
 
 interface DashboardStats {
   totalGuests: number
