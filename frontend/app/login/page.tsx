@@ -7,7 +7,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState("")  
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,9 +33,9 @@ export default function LoginPage() {
           
           console.log('Login successful, user saved:', data.user.username)
           
-          // ✅ REDIRECT TO ADMIN DASHBOARD after successful login
-          console.log('Login successful, redirecting to admin dashboard')
-          window.location.href = '/admin'
+          // ✅ REDIRECT TO DASHBOARD after successful login
+          console.log('Login successful, redirecting to dashboard')
+          window.location.href = '/dashboard'
         } else {
           setError(data.message || 'Đăng nhập thất bại')
         }

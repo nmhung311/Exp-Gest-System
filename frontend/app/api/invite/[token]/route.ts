@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const backendUrl = process.env.NODE_ENV === 'production' 
-  ? 'http://backend:5008' 
+  ? 'http://event-backend:5008' 
   : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008')
 
 // Removed generateStaticParams to make this a dynamic API route

@@ -37,7 +37,7 @@ ERD (mô tả): Event 1─* Guest
 - Phát QR & Thiệp mời:
   1) Sau khi tạo Guest, hệ thống sinh `qr_code` unique (token hóa id).
   2) Tạo link chứa token để khách xem thiệp mời và RSVP.
-  3) BTC gửi link qua email/SMS.
+  3) BTC gửi link qua email/Telegram/facebook.
 
 - RSVP:
   1) Khách mở link thiệp mời, xem thông tin sự kiện.

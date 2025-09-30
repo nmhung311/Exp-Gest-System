@@ -404,7 +404,7 @@ export default function GuestsPage(){
         console.log("Token value:", tokenData.token)
         console.log("Token length:", tokenData.token?.length)
         
-        const inviteUrl = `${window.location.origin}/invite/${tokenData.token}`
+        const inviteUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://event.expsolution.io'}/invite/${tokenData.token}`
         console.log('Generated invite URL:', inviteUrl)
         
         // Tạo QR code URL
@@ -988,7 +988,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         const data = await response.json()
-        const inviteLink = `${window.location.origin}/invite/${data.token}`
+        const inviteLink = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://event.expsolution.io'}/invite/${data.token}`
         
         // Copy vào clipboard
         await navigator.clipboard.writeText(inviteLink)
@@ -1036,7 +1036,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         const data = await response.json()
-        const link = `${window.location.origin}/invite/${data.token}`
+        const link = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://event.expsolution.io'}/invite/${data.token}`
         setInviteLink(link)
       } else {
         setInviteLink("")
@@ -1116,7 +1116,7 @@ export default function GuestsPage(){
       
       if (response.ok) {
         const data = await response.json()
-        const inviteUrl = `${window.location.origin}/invite/${data.token}`
+        const inviteUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://event.expsolution.io'}/invite/${data.token}`
         
         console.log('Generated invite URL:', inviteUrl)
         
@@ -1157,7 +1157,7 @@ export default function GuestsPage(){
         return
       }
       
-      const inviteUrl = `${window.location.origin}/invite/${backupCode}`
+      const inviteUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://event.expsolution.io'}/invite/${backupCode}`
       console.log('Generated invite URL:', inviteUrl)
       
       // Tạo QR code URL (có thể sử dụng service như qr-server.com)

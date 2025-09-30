@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const backendUrl = process.env.NODE_ENV === 'production' 
-    ? 'http://backend:5008' 
+    ? 'http://event-backend:5008' 
     : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
   
   try {
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const backendUrl = process.env.NODE_ENV === 'production' 
-    ? 'http://backend:5008' 
+    ? 'http://event-backend:5008' 
     : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
   const body = await request.json();
 

@@ -11,6 +11,8 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_BASE_URL=https://apievent.expsolution.io
+      - NEXT_PUBLIC_FRONTEND_URL=https://event.expsolution.io
     expose:
       - "3000"
     depends_on:
@@ -49,7 +51,6 @@ services:
     build: 
       context: ../backend
       dockerfile: Dockerfile
-      target: production
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False

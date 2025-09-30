@@ -7,7 +7,7 @@ from flask import request, jsonify
 # JWT Configuration
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-this-in-production')
 JWT_ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRATION_MINUTES = 15  # Short-lived access token
+ACCESS_TOKEN_EXPIRATION_MINUTES = 60  # Short-lived access token
 REFRESH_TOKEN_EXPIRATION_DAYS = 7     # Long-lived refresh token
 
 def generate_access_token(user_id, username, email=None):

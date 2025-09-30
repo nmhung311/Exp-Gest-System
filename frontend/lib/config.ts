@@ -11,35 +11,35 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
   (isDevelopment ? 'http://192.168.1.135:3000' : 'https://event.expsolution.io')
 
-// API Endpoints - Gọi trực tiếp đến external backend
+// API Endpoints - Sử dụng Next.js API routes
 export const API_ENDPOINTS = {
   // Events
-  EVENTS: `${API_BASE_URL}/api/events`,
+  EVENTS: '/api/events',
   
-  // Guests - Gọi trực tiếp backend external
-  GUESTS: `${API_BASE_URL}/api/guests`,
-  GUEST_BY_ID: (id: string) => `${API_BASE_URL}/api/guests/${id}`,
-  GUEST_QR: (id: string) => `${API_BASE_URL}/api/guests/${id}/qr`,
-  GUEST_QR_IMAGE: (id: string) => `${API_BASE_URL}/api/guests/${id}/qr-image`,
-  GUEST_BULK_CHECKIN: `${API_BASE_URL}/api/guests/bulk-checkin`,
-  GUEST_BULK_CHECKOUT: `${API_BASE_URL}/api/guests/bulk-checkout`,
-  GUEST_BULK_DELETE: `${API_BASE_URL}/api/guests/bulk-delete`,
-  GUEST_BULK_RSVP: `${API_BASE_URL}/api/guests/bulk-rsvp`,
-  GUEST_BULK_HOST: `${API_BASE_URL}/api/guests/bulk-host`,
-  GUEST_IMPORT: `${API_BASE_URL}/api/guests/import`,
-  GUEST_IMPORT_CSV: `${API_BASE_URL}/api/guests/import-csv`,
-  GUESTS_CHECKED_IN: `${API_BASE_URL}/api/guests/checked-in`,
+  // Guests - Sử dụng Next.js API routes
+  GUESTS: '/api/guests',
+  GUEST_BY_ID: (id: string) => `/api/guests/${id}`,
+  GUEST_QR: (id: string) => `/api/guests/${id}/qr`,
+  GUEST_QR_IMAGE: (id: string) => `/api/guests/${id}/qr-image`,
+  GUEST_BULK_CHECKIN: '/api/guests/bulk-checkin',
+  GUEST_BULK_CHECKOUT: '/api/guests/bulk-checkout',
+  GUEST_BULK_DELETE: '/api/guests/bulk-delete',
+  GUEST_BULK_RSVP: '/api/guests/bulk-rsvp',
+  GUEST_BULK_HOST: '/api/guests/bulk-host',
+  GUEST_IMPORT: '/api/guests/import',
+  GUEST_IMPORT_CSV: '/api/guests/import-csv',
+  GUESTS_CHECKED_IN: '/api/guests/checked-in',
   
-  // Check-in - Gọi trực tiếp backend external
-  CHECKIN: `${API_BASE_URL}/api/checkin`,
-  CHECKIN_BY_ID: (id: string) => `${API_BASE_URL}/api/checkin/${id}`,
+  // Check-in - Sử dụng Next.js API routes
+  CHECKIN: '/api/checkin',
+  CHECKIN_BY_ID: (id: string) => `/api/checkin/${id}`,
   
-  // Auth - Gọi trực tiếp backend external
+  // Auth - Sử dụng Next.js API routes
   AUTH: {
-    LOGIN: `${API_BASE_URL}/api/auth/login`,
-    REGISTER: `${API_BASE_URL}/api/auth/register`,
-    USERS: `${API_BASE_URL}/api/auth/users`,
-    ME: `${API_BASE_URL}/api/auth/me`,
+    LOGIN: '/api/auth/login',
+    REGISTER: '/api/auth/register',
+    USERS: '/api/auth/users',
+    ME: '/api/auth/me',
   },
 } as const
 

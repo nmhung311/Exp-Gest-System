@@ -1,0 +1,131 @@
+name: Database Migration and Seeding
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/app/models/**'
+      - 'alembic/**'
+      - 'backend/seed.py'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/app/models/**'
+      - 'alembic/**'
+      - 'backend/seed.py'
+
+jobs:
+  database-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: exp_guest_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install alembic psycopg2-binary
+    
+    - name: Set up environment
+      run: |
+        echo "DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/exp_guest_test" >> $GITHUB_ENV
+        echo "PYTHONPATH=backend" >> $GITHUB_ENV
+    
+    - name: Run migrations
+      run: |
+        alembic upgrade head
+        echo "✅ Migrations completed successfully"
+    
+    - name: Run seeding
+      run: |
+        python -m backend.seed
+        echo "✅ Seeding completed successfully"
+    
+    - name: Verify database state
+      run: |
+        python -c "
+        import os
+        os.environ['PYTHONPATH'] = 'backend'
+        from app.db.session import SessionLocal
+        from app.models import Event, Guest, User, Role
+        
+        db = SessionLocal()
+        try:
+            # Check tables exist and have data
+            event_count = db.query(Event).count()
+            guest_count = db.query(Guest).count()
+            user_count = db.query(User).count()
+            role_count = db.query(Role).count()
+            
+            print(f'Events: {event_count}')
+            print(f'Guests: {guest_count}')
+            print(f'Users: {user_count}')
+            print(f'Roles: {role_count}')
+            
+            # Verify we have expected data
+            assert event_count >= 1, 'No events found'
+            assert guest_count >= 1, 'No guests found'
+            assert user_count >= 1, 'No users found'
+            assert role_count >= 3, 'Expected at least 3 roles'
+            
+            print('✅ Database verification passed')
+        finally:
+            db.close()
+        "
+    
+    - name: Test rollback
+      run: |
+        # Test rollback to previous version
+        alembic downgrade -1
+        echo "✅ Rollback test completed"
+        
+        # Upgrade back to head
+        alembic upgrade head
+        echo "✅ Upgrade after rollback completed"
+    
+    - name: Run smoke tests
+      run: |
+        python -c "
+        import os
+        os.environ['PYTHONPATH'] = 'backend'
+        from app.db.session import SessionLocal
+        from app.models import Event, Guest, User, Role, UserRole
+        
+        db = SessionLocal()
+        try:
+            # Test basic queries
+            events = db.query(Event).all()
+            print(f'Found {len(events)} events')
+            
+            for event in events:
+                guests = db.query(Guest).filter(Guest.event_id == event.id).all()
+                print(f'Event \"{event.name}\" has {len(guests)} guests')
+            
+            # Test user roles
+            admin_users = db.query(User).join(UserRole).join(Role).filter(Role.name == 'admin').all()
+            print(f'Found {len(admin_users)} admin users')
+            
+            print('✅ Smoke tests passed')
+        finally:
+            db.close()
+        "
