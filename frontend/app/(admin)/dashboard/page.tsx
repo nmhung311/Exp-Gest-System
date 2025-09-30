@@ -68,27 +68,18 @@ export default function DashboardPage(){
   const loadDashboardStats = async () => {
     try {
       setLoading(true)
-      console.log('Loading dashboard stats...')
-      
       // Load guests data
-      console.log('Fetching guests from:', API_ENDPOINTS.GUESTS)
       const guestsRes = await fetch(API_ENDPOINTS.GUESTS)
-      console.log('Guests response status:', guestsRes.status)
       let guests = []
       if (guestsRes.ok) {
         const guestsData = await guestsRes.json()
         guests = guestsData.guests || guestsData || []
-        console.log('Guests data:', guests)
-      } else {
-        console.error('Failed to fetch guests:', guestsRes.status, await guestsRes.text())
       }
       
       // Load checked-in guests
       const eventId = 1 // Default event ID - should be dynamic in real app
       const qs = `?event_id=${encodeURIComponent(eventId)}&limit=100`
-      console.log('Fetching checked-in guests from:', `${API_ENDPOINTS.GUESTS_CHECKED_IN}${qs}`)
       const checkinRes = await fetch(`${API_ENDPOINTS.GUESTS_CHECKED_IN}${qs}`)
-      console.log('Checked-in guests response status:', checkinRes.status)
       let checkedInGuests = []
       if (checkinRes.ok) {
         const checkinData = await checkinRes.json()
@@ -96,15 +87,10 @@ export default function DashboardPage(){
           logOnce('checkedin-err', 'checked-in proxy says:', checkinData)
         }
         checkedInGuests = asItems(checkinData)
-        console.log('Checked-in guests data:', checkedInGuests)
-      } else {
-        console.error('Failed to fetch checked-in guests:', checkinRes.status, await checkinRes.text())
       }
       
       // Load events data
-      console.log('Fetching events from:', API_ENDPOINTS.EVENTS)
       const eventsRes = await fetch(API_ENDPOINTS.EVENTS)
-      console.log('Events response status:', eventsRes.status)
       let events = []
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json()
@@ -112,9 +98,6 @@ export default function DashboardPage(){
           logOnce('events-err', 'events proxy says:', eventsData)
         }
         events = asItems(eventsData)
-        console.log('Events data:', events)
-      } else {
-        console.error('Failed to fetch events:', eventsRes.status, await eventsRes.text())
       }
       
       // Calculate today's check-ins
@@ -143,7 +126,7 @@ export default function DashboardPage(){
         todayCheckins
       })
     } catch (error) {
-      console.error("Error loading dashboard stats:", error)
+      // Silent error handling
     } finally {
       setLoading(false)
     }
@@ -195,7 +178,6 @@ export default function DashboardPage(){
         setUpcomingEvents(filteredEvents)
       }
     } catch (error) {
-      console.error("Error loading upcoming events:", error)
       setUpcomingEvents([])
     }
   }

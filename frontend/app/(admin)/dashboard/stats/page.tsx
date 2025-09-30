@@ -70,13 +70,10 @@ export default function StatsPage() {
         }
         const guestsData = asItems(data)
         setGuests(guestsData)
-        console.log('Loaded guests:', guestsData.length)
       } else {
-        console.error('Failed to load guests:', response.status)
         setGuests([])
       }
     } catch (error) {
-      console.error('Error loading guests:', error)
       setGuests([])
     }
   }
@@ -93,13 +90,10 @@ export default function StatsPage() {
         }
         const checkedInData = asItems(data)
         setCheckedInGuests(checkedInData)
-        console.log('Loaded checked-in guests:', checkedInData.length)
       } else {
-        console.error('Failed to load checked-in guests:', response.status)
         setCheckedInGuests([])
       }
     } catch (error) {
-      console.error('Error loading checked-in guests:', error)
       setCheckedInGuests([])
     } finally {
       setLoading(false)
