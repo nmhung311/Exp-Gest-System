@@ -146,8 +146,15 @@ export default function CheckinPage() {
       try {
         const response = await api.getEvents()
         const data = await response.json()
-        const sorted = data.sort((a: Event, b: Event) => +new Date(a.date) - +new Date(b.date))
-        setEvents(sorted)
+        // Use asItems to safely extract events array
+        const eventsList = Array.isArray(data) ? data : (data?.items || [])
+        
+        if (Array.isArray(eventsList)) {
+          const sorted = eventsList.sort((a: Event, b: Event) => +new Date(a.date) - +new Date(b.date))
+          setEvents(sorted)
+        } else {
+          setEvents([])
+        }
       } catch {
         setEvents([])
       }

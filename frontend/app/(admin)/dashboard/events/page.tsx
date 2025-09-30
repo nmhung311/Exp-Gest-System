@@ -134,15 +134,21 @@ function EventsPageContent() {
       const res = await api.getEvents()
       if (res.ok) {
         const data = await res.json()
-        // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
-        const sortedEvents = data.sort((a: Event, b: Event) => {
-          const dateA = new Date(a.date)
-          const dateB = new Date(b.date)
-          return dateA.getTime() - dateB.getTime()
-        })
-        setEvents(sortedEvents)
+        // Use asItems to safely extract events array
+        const eventsList = Array.isArray(data) ? data : (data?.items || [])
+        
+        if (Array.isArray(eventsList)) {
+          // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
+          const sortedEvents = eventsList.sort((a: Event, b: Event) => {
+            const dateA = new Date(a.date)
+            const dateB = new Date(b.date)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setEvents(sortedEvents)
+        } else {
+          setEvents([])
+        }
       } else {
-        console.error("Failed to load events:", res.status, res.statusText)
         setEvents([])
       }
     } catch (error) {

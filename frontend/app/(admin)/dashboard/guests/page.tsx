@@ -340,41 +340,39 @@ export default function GuestsPage(){
 
   const loadEvents = async () => {
     try {
-      console.log("Loading events...")
       const res = await api.getEvents()
-      console.log("Events response:", res.status, res.statusText)
       if (res.ok) {
         const data = await res.json()
-        console.log("Events data received:", data)
-        // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
-        const sortedEvents = data.sort((a: Event, b: Event) => {
-          const dateA = new Date(a.date)
-          const dateB = new Date(b.date)
-          return dateA.getTime() - dateB.getTime()
-        })
-        console.log("Sorted events:", sortedEvents)
-        setEvents(sortedEvents)
-        // Nếu có sự kiện đã lưu và còn tồn tại, giữ nguyên; nếu không, để trống
-        try {
-          const saved = localStorage.getItem("exp_selected_event")
-          console.log("Saved event from localStorage:", saved)
-          if (saved && sortedEvents.some((e: Event) => e.id.toString() === saved)) {
-            setEventFilter(saved)
-            console.log("Set eventFilter to saved value:", saved)
-          } else if (sortedEvents.length > 0) {
-            // Tự động chọn sự kiện đầu tiên nếu chưa có sự kiện nào được chọn
-            setEventFilter(sortedEvents[0].id.toString())
-            console.log("Auto-selected first event:", sortedEvents[0].id.toString())
-          }
-        } catch {}
+        // Use asItems to safely extract events array
+        const eventsList = Array.isArray(data) ? data : (data?.items || [])
+        
+        // Ensure eventsList is an array before sorting
+        if (Array.isArray(eventsList)) {
+          // Sắp xếp sự kiện theo ngày gần nhất (upcoming events first)
+          const sortedEvents = eventsList.sort((a: Event, b: Event) => {
+            const dateA = new Date(a.date)
+            const dateB = new Date(b.date)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setEvents(sortedEvents)
+          
+          // Nếu có sự kiện đã lưu và còn tồn tại, giữ nguyên; nếu không, để trống
+          try {
+            const saved = localStorage.getItem("exp_selected_event")
+            if (saved && sortedEvents.some((e: Event) => e.id.toString() === saved)) {
+              setEventFilter(saved)
+            } else if (sortedEvents.length > 0) {
+              // Tự động chọn sự kiện đầu tiên nếu chưa có sự kiện nào được chọn
+              setEventFilter(sortedEvents[0].id.toString())
+            }
+          } catch {}
+        } else {
+          setEvents([])
+        }
       } else {
-        console.error("Failed to load events:", res.status, res.statusText)
-        // Fallback to empty array if API fails
         setEvents([])
       }
     } catch (error) {
-      console.error("Error loading events:", error)
-      // Fallback to empty array if API fails
       setEvents([])
     }
   }
