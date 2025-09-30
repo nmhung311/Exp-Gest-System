@@ -1,9 +1,10 @@
 // API utility functions
-// Đơn giản hóa - chỉ sử dụng cookies cho authentication
+// Sử dụng JWT token cho authentication
 
 import { API_ENDPOINTS, getApiUrl } from './config'
+import { getAccessToken, getValidAccessToken, refreshAccessToken } from './jwt'
 
-// Generic API call function - đơn giản với cookies
+// Generic API call function với JWT authentication
 export const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
@@ -13,12 +14,32 @@ export const apiCall = async (
   const headers = new Headers(options.headers || {})
   if (!headers.has("content-type")) headers.set("content-type", "application/json")
 
+  // Get JWT token for authorization
+  let token = getAccessToken() || await getValidAccessToken()
+  if (token) {
+    headers.set("authorization", `Bearer ${token}`)
+  }
+
   console.log("📤 Making API call to:", url)
-  const res = await fetch(url, { 
+  let res = await fetch(url, { 
     ...options, 
     headers, 
-    credentials: "include" // Chỉ cần cookies
+    credentials: "include"
   })
+
+  // Handle 401 with token refresh
+  if (res.status === 401 && token) {
+    console.log("🔄 Got 401, attempting refresh...")
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      headers.set("authorization", `Bearer ${newToken}`)
+      res = await fetch(url, { 
+        ...options, 
+        headers, 
+        credentials: "include"
+      })
+    }
+  }
   
   return res
 }
