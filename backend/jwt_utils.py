@@ -48,17 +48,24 @@ def verify_jwt_token(token):
         return None
 
 def jwt_required(f):
-    """Decorator to require JWT authentication - đơn giản hóa"""
+    """Decorator to require JWT authentication - hỗ trợ cả Authorization header và cookie"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Chỉ kiểm tra refresh token trong cookie
-        refresh_token = request.cookies.get('refresh-token')
+        # Kiểm tra Authorization header trước
+        auth_header = request.headers.get('Authorization')
+        token = None
         
-        if not refresh_token:
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        else:
+            # Fallback: kiểm tra refresh token trong cookie
+            token = request.cookies.get('refresh-token')
+        
+        if not token:
             return jsonify({'message': 'Authentication required'}), 401
         
         try:
-            payload = verify_jwt_token(refresh_token)
+            payload = verify_jwt_token(token)
             if payload is None:
                 return jsonify({'message': 'Invalid or expired token'}), 401
             
