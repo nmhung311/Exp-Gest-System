@@ -1,23 +1,64 @@
 # Backend / Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 .venv/
 .env
+.env.local
+.env.production
 logs/
 *.log
 instance/
 *.db
 *.sqlite*
+*.db-journal
+migrations/versions/*.pyc
 
 # Frontend / Node
 **/node_modules/
 **/.next/
+**/.next.backup/
 dist/
 out/
 coverage/
+*.tsbuildinfo
+.next/
+.next.backup/
+
+# Build artifacts
+build/
+*.tgz
+*.tar.gz
+
+# Environment files
+.env*
+!.env.example
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.tmp
 
 # OS/IDE
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Database backups
+*_backup_*.db
+*_backup_*.sqlite*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
