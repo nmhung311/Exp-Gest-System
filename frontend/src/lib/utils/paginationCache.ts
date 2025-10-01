@@ -1,7 +1,7 @@
 // Pagination Cache Manager
 // Quản lý cache thông minh cho pagination data
 
-import { CacheEntry, CacheManager, PaginationMetrics } from '@/lib/types/pagination'
+import { CacheEntry, CacheManager, PaginationMetrics } from '@/src/lib/types/pagination'
 
 export class PaginationCacheManager<T = any> implements CacheManager<T> {
   private cache = new Map<number, CacheEntry<T>>()

@@ -96,8 +96,14 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
         // Đợi video load xong
         videoRef.current.onloadedmetadata = () => {
           setDebugInfo("Video metadata loaded - Camera phía sau")
+          console.log('Video metadata loaded:', {
+            videoWidth: videoRef.current?.videoWidth,
+            videoHeight: videoRef.current?.videoHeight,
+            readyState: videoRef.current?.readyState
+          })
           videoRef.current?.play().then(() => {
             setDebugInfo("Camera phía sau đang hoạt động")
+            console.log('Video playing successfully')
             setIsScanning(true)
             startQRDetection()
           }).catch((playError) => {
@@ -106,6 +112,16 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
             setIsScanning(true)
             startQRDetection()
           })
+        }
+        
+        // Thêm event listener để debug
+        videoRef.current.oncanplay = () => {
+          console.log('Video can play:', {
+            videoWidth: videoRef.current?.videoWidth,
+            videoHeight: videoRef.current?.videoHeight,
+            readyState: videoRef.current?.readyState
+          })
+          setDebugInfo(`Video ready: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`)
         }
       }
     } catch (err) {
@@ -251,16 +267,32 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
 
   // Hiển thị khung video để người dùng thấy camera đang hoạt động
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/20 bg-black/40 backdrop-blur-sm">
-      <div className="relative w-full aspect-video">
+    <div className="relative overflow-hidden rounded-xl border border-white/20 bg-black/40 backdrop-blur-sm" style={{ minHeight: '500px' }}>
+      <div className="relative w-full h-[500px] sm:h-[600px] md:h-[700px] lg:h-[600px] xl:h-[700px]">
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover z-10"
+          style={{ 
+            backgroundColor: 'transparent',
+            display: 'block',
+            visibility: 'visible'
+          }}
         />
         <canvas ref={canvasRef} className="hidden" />
+        
+        {/* Overlay với khung quét QR - chỉ hiển thị khung, không che video */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <div className="w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem] lg:w-96 lg:h-96 xl:w-[32rem] xl:h-[32rem] border-2 border-white/80 rounded-lg relative">
+            {/* Góc vuông */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-6 border-l-6 border-cyan-400 rounded-tl-lg"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-6 border-r-6 border-cyan-400 rounded-tr-lg"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-6 border-l-6 border-cyan-400 rounded-bl-lg"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-6 border-r-6 border-cyan-400 rounded-br-lg"></div>
+          </div>
+        </div>
       </div>
       {/* Thanh trạng thái nhỏ dưới khung video */}
       <div className="px-3 py-2 text-xs text-white/70 border-t border-white/10 flex items-center justify-between">

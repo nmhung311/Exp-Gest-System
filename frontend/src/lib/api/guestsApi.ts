@@ -1,9 +1,9 @@
 // Guests API functions for preload pagination
 // Tối ưu API calls cho pagination
 
-import { api, apiCall } from '@/lib/api'
-import { authApi } from '@/lib/auth'
-import { Guest } from '@/lib/types/guest'
+import { api, apiCall } from '@/src/lib/api'
+import { authApi } from '@/src/lib/auth'
+import { Guest } from '@/src/lib/types/guest'
 
 export interface GuestsApiResponse {
   guests: Guest[]

@@ -170,3 +170,109 @@ body {
 .mobile-card-container > *:last-child {
   margin-right: 20px;
 }
+
+/* CSS Reset for Native Controls - Hide default browser controls */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="checkbox"],
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+/* Hide calendar/clock picker indicators in WebKit browsers */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+/* Hide spin/clear buttons on time inputs */
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-clear-button {
+  display: none !important;
+}
+
+/* Hide expand arrows in Edge/Firefox */
+input[type="date"]::-ms-expand,
+select::-ms-expand {
+  display: none;
+}
+
+/* Ensure custom checkboxes are properly styled */
+input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Prevent native date/time picker from appearing */
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Ensure no native controls show up */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  display: none;
+}
+
+/* Hide scrollbar for wheel picker */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Calendar cell size variables for react-day-picker */
+:root {
+  --rdp-cell-size: 32px;
+  --rdp-caption-font-size: 0.875rem;
+}
+
+/* DayPicker minimal layout to keep 7 columns */
+.rdp { 
+  --rdp-cell-size: 36px; 
+  margin: 0; 
+}
+.rdp-months { 
+  display: flex; 
+}
+.rdp-month { 
+  margin: 0 0.5rem 0.5rem 0; 
+}
+.rdp-caption { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: .25rem; 
+}
+.rdp-head { 
+  margin-bottom: .25rem; 
+}
+.rdp-head_row,
+.rdp-row { 
+  display: grid; 
+  grid-template-columns: repeat(7, 1fr); 
+  gap: 2px; 
+}
+.rdp-head_cell { 
+  text-align: center; 
+  font-size: 10px; 
+  opacity: .7; 
+}
+.rdp-day { 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  width: var(--rdp-cell-size); 
+  height: var(--rdp-cell-size); 
+  border-radius: 8px; 
+}

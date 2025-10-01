@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { initializeTokenRestoration, enableAuthStorageSync } from '@/lib/jwt'
+import { initializeTokenRestoration, enableAuthStorageSync } from '@/src/lib/jwt'
 
 export default function TokenInitializer() {
   useEffect(() => {

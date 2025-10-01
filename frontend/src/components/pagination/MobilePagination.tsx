@@ -2,9 +2,9 @@
 // Component pagination tối ưu cho mobile devices
 
 import React, { useState, useEffect, useRef } from 'react'
-import { PreloadPaginationHook } from '@/lib/types/pagination'
-import { PreloadIndicator, PageStatusIndicator } from '@/components/loading/AdvancedSkeletonLoader'
-import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll'
+import { PreloadPaginationHook } from '@/src/lib/types/pagination'
+import { PreloadIndicator, PageStatusIndicator } from '@/src/components/loading/AdvancedSkeletonLoader'
+import { useInfiniteScroll } from '@/src/lib/hooks/useInfiniteScroll'
 
 interface MobilePaginationProps<T = any> {
   // Pagination state

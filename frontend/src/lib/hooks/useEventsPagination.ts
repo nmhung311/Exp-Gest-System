@@ -3,9 +3,9 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { usePreloadPagination } from './usePreloadPagination'
-import { fetchEventsPage, EventsApiParams } from '@/lib/api/eventsApi'
-import { Event } from '@/lib/types/guest'
-import { PreloadPaginationConfig } from '@/lib/types/pagination'
+import { fetchEventsPage, EventsApiParams } from '@/src/lib/api/eventsApi'
+import { Event } from '@/src/lib/types/guest'
+import { PreloadPaginationConfig } from '@/src/lib/types/pagination'
 
 export interface EventsFilters {
   searchTerm: string
@@ -96,7 +96,7 @@ export function useEventsPagination({
     
     // Event CRUD actions
     createEvent: async (eventData: Partial<Event>) => {
-      const { createEvent } = await import('@/lib/api/eventsApi')
+      const { createEvent } = await import('@/src/lib/api/eventsApi')
       const result = await createEvent(eventData)
       if (result.success) {
         onEventUpdate?.(result.event)
@@ -107,7 +107,7 @@ export function useEventsPagination({
     },
     
     updateEvent: async (eventId: number, eventData: Partial<Event>) => {
-      const { updateEvent } = await import('@/lib/api/eventsApi')
+      const { updateEvent } = await import('@/src/lib/api/eventsApi')
       const result = await updateEvent(eventId, eventData)
       if (result.success) {
         onEventUpdate?.(result.event)
@@ -118,7 +118,7 @@ export function useEventsPagination({
     },
     
     deleteEvent: async (eventId: number) => {
-      const { deleteEvent } = await import('@/lib/api/eventsApi')
+      const { deleteEvent } = await import('@/src/lib/api/eventsApi')
       const result = await deleteEvent(eventId)
       if (result.success) {
         // Refresh current page after deletion
@@ -128,7 +128,7 @@ export function useEventsPagination({
     },
     
     duplicateEvent: async (eventId: number) => {
-      const { duplicateEvent } = await import('@/lib/api/eventsApi')
+      const { duplicateEvent } = await import('@/src/lib/api/eventsApi')
       const result = await duplicateEvent(eventId)
       if (result.success) {
         onEventUpdate?.(result.event)
@@ -139,7 +139,7 @@ export function useEventsPagination({
     },
     
     updateEventStatus: async (eventId: number, status: Event['status']) => {
-      const { updateEventStatus } = await import('@/lib/api/eventsApi')
+      const { updateEventStatus } = await import('@/src/lib/api/eventsApi')
       const result = await updateEventStatus(eventId, status)
       if (result.success) {
         onEventUpdate?.(result.event)
@@ -240,7 +240,7 @@ export function useEventsStats() {
     setError(null)
     
     try {
-      const { getEventsStats } = await import('@/lib/api/eventsApi')
+      const { getEventsStats } = await import('@/src/lib/api/eventsApi')
       const result = await getEventsStats()
       setStats(result)
     } catch (err) {
@@ -310,7 +310,7 @@ export function useUpcomingEvents(limit: number = 5) {
     setError(null)
     
     try {
-      const { getUpcomingEvents } = await import('@/lib/api/eventsApi')
+      const { getUpcomingEvents } = await import('@/src/lib/api/eventsApi')
       const result = await getUpcomingEvents(limit)
       setEvents(result)
     } catch (err) {

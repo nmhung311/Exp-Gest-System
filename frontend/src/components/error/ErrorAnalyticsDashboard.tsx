@@ -2,7 +2,7 @@
 // Dashboard hiển thị thống kê lỗi và analytics
 
 import React, { useState, useEffect } from 'react'
-import { errorHandler, ErrorInfo } from '@/lib/utils/errorHandler'
+import { errorHandler, ErrorInfo } from '@/src/lib/utils/errorHandler'
 
 interface ErrorAnalyticsDashboardProps {
   className?: string

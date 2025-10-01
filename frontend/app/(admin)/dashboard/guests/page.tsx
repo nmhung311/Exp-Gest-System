@@ -1,13 +1,13 @@
 "use client"
 import React, { useState, useEffect, useMemo, useCallback } from "react"
-import CustomDropdown from "../../../components/CustomDropdown"
-import CustomCheckbox from "../../../components/CustomCheckbox"
-import Portal from "../../../components/Portal"
-import SystemModal from "../../../components/SystemModal"
-import CopyLinkModal from "../../../components/CopyLinkModal"
-import MobileStatusCardContainer from "../../../../components/ui/MobileStatusCardContainer"
-import { api, API_ENDPOINTS } from "@/lib/api"
-import { authApi } from "@/lib/auth"
+import CustomDropdown from "@/src/components/CustomDropdown"
+import CustomCheckbox from "@/src/components/CustomCheckbox"
+import Portal from "@/src/components/Portal"
+import SystemModal from "@/src/components/SystemModal"
+import CopyLinkModal from "@/src/components/CopyLinkModal"
+import MobileStatusCardContainer from "@/src/components/ui/MobileStatusCardContainer"
+import { api, API_ENDPOINTS } from "@/src/lib/api"
+import { authApi } from "@/src/lib/auth"
 interface Guest {
   id: number
   name: string
@@ -296,26 +296,15 @@ export default function GuestsPage(){
   async function loadGuests() {
     setLoading(true)
     try {
-      console.log("=== LOADING GUESTS ===")
-      const res = await fetch(API_ENDPOINTS.GUESTS)
-      console.log("Load guests response:", res.status)
+      const res = await api.getGuests()
       if (res.ok) {
         const data = await res.json()
-        console.log("Guests data received:", data)
-        console.log("Guests with status:", data.guests?.map((g: any) => ({
-          id: g.id,
-          name: g.name,
-          rsvp_status: g.rsvp_status,
-          checkin_status: g.checkin_status
-        })))
-        console.log("Check-in stats:", {
-          checked_in: data.guests?.filter((g: any) => g.checkin_status === 'checked_in').length || 0,
-          not_checked_in: data.guests?.filter((g: any) => g.checkin_status !== 'checked_in').length || 0
-        })
         setGuests(data.guests || [])
-        console.log("Guests state updated with", data.guests?.length || 0, "guests")
       } else {
-        console.error("Failed to load guests:", res.status, res.statusText)
+        // Only log actual errors, not debug info
+        if (res.status >= 400) {
+          console.error("Failed to load guests:", res.status, res.statusText)
+        }
       }
     } catch (e) {
       console.error("Error loading guests:", e)
@@ -326,7 +315,6 @@ export default function GuestsPage(){
 
   // Function to refresh guests data immediately (for real-time updates)
   const refreshGuests = useCallback(() => {
-    console.log("Manual refresh of guests data...")
     loadGuests()
     // Show a brief notification that data is being refreshed
     const notification = document.createElement('div')
@@ -4480,19 +4468,18 @@ Mr Tên khách,CEO,Host ABC,Công ty ABC,Tag,email@example.com,0900000000</pre>
                     return (
                       <div key={index} className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
                         <div className="flex items-start gap-4">
-                          <input
-                            type="checkbox"
+                          <CustomCheckbox
                             checked={isSelected}
-                            onChange={(e) => {
+                            onChange={(checked) => {
                               const newSelected = new Set(selectedDuplicates)
-                              if (e.target.checked) {
+                              if (checked) {
                                 newSelected.add(index)
                               } else {
                                 newSelected.delete(index)
                               }
                               setSelectedDuplicates(newSelected)
                             }}
-                            className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                            className="mt-1"
                           />
                           
                           <div className="flex-1">

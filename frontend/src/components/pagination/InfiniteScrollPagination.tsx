@@ -2,10 +2,10 @@
 // Component pagination với infinite scroll cho mobile
 
 import React, { useState, useEffect } from 'react'
-import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll'
-import { PreloadPaginationConfig } from '@/lib/types/pagination'
-import { LoadingState, ErrorState, EmptyState } from '@/components/loading/AdvancedSkeletonLoader'
-import { PreloadIndicator } from '@/components/loading/AdvancedSkeletonLoader'
+import { useInfiniteScroll } from '@/src/lib/hooks/useInfiniteScroll'
+import { PreloadPaginationConfig } from '@/src/lib/types/pagination'
+import { LoadingState, ErrorState, EmptyState } from '@/src/components/loading/AdvancedSkeletonLoader'
+import { PreloadIndicator } from '@/src/components/loading/AdvancedSkeletonLoader'
 
 interface InfiniteScrollPaginationProps<T = any> {
   // Data fetching

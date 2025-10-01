@@ -3,6 +3,7 @@
 
 import { API_ENDPOINTS, getApiUrl } from './config'
 import { getAccessToken, getValidAccessToken, refreshAccessToken } from './jwt'
+import { logger } from './logger'
 
 // Generic API call function với JWT authentication
 export const apiCall = async (
@@ -20,7 +21,7 @@ export const apiCall = async (
     headers.set("authorization", `Bearer ${token}`)
   }
 
-  console.log("📤 Making API call to:", url)
+  logger.debug(`Making API call to: ${url}`, { type: 'api_call', url })
   let res = await fetch(url, { 
     ...options, 
     headers, 
@@ -29,7 +30,7 @@ export const apiCall = async (
 
   // Handle 401 with token refresh
   if (res.status === 401 && token) {
-    console.log("🔄 Got 401, attempting refresh...")
+    logger.warn("Got 401, attempting token refresh", { type: 'auth', url })
     const newToken = await refreshAccessToken()
     if (newToken) {
       headers.set("authorization", `Bearer ${newToken}`)

@@ -1,8 +1,8 @@
 // Check-in API functions for preload pagination
 // Tối ưu API calls cho check-in page
 
-import { api, apiCall } from '@/lib/api'
-import { Guest } from '@/lib/types/guest'
+import { api, apiCall } from '@/src/lib/api'
+import { Guest } from '@/src/lib/types/guest'
 
 export interface CheckinApiResponse {
   guests: Guest[]

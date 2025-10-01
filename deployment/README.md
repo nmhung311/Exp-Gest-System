@@ -46,6 +46,7 @@ This folder contains the event services that will be integrated with your main n
 - **Container names** match nginx upstream configuration
 - **Security headers** and **CORS support** included
 - **No port exposure** - nginx handles all external access
+- **services exp-ngin** running at docker ps --filter="name=nginx"
 
 ## Resource Usage
 

@@ -32,7 +32,7 @@ export default /** @type {import('next').NextConfig} */ ({
       {
         protocol: 'http',
         hostname: '192.168.1.135',
-        port: '5008',
+        port: '5012',
         pathname: '/api/**',
       },
     ],

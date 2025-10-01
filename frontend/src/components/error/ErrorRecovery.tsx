@@ -2,8 +2,8 @@
 // Component xử lý lỗi và recovery cho pagination
 
 import React, { useState, useEffect } from 'react'
-import { errorHandler, ErrorInfo } from '@/lib/utils/errorHandler'
-import { LoadingState, ErrorState } from '@/components/loading/AdvancedSkeletonLoader'
+import { errorHandler, ErrorInfo } from '@/src/lib/utils/errorHandler'
+import { LoadingState, ErrorState } from '@/src/components/loading/AdvancedSkeletonLoader'
 
 interface ErrorRecoveryProps {
   // Error handling

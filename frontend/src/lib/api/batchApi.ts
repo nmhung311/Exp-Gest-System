@@ -1,8 +1,8 @@
 // Batch API functions for preload pagination
 // Tối ưu API calls cho batch loading nhiều trang cùng lúc
 
-import { api } from '@/lib/api'
-import { Guest, Event } from '@/lib/types/guest'
+import { api } from '@/src/lib/api'
+import { Guest, Event } from '@/src/lib/types/guest'
 
 export interface BatchApiResponse<T = any> {
   data: { [page: number]: T[] }

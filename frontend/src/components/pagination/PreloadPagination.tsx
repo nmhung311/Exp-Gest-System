@@ -2,8 +2,8 @@
 // Component tái sử dụng cho tất cả các trang có pagination
 
 import React from 'react'
-import { PreloadPaginationHook } from '@/lib/types/pagination'
-import { PreloadIndicator, PageStatusIndicator } from '@/components/loading/AdvancedSkeletonLoader'
+import { PreloadPaginationHook } from '@/src/lib/types/pagination'
+import { PreloadIndicator, PageStatusIndicator } from '@/src/components/loading/AdvancedSkeletonLoader'
 
 interface PreloadPaginationProps {
   pagination: PreloadPaginationHook

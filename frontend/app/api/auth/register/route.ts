@@ -4,7 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+    const backendUrl = process.env.INTERNAL_API_BASE_URL || 'https://apievent.expsolution.io'
     const response = await fetch(`${backendUrl}/api/auth/register`, {
       method: 'POST',
       headers: {

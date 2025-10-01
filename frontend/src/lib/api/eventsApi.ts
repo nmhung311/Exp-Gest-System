@@ -1,8 +1,8 @@
 // Events API functions for preload pagination
 // Tối ưu API calls cho events page
 
-import { api, apiCall } from '@/lib/api'
-import { Event } from '@/lib/types/guest'
+import { api, apiCall } from '@/src/lib/api'
+import { Event } from '@/src/lib/types/guest'
 
 export interface EventsApiResponse {
   events: Event[]

@@ -2,8 +2,8 @@
 // Hook cho infinite scroll với preload pagination
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { PreloadPaginationConfig, PaginationState } from '@/lib/types/pagination'
-import { PaginationCacheManager } from '@/lib/utils/paginationCache'
+import { PreloadPaginationConfig, PaginationState } from '@/src/lib/types/pagination'
+import { PaginationCacheManager } from '@/src/lib/utils/paginationCache'
 
 interface InfiniteScrollOptions<T = any> {
   // Data fetching

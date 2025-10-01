@@ -1,7 +1,7 @@
 // Pagination Analytics System
 // Hệ thống analytics để đo hiệu suất pagination
 
-import { PaginationState } from '@/lib/types/pagination'
+import { PaginationState } from '@/src/lib/types/pagination'
 
 export interface PaginationMetrics {
   // Performance metrics

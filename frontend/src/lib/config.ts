@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 // SEPARATED SERVICES: API Base URL for external backend
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (isDevelopment ? 'http://192.168.1.135:5008' : 'https://apievent.expsolution.io')
+  (isDevelopment ? 'http://localhost:5008' : 'https://apievent.expsolution.io')
 
 // Frontend Base URL  
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
@@ -63,9 +63,5 @@ export const getFrontendUrl = (path: string) => {
 
 // Debug info (chỉ hiển thị trong development)
 if (isDevelopment) {
-  console.log('🔧 Development Mode - API Config:', {
-    API_BASE_URL,
-    FRONTEND_URL,
-    NODE_ENV: process.env.NODE_ENV
-  })
+  // Silent in production - config info not needed in console
 }

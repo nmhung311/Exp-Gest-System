@@ -15,14 +15,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create directory for database
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chmod 755 /app/data
+# Set proper permissions for database file
+RUN chmod 755 /app
 
 # Expose port
 EXPOSE 5008
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5008/ || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:5008/api/health')" || exit 1
 
 # Run the application
 CMD ["python", "app.py"]

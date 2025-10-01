@@ -239,33 +239,24 @@ const InvitePage: React.FC = () => {
   useEffect(() => {
     if (!inviteData?.guest.id) return
     
-    console.log('Setting up BroadcastChannel for guest ID:', inviteData.guest.id)
     const channel = new BroadcastChannel('checkin-channel')
     
     channel.onmessage = (event) => {
-      console.log('=== BROADCAST CHECKIN MESSAGE ===', event.data)
-      console.log('Current guest ID:', inviteData?.guest.id)
-      console.log('Message guest ID:', event.data.guestId)
-      
       if (event.data.type === 'instant-checkin') {
         if (event.data.guestId === inviteData?.guest.id) {
-          console.log('✅ MATCHED GUEST ID - Showing instant check-in!')
           setInstantCheckin(true)
           setShowCheckinSuccess(true)
           updateCheckinStatus('checked_in')
         } else if (event.data.guestId === null) {
-          console.log('⚠️ NULL GUEST ID - Showing generic instant check-in')
           setInstantCheckin(true)
           setShowCheckinSuccess(true)
           updateCheckinStatus('checked_in')
-        } else {
-          console.log('❌ GUEST ID MISMATCH - Ignoring message')
         }
+        // Silent handling - no console logs needed
       }
     }
     
     return () => {
-      console.log('Closing BroadcastChannel...')
       channel.close()
     }
   }, [inviteData?.guest.id])

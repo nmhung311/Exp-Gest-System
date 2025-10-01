@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, time
 import json
 from queue import Queue, Empty
 import pytz
@@ -11,7 +11,7 @@ import csv
 import io
 import qrcode
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, time
 import os
 import hashlib
 import shutil
@@ -22,7 +22,7 @@ from jwt_utils import generate_access_token, generate_refresh_token, verify_jwt_
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../exp_guest.db"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///exp_guest.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     
     # CORS configuration with environment variable support
@@ -342,7 +342,7 @@ def create_app() -> Flask:
         if file.filename == '':
             return {"message": "No file selected"}, 400
         
-        if not file.filename.lower().endswith('.csv'):
+        if not file.filename or not file.filename.lower().endswith('.csv'):
             return {"message": "File must be CSV"}, 400
         
         try:
@@ -613,7 +613,7 @@ def create_app() -> Flask:
                 return {"message": "No file selected"}, 400
             
             # Validate file extension
-            if not file.filename.endswith('.zip'):
+            if not file.filename or not file.filename.endswith('.zip'):
                 return {"message": "Only ZIP files are allowed"}, 400
             
             # Create backup directory if it doesn't exist
@@ -1201,7 +1201,7 @@ def create_app() -> Flask:
     def get_upcoming_events():
         """Lấy sự kiện sắp tới theo khoảng thời gian"""
         try:
-            from datetime import datetime, timedelta
+            from datetime import datetime, time, timedelta
             import pytz
             
             # Lấy tham số khoảng thời gian
@@ -1273,7 +1273,7 @@ def create_app() -> Flask:
                                 hour = int(parts[0])
                                 minute = int(parts[1])
                                 second = int(parts[2]) if len(parts) > 2 else 0
-                                parsed_time = datetime.time(hour, minute, second)
+                                parsed_time = time(hour, minute, second)
                             else:
                                 raise ValueError("Invalid time format")
                         else:
@@ -1358,7 +1358,7 @@ def create_app() -> Flask:
                                     hour = int(parts[0])
                                     minute = int(parts[1])
                                     second = int(parts[2]) if len(parts) > 2 else 0
-                                    parsed_time = datetime.time(hour, minute, second)
+                                    parsed_time = time(hour, minute, second)
                                 else:
                                     raise ValueError("Invalid time format")
                             else:

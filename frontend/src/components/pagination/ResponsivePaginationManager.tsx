@@ -2,7 +2,7 @@
 // Manager component để tự động chọn pagination mode phù hợp
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { PreloadPaginationHook } from '@/lib/types/pagination'
+import { PreloadPaginationHook } from '@/src/lib/types/pagination'
 import PreloadPagination from './PreloadPagination'
 import InfiniteScrollPagination from './InfiniteScrollPagination'
 import MobilePagination from './MobilePagination'

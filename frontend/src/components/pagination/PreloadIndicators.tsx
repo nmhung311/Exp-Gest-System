@@ -2,7 +2,7 @@
 // Hiển thị trạng thái preload và cache cho pagination
 
 import React, { useState, useEffect } from 'react'
-import { PreloadIndicator, PageStatusIndicator } from '@/components/loading/AdvancedSkeletonLoader'
+import { PreloadIndicator, PageStatusIndicator } from '@/src/components/loading/AdvancedSkeletonLoader'
 
 interface PreloadIndicatorsProps {
   // Pagination state

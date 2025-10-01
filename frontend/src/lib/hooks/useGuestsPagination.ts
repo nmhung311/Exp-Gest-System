@@ -4,9 +4,9 @@
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { usePreloadPagination } from './usePreloadPagination'
 import { useOptimizedImport } from './useOptimizedImport'
-import { fetchGuestsPage, GuestsApiParams } from '@/lib/api/guestsApi'
-import { Guest, GuestFilters } from '@/lib/types/guest'
-import { PreloadPaginationConfig } from '@/lib/types/pagination'
+import { fetchGuestsPage, GuestsApiParams } from '@/src/lib/api/guestsApi'
+import { Guest, GuestFilters } from '@/src/lib/types/guest'
+import { PreloadPaginationConfig } from '@/src/lib/types/pagination'
 
 interface UseGuestsPaginationOptions {
   // Filters
@@ -238,7 +238,7 @@ export function useGuestsStats(eventFilter?: string) {
     setError(null)
     
     try {
-      const { getGuestsStats } = await import('@/lib/api/guestsApi')
+      const { getGuestsStats } = await import('@/src/lib/api/guestsApi')
       const result = await getGuestsStats(eventFilter)
       setStats(result)
     } catch (err) {

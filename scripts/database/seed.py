@@ -6,8 +6,13 @@ Run this script to populate the database with initial data
 
 if __name__ == "__main__":
     # Import all seed modules to register them
-    from app.seeds import seed_roles, seed_users, seed_events, seed_guests
-    from app.seeds.base_seed import run_all
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
+    
+    # Import all seed modules to register them
+    from app.seeds import seed_roles, seed_users, seed_events, seed_guests  # type: ignore
+    from app.seeds.base_seed import run_all  # type: ignore
     
     print("Starting database seeding...")
     print("=" * 50)

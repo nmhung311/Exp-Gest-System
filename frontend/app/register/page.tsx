@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { API_ENDPOINTS } from '@/src/lib/api'
+import CustomCheckbox from '@/src/components/CustomCheckbox'
 
 // Password validation function
 const validatePassword = (password: string) => {
@@ -367,10 +368,9 @@ export default function RegisterPage() {
             </div>
 
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
-                required
+              <CustomCheckbox
+                checked={false}
+                onChange={() => {}}
               />
               <label className="ml-2 text-sm text-gray-300">
                 I agree to the{' '}

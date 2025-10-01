@@ -64,5 +64,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Start the application
-CMD ["node", "server.js"]
+# Start the application with increased memory limit
+CMD ["node", "--max-old-space-size=1024", "server.js"]

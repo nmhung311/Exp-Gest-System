@@ -2,12 +2,13 @@
 // Component hiển thị danh sách check-in với preload pagination
 
 import React, { useState } from 'react'
-import { Guest } from '@/lib/types/guest'
-import { useCheckinPagination } from '@/lib/hooks/useCheckinPagination'
-import { CheckinFilters } from '@/lib/hooks/useCheckinPagination'
-import PreloadPagination from '@/components/pagination/PreloadPagination'
-import SkeletonLoader from '@/components/pagination/SkeletonLoader'
-import { LoadingState, ErrorState, EmptyState } from '@/components/pagination/SkeletonLoader'
+import { Guest } from '@/src/lib/types/guest'
+import { useCheckinPagination } from '@/src/lib/hooks/useCheckinPagination'
+import { CheckinFilters } from '@/src/lib/hooks/useCheckinPagination'
+import PreloadPagination from '@/src/components/pagination/PreloadPagination'
+import SkeletonLoader from '@/src/components/pagination/SkeletonLoader'
+import { LoadingState, ErrorState, EmptyState } from '@/src/components/pagination/SkeletonLoader'
+import CustomCheckbox from '@/src/components/CustomCheckbox'
 
 interface CheckinListProps {
   filters: CheckinFilters
@@ -159,13 +160,11 @@ export default function CheckinList({
         }`}
       >
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={selectedGuests.has(guest.id)}
-              onChange={() => handleGuestToggle(guest.id)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-            />
+        <div className="flex items-center gap-3">
+          <CustomCheckbox
+            checked={selectedGuests.has(guest.id)}
+            onChange={() => handleGuestToggle(guest.id)}
+          />
             <div>
               <div className="flex items-center gap-2">
                 <div className="text-white font-medium text-sm">{guest.name}</div>
@@ -289,11 +288,9 @@ export default function CheckinList({
           <thead className="text-xs text-white/60 uppercase bg-black/30">
             <tr>
               <th className="px-4 py-3 w-12">
-                <input
-                  type="checkbox"
+                <CustomCheckbox
                   checked={selectedGuests.size === pagination.currentItems.length && pagination.currentItems.length > 0}
                   onChange={selectedGuests.size === pagination.currentItems.length ? handleDeselectAll : handleSelectAll}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
               </th>
               <th className="px-4 py-3 w-16">STT</th>
@@ -321,11 +318,9 @@ export default function CheckinList({
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <CustomCheckbox
                       checked={selectedGuests.has(guest.id)}
                       onChange={() => handleGuestToggle(guest.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                     />
                   </td>
                   <td className="px-4 py-3 text-white/60">

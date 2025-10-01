@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { asItems, logOnce } from '@/src/lib/asItems'
+import { api } from '@/src/lib/api'
 
 interface Guest {
   id: number
@@ -62,7 +63,7 @@ export default function StatsPage() {
 
   const loadGuests = async () => {
     try {
-      const response = await fetch('/api/guests')
+      const response = await api.getGuests()
       if (response.ok) {
         const data = await response.json()
         if (data?.error) {

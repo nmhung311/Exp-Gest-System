@@ -2,8 +2,8 @@
 // Hook để tối ưu hóa trải nghiệm import khách mời
 
 import { useCallback, useState, useEffect, useRef } from 'react'
-import { Guest } from '@/lib/types/guest'
-import { fetchGuestsPage, GuestsApiParams } from '@/lib/api/guestsApi'
+import { Guest } from '@/src/lib/types/guest'
+import { fetchGuestsPage, GuestsApiParams } from '@/src/lib/api/guestsApi'
 
 interface ImportProgress {
   currentPage: number

@@ -2,7 +2,7 @@
 // Dashboard hiển thị metrics và analytics cho pagination
 
 import React, { useState, useEffect } from 'react'
-import { paginationAnalytics, PaginationMetrics, PerformanceThresholds } from '@/lib/analytics/paginationAnalytics'
+import { paginationAnalytics, PaginationMetrics, PerformanceThresholds } from '@/src/lib/analytics/paginationAnalytics'
 
 interface PerformanceDashboardProps {
   className?: string

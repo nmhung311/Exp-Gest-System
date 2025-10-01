@@ -9,22 +9,16 @@ export default function DebugPage() {
   useEffect(() => {
     const testAPI = async () => {
       try {
-        console.log('Testing API...')
         const response = await fetch('/api/invite/XwJmq68ezBb3RJeHzUK-tVYh4GUoG-JWOJW2XaCuQoE')
-        console.log('Response status:', response.status)
-        console.log('Response ok:', response.ok)
         
         if (response.ok) {
           const result = await response.json()
-          console.log('API Response:', result)
           setData(result)
         } else {
           const errorText = await response.text()
-          console.log('API Error:', errorText)
           setError(errorText)
         }
       } catch (err) {
-        console.log('Fetch Error:', err)
         setError(err.message)
       } finally {
         setLoading(false)

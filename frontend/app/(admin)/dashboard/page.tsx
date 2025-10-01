@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from "react"
-import { API_ENDPOINTS } from '@/src/lib/api'
+import { API_ENDPOINTS, api } from '@/src/lib/api'
 import { asItems, logOnce } from '@/src/lib/asItems'
 import CustomDropdown from '@/src/components/CustomDropdown'
 import MobileStatusCardContainer from '@/src/components/ui/MobileStatusCardContainer'
@@ -69,7 +69,7 @@ export default function DashboardPage(){
     try {
       setLoading(true)
       // Load guests data
-      const guestsRes = await fetch(API_ENDPOINTS.GUESTS)
+      const guestsRes = await api.getGuests()
       let guests = []
       if (guestsRes.ok) {
         const guestsData = await guestsRes.json()
@@ -90,7 +90,7 @@ export default function DashboardPage(){
       }
       
       // Load events data
-      const eventsRes = await fetch(API_ENDPOINTS.EVENTS)
+      const eventsRes = await api.getEvents()
       let events = []
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json()

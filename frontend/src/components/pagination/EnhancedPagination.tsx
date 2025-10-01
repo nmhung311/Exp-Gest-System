@@ -2,10 +2,10 @@
 // Component pagination nâng cao với tất cả features
 
 import React, { useState, useEffect } from 'react'
-import { PreloadPaginationHook } from '@/lib/types/pagination'
-import { PreloadIndicator, PageStatusIndicator } from '@/components/loading/AdvancedSkeletonLoader'
+import { PreloadPaginationHook } from '@/src/lib/types/pagination'
+import { PreloadIndicator, PageStatusIndicator } from '@/src/components/loading/AdvancedSkeletonLoader'
 import PreloadIndicators from './PreloadIndicators'
-import ProgressiveLoading from '@/components/loading/ProgressiveLoading'
+import ProgressiveLoading from '@/src/components/loading/ProgressiveLoading'
 
 interface EnhancedPaginationProps {
   // Pagination state

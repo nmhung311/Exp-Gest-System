@@ -23,13 +23,13 @@ export function parseJWT(token: string): JWTPayload | null {
 
     const normalizedType = raw?.type ?? raw?.typ // ưu tiên type
     if (normalizedType !== 'access' && normalizedType !== 'refresh') {
-      console.log('❌ Unknown token type:', normalizedType)
+      // Unknown token type - silent in production
       return null
     }
 
     // Ràng kiểu mềm cho payload
     if (typeof raw.user_id !== 'number' || typeof raw.username !== 'string') {
-      console.log('❌ Invalid payload shape')
+      // Invalid payload shape - silent in production
       return null
     }
 
@@ -45,20 +45,12 @@ export function parseJWT(token: string): JWTPayload | null {
     // Fail-safe cho iat tương lai
     const now = Math.floor(Date.now() / 1000)
     if (normalized.iat && normalized.iat - now > 300) {
-      console.log('⚠️ Client clock skew? iat is in the future:', normalized.iat, now)
+      // Client clock skew detected - silent in production
     }
-
-    console.log("🔍 Parsed JWT payload:", {
-      type: normalized.type,
-      user_id: normalized.user_id,
-      username: normalized.username,
-      exp: normalized.exp,
-      iat: normalized.iat
-    })
 
     return normalized
   } catch (e) {
-    console.error('❌ Error parsing JWT:', e)
+    // JWT parsing error - silent in production
     return null
   }
 }
@@ -68,21 +60,12 @@ const LEEWAY = 60 // seconds
 export function isTokenExpired(token: string): boolean {
   const payload = parseJWT(token)
   if (!payload) {
-    console.log("❌ Cannot parse token payload")
     return true
   }
 
   // Check if token is expired (exp is in seconds, Date.now() is in milliseconds)
   const currentTime = Math.floor(Date.now() / 1000)
   const isExpired = (payload.exp - currentTime) <= LEEWAY
-  
-  console.log("🕐 Token expiry check:", {
-    currentTime,
-    exp: payload.exp,
-    isExpired,
-    timeLeft: payload.exp - currentTime,
-    leeway: LEEWAY
-  })
   
   return isExpired
 }
@@ -113,20 +96,16 @@ export function getAccessToken(): string | null {
   }
   
   const token = localStorage.getItem(ACCESS_TOKEN_KEY)
-  console.log("🔍 getAccessToken - Raw token:", token ? token.substring(0, 20) + "..." : "null")
   
   if (!token) {
-    console.log("❌ No token in localStorage")
     return null
   }
   
   if (isTokenExpired(token)) {
-    console.log("❌ Token expired, removing from localStorage")
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     return null
   }
   
-  console.log("✅ Valid access token found")
   return token
 }
 
@@ -158,15 +137,15 @@ export async function refreshAccessToken(): Promise<string | null> {
     const p = JSON.parse(atob(access.split(".")[1]))
     const tokenType = p?.type ?? p?.typ
     if (tokenType !== "access") {
-      console.log("❌ Refresh returned non-access token, type:", tokenType)
+      // Refresh returned non-access token
       return null
     }
     
     localStorage.setItem(ACCESS_TOKEN_KEY, access)
-    console.log("✅ Refresh successful, access token saved")
+    // Refresh successful
     return access
   } catch (e) {
-    console.log("❌ Refresh error:", e)
+    // Refresh error - silent in production
     return null
   }
 }
@@ -175,7 +154,6 @@ export async function refreshAccessToken(): Promise<string | null> {
 export async function getValidAccessToken(): Promise<string | null> {
   const raw = localStorage.getItem(ACCESS_TOKEN_KEY)
   if (!raw) {
-    console.log("❌ No access token in localStorage")
     return null
   }
   
@@ -185,25 +163,20 @@ export async function getValidAccessToken(): Promise<string | null> {
     
     const tokenType = p?.type ?? p?.typ // chấp cả 2, ưu tiên 'type'
     if (tokenType !== "access") {
-      console.log("❌ Token in localStorage is not access token, type:", tokenType)
       localStorage.removeItem(ACCESS_TOKEN_KEY) // Remove invalid token
       return null
     }
     
     if ((p.exp ?? 0) - now > 60) { // thay vì 30
-      console.log("✅ Access token is still valid")
       return raw
     }
     
-    console.log("🔄 Access token expired, refreshing...")
     const newAccess = await refreshAccessToken() // phải TRẢ ACCESS
     if (newAccess) {
       localStorage.setItem(ACCESS_TOKEN_KEY, newAccess)
-      console.log("✅ Access token refreshed and saved")
     }
     return newAccess ?? null
   } catch (e) { 
-    console.log("❌ Error validating access token:", e)
     localStorage.removeItem(ACCESS_TOKEN_KEY) // Remove invalid token
     return null 
   }

@@ -8,9 +8,9 @@ import {
   PreloadPaginationActions, 
   PreloadPaginationHook,
   DEFAULT_PAGINATION_CONFIG 
-} from '@/lib/types/pagination'
-import { PaginationCacheManager, paginationUtils, performanceMonitor } from '@/lib/utils/paginationCache'
-import { batchLoadWithRetry } from '@/lib/api/batchApi'
+} from '@/src/lib/types/pagination'
+import { PaginationCacheManager, paginationUtils, performanceMonitor } from '@/src/lib/utils/paginationCache'
+import { batchLoadWithRetry } from '@/src/lib/api/batchApi'
 
 interface UsePreloadPaginationOptions<T = any> {
   // API function to fetch data

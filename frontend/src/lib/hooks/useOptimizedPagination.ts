@@ -8,8 +8,8 @@ import {
   PreloadPaginationActions, 
   PreloadPaginationHook,
   DEFAULT_PAGINATION_CONFIG 
-} from '@/lib/types/pagination'
-import { PaginationCacheManager, paginationUtils, performanceMonitor } from '@/lib/utils/paginationCache'
+} from '@/src/lib/types/pagination'
+import { PaginationCacheManager, paginationUtils, performanceMonitor } from '@/src/lib/utils/paginationCache'
 import { 
   batchGetGuests, 
   batchGetEvents, 
@@ -17,7 +17,7 @@ import {
   smartGuestsLoader,
   smartEventsLoader,
   smartCheckinLoader
-} from '@/lib/api/batchApi'
+} from '@/src/lib/api/batchApi'
 
 interface OptimizedPaginationOptions<T = any> {
   // Entity type for batch loading

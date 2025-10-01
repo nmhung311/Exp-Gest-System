@@ -3,9 +3,9 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { usePreloadPagination } from './usePreloadPagination'
-import { fetchCheckedInGuestsPage, CheckinApiParams } from '@/lib/api/checkinApi'
-import { Guest } from '@/lib/types/guest'
-import { PreloadPaginationConfig } from '@/lib/types/pagination'
+import { fetchCheckedInGuestsPage, CheckinApiParams } from '@/src/lib/api/checkinApi'
+import { Guest } from '@/src/lib/types/guest'
+import { PreloadPaginationConfig } from '@/src/lib/types/pagination'
 
 export interface CheckinFilters {
   searchTerm: string
@@ -72,7 +72,7 @@ export function useCheckinPagination({
   
   // Real-time updates
   useEffect(() => {
-    const { subscribeToCheckinUpdates } = require('@/lib/api/checkinApi')
+    const { subscribeToCheckinUpdates } = require('@/src/lib/api/checkinApi')
     
     const unsubscribe = subscribeToCheckinUpdates((guest: Guest) => {
       onCheckinUpdate?.(guest)
@@ -109,18 +109,18 @@ export function useCheckinPagination({
     
     // Check-in actions
     checkinGuest: async (guestId: number, method: 'qr' | 'manual' = 'manual') => {
-      const { checkinGuest } = await import('@/lib/api/checkinApi')
+      const { checkinGuest } = await import('@/src/lib/api/checkinApi')
       return await checkinGuest(guestId, method)
     },
     
     checkoutGuest: async (guestId: number) => {
-      const { checkoutGuest } = await import('@/lib/api/checkinApi')
+      const { checkoutGuest } = await import('@/src/lib/api/checkinApi')
       return await checkoutGuest(guestId)
     },
     
     // Bulk actions
     bulkCheckin: async (guestIds: number[]) => {
-      const { bulkCheckinGuests } = await import('@/lib/api/checkinApi')
+      const { bulkCheckinGuests } = await import('@/src/lib/api/checkinApi')
       const result = await bulkCheckinGuests(guestIds)
       // Refresh current page after bulk operation
       pagination.actions.refreshPage()
@@ -128,7 +128,7 @@ export function useCheckinPagination({
     },
     
     bulkCheckout: async (guestIds: number[]) => {
-      const { bulkCheckoutGuests } = await import('@/lib/api/checkinApi')
+      const { bulkCheckoutGuests } = await import('@/src/lib/api/checkinApi')
       const result = await bulkCheckoutGuests(guestIds)
       // Refresh current page after bulk operation
       pagination.actions.refreshPage()
@@ -226,7 +226,7 @@ export function useCheckinStats(eventFilter?: string) {
     setError(null)
     
     try {
-      const { getCheckinStats } = await import('@/lib/api/checkinApi')
+      const { getCheckinStats } = await import('@/src/lib/api/checkinApi')
       const result = await getCheckinStats(eventFilter)
       setStats(result)
     } catch (err) {
@@ -291,7 +291,7 @@ export function useCheckinUpdates() {
   const [isConnected, setIsConnected] = useState(false)
   
   useEffect(() => {
-    const { subscribeToCheckinUpdates } = require('@/lib/api/checkinApi')
+    const { subscribeToCheckinUpdates } = require('@/src/lib/api/checkinApi')
     
     const unsubscribe = subscribeToCheckinUpdates((guest: Guest) => {
       setUpdates(prev => [guest, ...prev.slice(0, 9)]) // Keep last 10 updates

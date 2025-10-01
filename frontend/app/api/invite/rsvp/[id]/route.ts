@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'https://apievent.expsolution.io'
 
 export async function GET(
   request: NextRequest,

@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const backendUrl = process.env.NODE_ENV === 'production' 
-    ? 'http://event-backend:5008' 
-    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
+    ? 'https://apievent.expsolution.io' 
+    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008');
   
   try {
     // Forward authentication headers and cookies
@@ -40,8 +40,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const backendUrl = process.env.NODE_ENV === 'production' 
-    ? 'http://event-backend:5008' 
-    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5008');
+    ? 'https://apievent.expsolution.io' 
+    : (process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://event-backend:5008');
   const body = await request.json();
 
   try {

@@ -2,7 +2,7 @@
 // Hiển thị loading progress và stages cho better UX
 
 import React, { useState, useEffect } from 'react'
-import { LoadingState, ErrorState, EmptyState } from '@/components/loading/AdvancedSkeletonLoader'
+import { LoadingState, ErrorState, EmptyState } from '@/src/components/loading/AdvancedSkeletonLoader'
 
 interface LoadingStage {
   id: string

@@ -2,8 +2,8 @@
 import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import UserProfileDropdown from "../components/UserProfileDropdown"
-import AuthGuard from "../../lib/auth-guard"
+import UserProfileDropdown from "@/src/components/UserProfileDropdown"
+import AuthGuard from "@/src/lib/auth-guard"
 
 export default function AdminLayout({
   children,

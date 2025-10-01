@@ -2,7 +2,8 @@
 // Component settings để tùy chỉnh performance monitoring
 
 import React, { useState, useEffect } from 'react'
-import { paginationAnalytics, PerformanceThresholds } from '@/lib/analytics/paginationAnalytics'
+import { paginationAnalytics, PerformanceThresholds } from '@/src/lib/analytics/paginationAnalytics'
+import CustomCheckbox from '@/src/components/CustomCheckbox'
 
 interface PerformanceSettingsProps {
   className?: string
@@ -212,11 +213,9 @@ export default function PerformanceSettings({
     <div className="space-y-4">
       <div className="space-y-3">
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.enableMonitoring}
-            onChange={(e) => updateSetting('enableMonitoring', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('enableMonitoring', checked)}
           />
           <span className="text-white/80 text-sm">Bật monitoring</span>
         </label>
@@ -300,11 +299,9 @@ export default function PerformanceSettings({
     <div className="space-y-4">
       <div className="space-y-3">
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.enableAlerts}
-            onChange={(e) => updateSetting('enableAlerts', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('enableAlerts', checked)}
           />
           <span className="text-white/80 text-sm">Bật alerts</span>
         </label>
@@ -363,21 +360,17 @@ export default function PerformanceSettings({
     <div className="space-y-4">
       <div className="space-y-3">
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.showChart}
-            onChange={(e) => updateSetting('showChart', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('showChart', checked)}
           />
           <span className="text-white/80 text-sm">Hiển thị chart</span>
         </label>
         
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.showDetails}
-            onChange={(e) => updateSetting('showDetails', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('showDetails', checked)}
           />
           <span className="text-white/80 text-sm">Hiển thị chi tiết</span>
         </label>
@@ -403,11 +396,9 @@ export default function PerformanceSettings({
     <div className="space-y-4">
       <div className="space-y-3">
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.enableExport}
-            onChange={(e) => updateSetting('enableExport', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('enableExport', checked)}
           />
           <span className="text-white/80 text-sm">Bật export</span>
         </label>
@@ -425,11 +416,9 @@ export default function PerformanceSettings({
         </div>
         
         <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <CustomCheckbox
             checked={settings.autoExport}
-            onChange={(e) => updateSetting('autoExport', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            onChange={(checked) => updateSetting('autoExport', checked)}
           />
           <span className="text-white/80 text-sm">Auto export</span>
         </label>

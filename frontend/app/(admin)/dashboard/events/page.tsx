@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import CustomDropdown from '@/src/components/CustomDropdown'
 import CustomCheckbox from '@/src/components/CustomCheckbox'
 import DateTimePicker from '@/src/components/DateTimePicker'
+import ResponsiveDateTimePicker from '@/src/components/date-time/ResponsiveDateTimePicker'
 import MobileStatusCardContainer from '@/src/components/ui/MobileStatusCardContainer'
 
 import { api } from "@/src/lib/api"
@@ -1190,22 +1191,26 @@ function EventsPageContent() {
                       <div className="grid grid-cols-2 gap-2">
                   <div>
                           <label className="block text-white/60 text-sm font-medium mb-1">Ngày</label>
-                  <DateTimePicker
-                    type="date"
-                    value={formData.date}
-                    onChange={(value) => setFormData({ ...formData, date: value })}
+                  <ResponsiveDateTimePicker
+                    mode="date"
+                    value={formData.date ? new Date(formData.date) : undefined}
+                    onChange={(date) => setFormData({ ...formData, date: date.toISOString().split('T')[0] })}
                     placeholder="Chọn ngày"
-                    className="w-full"
+                    buttonClassName="w-full h-10 rounded-md border border-white/20 bg-black/30 px-3 text-left text-white focus:outline-none focus:border-blue-400/50"
                   />
                 </div>
                 <div>
                           <label className="block text-white/60 text-sm font-medium mb-1">Giờ</label>
-                  <DateTimePicker
-                    type="time"
-                    value={formData.time}
-                    onChange={(value) => setFormData({ ...formData, time: value })}
+                  <ResponsiveDateTimePicker
+                    mode="time"
+                    minuteStep={5}
+                    value={formData.time ? new Date(`2000-01-01T${formData.time}`) : undefined}
+                    onChange={(date) => {
+                      const timeStr = date.toTimeString().slice(0, 5)
+                      setFormData({ ...formData, time: timeStr })
+                    }}
                     placeholder="Chọn giờ"
-                    className="w-full"
+                    buttonClassName="w-full h-10 rounded-md border border-white/20 bg-black/30 px-3 text-left text-white focus:outline-none focus:border-blue-400/50"
                   />
                         </div>
                       </div>

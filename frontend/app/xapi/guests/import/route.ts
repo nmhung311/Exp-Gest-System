@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const backendUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "") ||
-  "http://backend:5008";
+  "http://backend:5012";
 
 // Lấy ACCESS nếu có trong Authorization, nếu không thì xin ACCESS từ refresh cookie
 async function ensureAccessAuth(req: NextRequest): Promise<string | null> {

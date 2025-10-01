@@ -2,7 +2,7 @@
 // Component monitor hiệu suất real-time cho pagination
 
 import React, { useState, useEffect, useRef } from 'react'
-import { paginationAnalytics, PaginationMetrics } from '@/lib/analytics/paginationAnalytics'
+import { paginationAnalytics, PaginationMetrics } from '@/src/lib/analytics/paginationAnalytics'
 
 interface RealTimePerformanceMonitorProps {
   className?: string

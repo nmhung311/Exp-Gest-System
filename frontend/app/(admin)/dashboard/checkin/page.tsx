@@ -1,9 +1,9 @@
 "use client"
 import React, { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import WorkingQRScanner from "../../../components/WorkingQRScanner"
-import { Icons } from "../../../components/icons"
-import { api } from "@/lib/api"
+import WorkingQRScanner from "@/src/components/WorkingQRScanner"
+import { Icons } from "@/src/components/icons"
+import { api } from "@/src/lib/api"
 
 interface CheckedInGuest {
   id: number

@@ -2,12 +2,13 @@
 // Component hiển thị danh sách sự kiện với preload pagination
 
 import React, { useState } from 'react'
-import { Event } from '@/lib/types/guest'
-import { useEventsPagination } from '@/lib/hooks/useEventsPagination'
-import { EventsFilters } from '@/lib/hooks/useEventsPagination'
-import PreloadPagination from '@/components/pagination/PreloadPagination'
-import SkeletonLoader from '@/components/pagination/SkeletonLoader'
-import { LoadingState, ErrorState, EmptyState } from '@/components/pagination/SkeletonLoader'
+import { Event } from '@/src/lib/types/guest'
+import { useEventsPagination } from '@/src/lib/hooks/useEventsPagination'
+import { EventsFilters } from '@/src/lib/hooks/useEventsPagination'
+import PreloadPagination from '@/src/components/pagination/PreloadPagination'
+import SkeletonLoader from '@/src/components/pagination/SkeletonLoader'
+import { LoadingState, ErrorState, EmptyState } from '@/src/components/pagination/SkeletonLoader'
+import CustomCheckbox from '@/src/components/CustomCheckbox'
 
 interface EventsListProps {
   filters: EventsFilters
@@ -173,11 +174,9 @@ export default function EventsList({
       <div key={event.id} className="bg-black/20 border border-white/10 rounded-xl p-4 hover:bg-black/30 transition-colors">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
+            <CustomCheckbox
               checked={selectedEvents.has(event.id)}
               onChange={() => handleEventToggle(event.id)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
             />
             <div>
               <div className="text-white font-medium text-sm">{event.name}</div>
@@ -269,11 +268,9 @@ export default function EventsList({
           <thead className="text-xs text-white/60 uppercase bg-black/30">
             <tr>
               <th className="px-4 py-3 w-12">
-                <input
-                  type="checkbox"
+                <CustomCheckbox
                   checked={selectedEvents.size === pagination.currentItems.length && pagination.currentItems.length > 0}
                   onChange={selectedEvents.size === pagination.currentItems.length ? handleDeselectAll : handleSelectAll}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
               </th>
               <th className="px-4 py-3 w-16">STT</th>
@@ -293,11 +290,9 @@ export default function EventsList({
               return (
                 <tr key={event.id} className="border-b border-white/10 hover:bg-black/20">
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <CustomCheckbox
                       checked={selectedEvents.has(event.id)}
                       onChange={() => handleEventToggle(event.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                     />
                   </td>
                   <td className="px-4 py-3 text-white/60">

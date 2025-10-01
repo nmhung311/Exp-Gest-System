@@ -1,5 +1,7 @@
 import './globals.css'
-import TokenInitializer from '../components/TokenInitializer'
+import TokenInitializer from '@/src/components/TokenInitializer'
+import '../src/lib/consoleConfig' // Initialize console configuration
+import { ErrorBoundary } from '../src/lib/errorBoundary'
 
 export const metadata = { 
   title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",

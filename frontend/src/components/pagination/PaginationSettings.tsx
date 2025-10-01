@@ -2,7 +2,7 @@
 // Component cho phép user tùy chỉnh pagination behavior
 
 import React, { useState, useEffect } from 'react'
-import { PreloadPaginationConfig } from '@/lib/types/pagination'
+import { PreloadPaginationConfig } from '@/src/lib/types/pagination'
 
 interface PaginationSettingsProps {
   // Current configuration

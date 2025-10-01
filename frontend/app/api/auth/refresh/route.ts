@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 
 
-const backendUrl = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+const backendUrl = process.env.INTERNAL_API_BASE_URL || 'https://apievent.expsolution.io'
 
 export async function POST(request: NextRequest) {
   try {
