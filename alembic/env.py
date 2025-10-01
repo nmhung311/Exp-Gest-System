@@ -7,7 +7,11 @@ from sqlalchemy import pool
 from alembic import context
 
 # Import models to ensure they are registered with Base
-from app.models import Base
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+from models import db
+Base = db.Model
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

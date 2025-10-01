@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   const limit = searchParams.get('limit') ?? '50'
   const offset = searchParams.get('offset') ?? '0'
   const auth = req.headers.get('authorization') || ''
-  const base = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+  const base = process.env.INTERNAL_API_BASE_URL || 'http://localhost:5008'
   const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
   const paths = [`/api/events${qs}`, `/events${qs}`]
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const auth = req.headers.get('authorization') || ''
-    const base = process.env.INTERNAL_API_BASE_URL || 'http://event-backend:5008'
+    const base = process.env.INTERNAL_API_BASE_URL || 'http://localhost:5008'
     const paths = ['/api/events', '/events']
 
     const r = await fetchWithFallback(base, paths, {

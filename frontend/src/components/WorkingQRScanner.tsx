@@ -43,6 +43,11 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
         streamRef.current.getTracks().forEach(track => track.stop())
       }
       
+      // Kiểm tra quyền truy cập camera
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Trình duyệt không hỗ trợ truy cập camera')
+      }
+      
       // Thử các cấu hình camera khác nhau để đảm bảo sử dụng camera phía sau
       const constraints = [
         // Ưu tiên camera phía sau với environment
@@ -101,17 +106,32 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
             videoHeight: videoRef.current?.videoHeight,
             readyState: videoRef.current?.readyState
           })
-          videoRef.current?.play().then(() => {
-            setDebugInfo("Camera phía sau đang hoạt động")
-            console.log('Video playing successfully')
-            setIsScanning(true)
-            startQRDetection()
-          }).catch((playError) => {
-            console.warn('Video play error:', playError)
-            setDebugInfo("Video play error nhưng vẫn tiếp tục...")
-            setIsScanning(true)
-            startQRDetection()
-          })
+          
+          // Force video to play and ensure it's visible
+          const playVideo = async () => {
+            try {
+              await videoRef.current?.play()
+              setDebugInfo("Camera phía sau đang hoạt động")
+              console.log('Video playing successfully')
+              
+              // Ensure video is visible
+              if (videoRef.current) {
+                videoRef.current.style.display = 'block'
+                videoRef.current.style.visibility = 'visible'
+                videoRef.current.style.opacity = '1'
+              }
+              
+              setIsScanning(true)
+              startQRDetection()
+            } catch (playError) {
+              console.warn('Video play error:', playError)
+              setDebugInfo("Video play error nhưng vẫn tiếp tục...")
+              setIsScanning(true)
+              startQRDetection()
+            }
+          }
+          
+          playVideo()
         }
         
         // Thêm event listener để debug
@@ -123,9 +143,34 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
           })
           setDebugInfo(`Video ready: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`)
         }
+        
+        // Thêm event listener để đảm bảo video hiển thị
+        videoRef.current.onplaying = () => {
+          console.log('Video is playing')
+          setDebugInfo("Video đang phát - Camera hoạt động")
+          if (videoRef.current) {
+            videoRef.current.style.display = 'block'
+            videoRef.current.style.visibility = 'visible'
+            videoRef.current.style.opacity = '1'
+          }
+        }
       }
     } catch (err) {
-      const errorMessage = 'Không thể truy cập camera phía sau. Vui lòng cho phép quyền truy cập camera và đảm bảo thiết bị có camera phía sau.'
+      console.error('Camera error:', err)
+      let errorMessage = 'Không thể truy cập camera phía sau. '
+      
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          errorMessage += 'Vui lòng cho phép quyền truy cập camera trong trình duyệt.'
+        } else if (err.name === 'NotFoundError') {
+          errorMessage += 'Không tìm thấy camera phía sau. Vui lòng kiểm tra thiết bị.'
+        } else if (err.name === 'NotSupportedError') {
+          errorMessage += 'Trình duyệt không hỗ trợ truy cập camera.'
+        } else {
+          errorMessage += `Lỗi: ${err.message}`
+        }
+      }
+      
       setError(errorMessage)
       setDebugInfo("Lỗi: " + errorMessage)
       onError?.(errorMessage)
@@ -278,7 +323,8 @@ export default function WorkingQRScanner({ onScan, onError, isActive }: WorkingQ
           style={{ 
             backgroundColor: 'transparent',
             display: 'block',
-            visibility: 'visible'
+            visibility: 'visible',
+            opacity: '1'
           }}
         />
         <canvas ref={canvasRef} className="hidden" />

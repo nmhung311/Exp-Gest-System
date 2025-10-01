@@ -2,7 +2,7 @@ import csv
 import requests
 import sys
 
-CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRRyn7JQqc-Ve6vONQBKVIws9xjqnTZO_PNLY2DWPc9t8OPIZBa1f-oe-wc59p1h6ZIHKXa07o2hgj/pub?gid=0&single=true&output=csv"
+CSV_URL = "https://docs.google.com/spreadsheets/d/1r489l9sbIdbuEeRw0FT-vknamclIkkDmc-h1QMEVvbA/export?format=csv&gid=0"
 
 def fetch_guest_csv(url: str):
     resp = requests.get(url)
@@ -13,17 +13,33 @@ def fetch_guest_csv(url: str):
 
 def parse_csv_data(csv_text: str):
     lines = csv_text.splitlines()
-    # Skip first 2 rows (summary data) and use row 3 as headers
-    if len(lines) < 3:
+    if len(lines) < 1:
         return []
     
-    # Start reading from line 3 (index 2) which contains actual headers
-    reader = csv.DictReader(lines[2:])
+    # Try to detect if we need to skip rows by checking the first few lines
+    header_line = 0
+    for i, line in enumerate(lines[:3]):
+        if 'name' in line.lower() or 'title' in line.lower() or 'email' in line.lower():
+            header_line = i
+            break
+    
+    # Start reading from the detected header line
+    reader = csv.DictReader(lines[header_line:])
     guests = []
     
     for row in reader:
-        # Filter out empty rows (all values are None or empty)
-        if any(value and value.strip() for value in row.values()):
+        # Filter out empty rows and handle list values
+        has_data = False
+        for key, value in row.items():
+            if value:
+                if isinstance(value, list):
+                    # Convert list to string
+                    value = ' '.join(str(v) for v in value if v)
+                if str(value).strip():
+                    has_data = True
+                    break
+        
+        if has_data:
             guests.append(row)
     
     return guests
