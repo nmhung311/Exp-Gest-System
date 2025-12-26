@@ -62,6 +62,7 @@ class Guest(db.Model):
     rsvp_status = db.Column(db.String(20), default="pending")  # pending/accepted/declined
     checkin_status = db.Column(db.String(20), default="not_arrived")  # not_arrived/checked_in/checked_out
     event_content = db.Column(db.Text, nullable=True)  # Nội dung sự kiện cho khách mời
+    table_number = db.Column(db.String(20), nullable=True)  # Số bàn
     event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete="CASCADE"), nullable=True)
     created_at = db.Column(db.DateTime, default=get_hanoi_time)
     
@@ -81,6 +82,7 @@ class Guest(db.Model):
             "rsvp_status": self.rsvp_status,
             "checkin_status": self.checkin_status,
             "event_content": self.event_content,
+            "table_number": self.table_number,
             "event_id": self.event_id,
             "event_name": self.event.name if self.event else None,
             "created_at": self.created_at.isoformat() if self.created_at else None

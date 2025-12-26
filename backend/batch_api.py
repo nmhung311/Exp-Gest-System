@@ -59,7 +59,7 @@ def build_guests_query(filters: Dict[str, Any]):
                 Guest.email.ilike(search_term),
                 Guest.phone.ilike(search_term),
                 Guest.role.ilike(search_term),
-                Guest.company.ilike(search_term),
+                Guest.organization.ilike(search_term),
                 Guest.tag.ilike(search_term)
             )
         )
@@ -138,7 +138,7 @@ def build_checkin_query(filters: Dict[str, Any]):
                 Guest.email.ilike(search_term),
                 Guest.phone.ilike(search_term),
                 Guest.role.ilike(search_term),
-                Guest.company.ilike(search_term),
+                Guest.organization.ilike(search_term),
                 Guest.tag.ilike(search_term)
             )
         )
@@ -171,6 +171,7 @@ def serialize_guest(guest: Guest) -> Dict[str, Any]:
         'rsvp_status': guest.rsvp_status,
         'checkin_status': guest.checkin_status,
         'event_content': guest.event_content,
+        'table_number': guest.table_number,
         'created_at': guest.created_at.isoformat() if guest.created_at else None,
         'event_id': guest.event_id,
         'event_name': guest.event.name if guest.event else None

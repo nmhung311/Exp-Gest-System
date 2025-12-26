@@ -49,6 +49,7 @@ export async function fetchGuestsPage({
     
     if (eventFilter && eventFilter !== '') {
       params.append('event_id', eventFilter)
+      params.append('eventFilter', eventFilter) // Support both for compatibility
     }
     
     const response = await api.getGuests(`?${params.toString()}`)

@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { API_ENDPOINTS } from '@/lib/api'
 import CustomDropdown from '../../components/CustomDropdown'
 
@@ -42,6 +42,11 @@ export default function DashboardPage(){
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | '3days' | '7days' | 'month'>('all')
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
+  const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [restoring, setRestoring] = useState(false)
+  const [restoreResult, setRestoreResult] = useState<string>("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadDashboardStats()
@@ -186,6 +191,156 @@ export default function DashboardPage(){
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 text-transparent bg-clip-text">Bảng điều khiển</h1>
 
+      {/* Restore Backup Modal */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-black/90 border border-white/20 rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">Khôi phục từ Backup</h2>
+              <button
+                onClick={() => {
+                  setShowRestoreModal(false)
+                  setRestoreFile(null)
+                  setRestoreResult("")
+                  if (fileInputRef.current) fileInputRef.current.value = ""
+                }}
+                className="text-white/60 hover:text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Chọn file backup (.zip)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      if (!file.name.toLowerCase().endsWith('.zip')) {
+                        setRestoreResult("⚠️ Vui lòng chọn file ZIP")
+                        return
+                      }
+                      setRestoreFile(file)
+                      setRestoreResult("")
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-300 hover:file:bg-blue-500/30"
+                />
+              </div>
+              
+              {restoreFile && (
+                <div className="p-3 bg-white/5 rounded-lg">
+                  <p className="text-sm text-white/80">
+                    <strong>File:</strong> {restoreFile.name}
+                  </p>
+                  <p className="text-xs text-white/60 mt-1">
+                    Kích thước: {(restoreFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              )}
+              
+              {restoreResult && (
+                <div className={`p-3 rounded-lg ${
+                  restoreResult.includes('✅') || restoreResult.includes('thành công')
+                    ? 'bg-green-500/20 text-green-300'
+                    : restoreResult.includes('⚠️') || restoreResult.includes('lỗi')
+                    ? 'bg-red-500/20 text-red-300'
+                    : 'bg-blue-500/20 text-blue-300'
+                }`}>
+                  <p className="text-sm whitespace-pre-line">{restoreResult}</p>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!restoreFile) {
+                      setRestoreResult("⚠️ Vui lòng chọn file backup")
+                      return
+                    }
+                    
+                    setRestoring(true)
+                    setRestoreResult("Đang khôi phục...")
+                    
+                    try {
+                      console.log('=== UPLOADING BACKUP ===')
+                      console.log('File:', restoreFile.name, restoreFile.size)
+                      
+                      const formData = new FormData()
+                      formData.append('file', restoreFile)
+                      
+                      console.log('Calling /api/backup/restore...')
+                      const response = await fetch('/api/backup/restore', {
+                        method: 'POST',
+                        body: formData,
+                      })
+                      
+                      console.log('Upload response status:', response.status)
+                      console.log('Upload response ok:', response.ok)
+                      
+                      if (!response.ok) {
+                        const errorText = await response.text()
+                        console.error('Error response:', errorText)
+                        throw new Error(`Server error: ${response.status} - ${errorText}`)
+                      }
+                      
+                      const data = await response.json()
+                      console.log('Upload response data:', data)
+                      
+                      if (response.ok) {
+                        setRestoreResult(
+                          `✅ Khôi phục thành công!\n` +
+                          (data.database_restored ? `- Database đã được khôi phục\n` : '') +
+                          (data.data_imported ? `- Đã import ${data.events_imported} events và ${data.guests_imported} guests\n` : '') +
+                          (data.errors?.length > 0 ? `\n⚠️ Lỗi: ${data.errors.join(', ')}` : '')
+                        )
+                        // Reload page after 2 seconds
+                        setTimeout(() => {
+                          window.location.reload()
+                        }, 2000)
+                      } else {
+                        setRestoreResult(`❌ Lỗi: ${data.message || 'Không thể khôi phục backup'}`)
+                      }
+                    } catch (error: any) {
+                      setRestoreResult(`❌ Lỗi: ${error.message}`)
+                    } finally {
+                      setRestoring(false)
+                    }
+                  }}
+                  disabled={restoring || !restoreFile}
+                  className="flex-1 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {restoring ? 'Đang khôi phục...' : 'Khôi phục'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRestoreModal(false)
+                    setRestoreFile(null)
+                    setRestoreResult("")
+                    if (fileInputRef.current) fileInputRef.current.value = ""
+                  }}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
+              
+              <p className="text-xs text-white/60">
+                ⚠️ Lưu ý: Khôi phục backup sẽ thay thế database hiện tại. Database hiện tại sẽ được backup tự động trước khi khôi phục.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions - Mobile Optimized */}
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <a className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/20 rounded-xl p-2 sm:p-4 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/40 transition-all duration-300" href="/dashboard/guests">
@@ -243,6 +398,29 @@ export default function DashboardPage(){
             </div>
           </div>
         </a>
+      </div>
+      
+      {/* Backup & Restore Section */}
+      <div className="bg-black/20 backdrop-blur-sm border border-white/20 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Backup & Khôi phục
+          </h2>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowRestoreModal(true)}
+            className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors text-sm font-medium"
+          >
+            Khôi phục từ Backup
+          </button>
+        </div>
+        <p className="text-xs text-white/60 mt-2">
+          Tải lên file backup (.zip) để khôi phục database. File backup phải chứa exp_guest.db hoặc data_export.json
+        </p>
       </div>
 
 

@@ -20,7 +20,9 @@ from jwt_utils import generate_access_token, generate_refresh_token, verify_jwt_
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///exp_guest.db"
+    # Use absolute path to instance directory for database
+    # SQLite URI format: sqlite:///absolute/path (no leading slash after 3 slashes)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////app/instance/exp_guest.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     
     # CORS configuration with environment variable support
@@ -77,6 +79,25 @@ def create_app() -> Flask:
                     db.session.commit()
             except Exception as _:
                 # Do not block app start if pragma/alter fails
+                db.session.rollback()
+            
+            # --- Migration for table_number in guests table ---
+            try:
+                existing_guest_cols = set()
+                result = db.session.execute(db.text("PRAGMA table_info(guests)"))
+                for row in result:
+                    existing_guest_cols.add(str(row[1]))
+                
+                if "table_number" not in existing_guest_cols:
+                    try:
+                        db.session.execute(db.text("ALTER TABLE guests ADD COLUMN table_number VARCHAR(20)"))
+                        db.session.commit()
+                        print("Added table_number column to guests table")
+                    except Exception as e:
+                        print(f"Error adding table_number column: {e}")
+                        db.session.rollback()
+            except Exception as e:
+                print(f"Error checking guests table: {e}")
                 db.session.rollback()
         except Exception as e:
             print(f"DB init error: {e}")
@@ -433,13 +454,120 @@ def create_app() -> Flask:
     @app.route("/api/guests", methods=["GET"])
     def get_guests():
         try:
-            guests = Guest.query.all()
-            print(f"Found {len(guests)} guests in database")
+            from sqlalchemy import or_
             from batch_api import serialize_guest
-            return {"guests": [serialize_guest(guest) for guest in guests]}, 200
+            
+            # Lấy tham số pagination
+            page = int(request.args.get("page", 1))
+            limit = int(request.args.get("limit", 10))
+            
+            # Lấy tham số lọc theo sự kiện (tùy chọn) - hỗ trợ cả event_id và eventFilter
+            event_id_param = (request.args.get("event_id") or request.args.get("eventFilter") or "").strip()
+            event_filter = None
+            if event_id_param.isdigit():
+                event_filter = int(event_id_param)
+            
+            # Lấy các filter khác
+            search_term = request.args.get("search", "").strip()
+            status_filter = request.args.get("status", "all").strip()
+            tag_filter = request.args.get("tag", "all").strip()
+            organization_filter = request.args.get("organization", "all").strip()
+            role_filter = request.args.get("role", "all").strip()
+            
+            print(f"[GET /api/guests] Request params: page={page}, limit={limit}, event_id={event_filter}, search={search_term}, status={status_filter}")
+            
+            # Build query với filters - eager load event relationship
+            from sqlalchemy.orm import joinedload
+            query = Guest.query.options(joinedload(Guest.event))
+            
+            # Event filter
+            if event_filter is not None:
+                query = query.filter(Guest.event_id == event_filter)
+                print(f"[GET /api/guests] Filtering by event_id={event_filter}")
+            else:
+                print(f"[GET /api/guests] No event filter - getting all guests")
+            
+            # Search filter
+            if search_term:
+                search_pattern = f"%{search_term}%"
+                query = query.filter(
+                    or_(
+                        Guest.name.ilike(search_pattern),
+                        Guest.email.ilike(search_pattern),
+                        Guest.phone.ilike(search_pattern),
+                        Guest.role.ilike(search_pattern),
+                        Guest.organization.ilike(search_pattern),
+                        Guest.tag.ilike(search_pattern)
+                    )
+                )
+            
+            # Status filter
+            if status_filter and status_filter != "all":
+                query = query.filter(Guest.rsvp_status == status_filter)
+            
+            # Tag filter
+            if tag_filter and tag_filter != "all":
+                query = query.filter(Guest.tag == tag_filter)
+            
+            # Organization filter
+            if organization_filter and organization_filter != "all":
+                query = query.filter(Guest.organization == organization_filter)
+            
+            # Role filter
+            if role_filter and role_filter != "all":
+                query = query.filter(Guest.role == role_filter)
+            
+            # Order by created_at descending (newest first)
+            query = query.order_by(Guest.created_at.desc())
+            
+            # Get total count before pagination
+            total_items = query.count()
+            total_pages = (total_items + limit - 1) // limit if limit > 0 else 1
+            
+            print(f"[GET /api/guests] Total items found: {total_items}, total pages: {total_pages}")
+            
+            # Apply pagination
+            if limit > 0:
+                offset = (page - 1) * limit
+                query = query.offset(offset).limit(limit)
+            
+            guests = query.all()
+            
+            print(f"[GET /api/guests] Found {len(guests)} guests (page {page}, limit {limit}, total {total_items}, event_id={event_filter})")
+            
+            # Serialize guests with error handling
+            serialized_guests = []
+            for guest in guests:
+                try:
+                    serialized = serialize_guest(guest)
+                    serialized_guests.append(serialized)
+                except Exception as serialize_error:
+                    print(f"[GET /api/guests] Error serializing guest {guest.id}: {serialize_error}")
+                    import traceback
+                    traceback.print_exc()
+                    # Still include guest but with minimal data
+                    serialized_guests.append({
+                        'id': guest.id,
+                        'name': guest.name or 'Unknown',
+                        'event_id': guest.event_id,
+                        'error': 'Serialization error'
+                    })
+            
+            response_data = {
+                "guests": serialized_guests,
+                "total": total_items,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages
+            }
+            
+            print(f"[GET /api/guests] Returning {len(serialized_guests)} guests")
+            return response_data, 200
         except Exception as e:
-            print(f"Error getting guests: {e}")
-            return {"error": str(e), "guests": []}, 500
+            print(f"[GET /api/guests] Error getting guests: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e), "guests": [], "total": 0, "page": 1, "limit": 10, "totalPages": 0}, 500
 
     @app.route("/api/guests/checked-in", methods=["GET"])
     def get_checked_in_guests():
@@ -510,6 +638,7 @@ def create_app() -> Flask:
                 checkin_status=checkin_status,
                 rsvp_status=data.get("rsvp_status", "pending"),
                 event_content=data.get("event_content", "").strip() or None,
+                table_number=data.get("table_number", "").strip() or None,
                 event_id=data.get("event_id") if data.get("event_id") else None
             )
             
@@ -553,6 +682,7 @@ def create_app() -> Flask:
             guest.email = email or None
             guest.phone = data.get("phone", "").strip() or None
             guest.event_content = data.get("event_content", "").strip() or None
+            guest.table_number = data.get("table_number", "").strip() or None
             new_checkin_status = data.get("checkin_status", "not_arrived")
             print(f"Updating guest {guest.id} ({guest.name}) checkin_status from '{guest.checkin_status}' to '{new_checkin_status}'")
             guest.checkin_status = new_checkin_status
@@ -1405,7 +1535,8 @@ def create_app() -> Flask:
                     "is_vip": guest.tag == "VIP" if guest.tag else False,
                     "rsvp_status": guest.rsvp_status or "pending",
                     "checkin_status": guest.checkin_status or "not_arrived",
-                    "event_content": guest.event_content or ""
+                    "event_content": guest.event_content or "",
+                    "table_number": guest.table_number
                 }
             }
             
@@ -1449,6 +1580,167 @@ def create_app() -> Flask:
         except Exception as e:
             print(f"Error updating guest RSVP: {e}")
             return {"message": f"Error updating guest RSVP: {str(e)}"}, 500
+
+    # --- Backup & Restore ---
+    @app.route("/api/backup/create", methods=["POST"])
+    @jwt_required
+    def create_backup():
+        """Create a backup of the database"""
+        try:
+            import shutil
+            import zipfile
+            from pathlib import Path
+            
+            # Create backup directory if it doesn't exist
+            backup_dir = Path("/app/backups")
+            backup_dir.mkdir(exist_ok=True)
+            
+            # Generate timestamp for backup
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_name = f"{timestamp}"
+            backup_path = backup_dir / backup_name
+            backup_path.mkdir(exist_ok=True)
+            
+            # Copy database file
+            db_source = Path("/app/instance/exp_guest.db")
+            db_dest = backup_path / "exp_guest.db"
+            
+            if db_source.exists():
+                shutil.copy2(db_source, db_dest)
+            else:
+                return {"message": "Database file not found"}, 404
+            
+            # Create zip file
+            zip_path = backup_dir / f"{backup_name}.zip"
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                zipf.write(db_dest, arcname="exp_guest.db")
+            
+            # Clean up unzipped backup folder
+            shutil.rmtree(backup_path)
+            
+            return {
+                "message": "Backup created successfully",
+                "backup_name": f"{backup_name}.zip",
+                "backup_path": str(zip_path),
+                "size": zip_path.stat().st_size
+            }, 200
+            
+        except Exception as e:
+            print(f"Error creating backup: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"message": f"Error creating backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/restore", methods=["POST"])
+    @jwt_required
+    def restore_backup():
+        """Restore database from uploaded backup file"""
+        try:
+            import shutil
+            import zipfile
+            from pathlib import Path
+            
+            # Check if file was uploaded
+            if 'file' not in request.files:
+                return {"message": "No file uploaded"}, 400
+            
+            file = request.files['file']
+            if file.filename == '':
+                return {"message": "No file selected"}, 400
+            
+            if not file.filename.lower().endswith('.zip'):
+                return {"message": "File must be a ZIP archive"}, 400
+            
+            # Create temp directory for extraction
+            temp_dir = Path("/tmp/temp_restore")
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Save uploaded file
+            zip_path = temp_dir / "restore.zip"
+            file.save(zip_path)
+            
+            # Extract zip file
+            with zipfile.ZipFile(zip_path, 'r') as zipf:
+                zipf.extractall(temp_dir)
+            
+            # Find database file in extracted contents
+            db_file = temp_dir / "exp_guest.db"
+            if not db_file.exists():
+                # Try to find it in subdirectories
+                db_files = list(temp_dir.glob("**/exp_guest.db"))
+                if db_files:
+                    db_file = db_files[0]
+                else:
+                    shutil.rmtree(temp_dir)
+                    return {"message": "No database file found in backup"}, 400
+            
+            # Backup current database before restoring
+            db_dest = Path("/app/instance/exp_guest.db")
+            if db_dest.exists():
+                backup_current = Path("/app/instance/exp_guest.db.bak")
+                shutil.copy2(db_dest, backup_current)
+            
+            # Close all database connections
+            db.session.remove()
+            db.engine.dispose()
+            
+            # Restore database
+            shutil.copy2(db_file, db_dest)
+            
+            # Clean up temp directory
+            shutil.rmtree(temp_dir)
+            
+            # Reinitialize database connection
+            db.session.commit()
+            
+            return {
+                "message": "Database restored successfully",
+                "restored_from": file.filename
+            }, 200
+            
+        except Exception as e:
+            print(f"Error restoring backup: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Try to restore from backup if restoration failed
+            try:
+                backup_current = Path("/app/instance/exp_guest.db.bak")
+                db_dest = Path("/app/instance/exp_guest.db")
+                if backup_current.exists():
+                    shutil.copy2(backup_current, db_dest)
+            except:
+                pass
+            
+            return {"message": f"Error restoring backup: {str(e)}"}, 500
+
+    @app.route("/api/backup/list", methods=["GET"])
+    @jwt_required
+    def list_backups():
+        """List all available backups"""
+        try:
+            from pathlib import Path
+            
+            backup_dir = Path("/app/backups")
+            if not backup_dir.exists():
+                return {"backups": []}, 200
+            
+            backups = []
+            for backup_file in backup_dir.glob("*.zip"):
+                backups.append({
+                    "name": backup_file.name,
+                    "size": backup_file.stat().st_size,
+                    "created_at": datetime.fromtimestamp(backup_file.stat().st_mtime).isoformat()
+                })
+            
+            # Sort by creation time (newest first)
+            backups.sort(key=lambda x: x["created_at"], reverse=True)
+            
+            return {"backups": backups}, 200
+            
+        except Exception as e:
+            print(f"Error listing backups: {e}")
+            return {"message": f"Error listing backups: {str(e)}", "backups": []}, 500
 
     # Register batch API blueprint
     app.register_blueprint(batch_bp)

@@ -38,13 +38,7 @@ export default /** @type {import('next').NextConfig} */ ({
     ],
   },
   async redirects() {
-    return [
-      {
-        source: '/',
-        destination: 'https://expsolution.io/',
-        permanent: false,
-      },
-    ]
+    return []
   },
   async rewrites() {
     return [
