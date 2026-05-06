@@ -1,10 +1,10 @@
 "use client"
 import React, { useState, useEffect, useMemo, useCallback } from "react"
-import CustomDropdown from "../../../components/CustomDropdown"
-import CustomCheckbox from "../../../components/CustomCheckbox"
-import Portal from "../../../components/Portal"
-import SystemModal from "../../../components/SystemModal"
-import CopyLinkModal from "../../../components/CopyLinkModal"
+import CustomDropdown from "@/components/shared/CustomDropdown"
+import CustomCheckbox from "@/components/shared/CustomCheckbox"
+import Portal from "@/components/shared/Portal"
+import SystemModal from "@/components/shared/SystemModal"
+import CopyLinkModal from "@/components/shared/CopyLinkModal"
 import { api, API_ENDPOINTS } from "@/lib/api"
 import { authApi } from "@/lib/auth"
 interface Guest {
@@ -769,7 +769,8 @@ export default function GuestsPage() {
         event_id: guest.event_id?.toString() || "",
         checkin_status: guest.checkin_status, // Sử dụng trạng thái thực tế của khách
         rsvp_status: guest.rsvp_status || "pending",
-        event_content: guest.event_content || ""
+        event_content: guest.event_content || "",
+        table_number: guest.table_number || ""
       })
     } else {
       setEditingGuest(null)
@@ -787,7 +788,8 @@ export default function GuestsPage() {
         event_id: defaultEventId,
         checkin_status: "not_arrived", // Mặc định chưa đến khi thêm mới
         rsvp_status: "pending", // Mặc định chưa phản hồi khi thêm mới
-        event_content: ""
+        event_content: "",
+        table_number: ""
       })
     }
     setShowGuestModal(true)

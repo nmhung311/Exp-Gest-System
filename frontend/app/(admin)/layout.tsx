@@ -2,7 +2,7 @@
 import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import UserProfileDropdown from "../components/UserProfileDropdown"
+import UserProfileDropdown from "@/components/shared/UserProfileDropdown"
 
 export default function AdminLayout({
   children,

@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect, useRef } from "react"
 import { API_ENDPOINTS } from '@/lib/api'
-import CustomDropdown from '../../components/CustomDropdown'
+import CustomDropdown from '@/components/shared/CustomDropdown'
 
 interface DashboardStats {
   totalGuests: number

@@ -1,8 +1,8 @@
 "use client"
 import React, { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import WorkingQRScanner from "../../../components/WorkingQRScanner"
-import { Icons } from "../../../components/icons"
+import WorkingQRScanner from "@/components/shared/WorkingQRScanner"
+import { Icons } from "@/components/shared/icons"
 import { api } from "@/lib/api"
 
 interface CheckedInGuest {
@@ -19,6 +19,7 @@ interface CheckedInGuest {
   checkin_status: string
   event_id?: number
   event_name?: string
+  table_number?: string
 }
 
 interface Event {
@@ -80,12 +81,12 @@ export default function CheckinPage() {
 
   // cards
   const [selectedCard, setSelectedCard] = useState<"total" | "checkedIn" | "notCheckedIn" | null>(null)
-  
+
   // Touch handlers for horizontal swipe navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
-  
+
   // recently checked in guest
   const [recentlyCheckedInGuest, setRecentlyCheckedInGuest] = useState<CheckedInGuest | null>(null)
 
@@ -101,7 +102,7 @@ export default function CheckinPage() {
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return
-    
+
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
@@ -115,7 +116,7 @@ export default function CheckinPage() {
 
   // Card types array for navigation
   const cardTypes: ("total" | "checkedIn" | "notCheckedIn")[] = ["total", "checkedIn", "notCheckedIn"]
-  
+
   // Update selected card based on current index
   useEffect(() => {
     setSelectedCard(cardTypes[currentCardIndex])
@@ -135,13 +136,13 @@ export default function CheckinPage() {
         const parsed = Number(saved.replace(/"/g, ""))
         if (!Number.isNaN(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
     return null
   }, [events, allGuests, mounted])
 
   // load events
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       try {
         const response = await api.getEvents()
         const data = await response.json()
@@ -154,8 +155,8 @@ export default function CheckinPage() {
   }, [])
 
   // core loader for guests
-  const loadGuests = async () => {
-    setLoading(true)
+  const loadGuests = async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
       const response = await api.getGuests()
       if (!response.ok) throw new Error(`API error: ${response.status}`)
@@ -164,16 +165,25 @@ export default function CheckinPage() {
       setAllGuests(list)
     } catch (e) {
       console.error('Error loading guests:', e)
-      addNotification("Lỗi khi tải dữ liệu khách. Vui lòng thử lại.", "error")
-      setAllGuests([])
+      if (showLoading) {
+        addNotification("Lỗi khi tải dữ liệu khách. Vui lòng thử lại.", "error")
+        setAllGuests([])
+      }
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
   // initial + refresh on storage signals
   useEffect(() => {
     loadGuests()
+
+    // Polling interval for real-time updates (every 2 seconds)
+    const interval = setInterval(() => {
+      loadGuests(false)
+    }, 2000)
+
+    return () => clearInterval(interval)
   }, [])
 
   // Auto switch to scanned view if there are checked-in guests
@@ -183,7 +193,7 @@ export default function CheckinPage() {
         selectedEventId ? g?.event_id === selectedEventId : true
       )
       const scanned = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in")
-      
+
       // If there are checked-in guests and no card is selected, auto-select checkedIn view
       if (scanned.length > 0 && selectedCard === null) {
         setSelectedCard("checkedIn")
@@ -230,6 +240,13 @@ export default function CheckinPage() {
       addNotification("Vui lòng nhập mã QR", "warning")
       return
     }
+
+    // Nếu đang hiển thị thông tin khách vừa check-in thì không cho check-in tiếp
+    if (recentlyCheckedInGuest) {
+      addNotification("Vui lòng xác nhận thông tin khách hiện tại trước", "warning")
+      return
+    }
+
     try {
       const response = await api.checkinGuest({ qr_code: qrCode })
       const data = await response.json()
@@ -239,11 +256,11 @@ export default function CheckinPage() {
         console.log('Full API Response:', data)
         console.log('Guest data:', data.guest)
         console.log('checked_in_at:', data.checked_in_at)
-        
+
         const time = new Date().toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
         addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${time}`, "success")
         setQrCode("")
-        
+
         // Lưu thông tin khách hàng vừa check-in
         const checkedInGuest: CheckedInGuest = {
           id: data.guest.id,
@@ -258,35 +275,35 @@ export default function CheckinPage() {
           checkin_method: "manual",
           checkin_status: "checked_in",
           event_id: data.guest.event_id,
-          event_name: data.guest.event_name
+          event_name: data.guest.event_name,
+          table_number: data.guest.table_number
         }
         console.log('=== CHECKED IN GUEST OBJECT ===')
         console.log('checkedInGuest:', checkedInGuest)
+        console.log('table_number from API:', data.guest.table_number)
+        console.log('table_number in object:', checkedInGuest.table_number)
         setRecentlyCheckedInGuest(checkedInGuest)
-        
-        // Ẩn thông tin sau 10 giây
-        setTimeout(() => {
-          setRecentlyCheckedInGuest(null)
-        }, 10000)
-        
+
+
+
         await loadGuests()
-        
+
         // Auto switch to checkedIn view after successful check-in
         setSelectedCard("checkedIn")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
-        
-        const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
+
+        const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", {
           timeZone: "Asia/Bangkok",
           year: "numeric",
-          month: "2-digit", 
+          month: "2-digit",
           day: "2-digit",
           hour: "2-digit",
           minute: "2-digit"
         })
         addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in trước đó\nThời gian: ${checkinTime}`, "warning")
-        
+
         // Hiển thị thông tin khách đã check-in trước đó
         if (data.guest) {
           const checkedInGuest: CheckedInGuest = {
@@ -302,11 +319,12 @@ export default function CheckinPage() {
             checkin_method: "qr",
             checkin_status: "checked_in",
             event_id: data.guest.event_id,
-            event_name: data.guest.event_name
+            event_name: data.guest.event_name,
+            table_number: data.guest.table_number
           }
           console.log('Setting recentlyCheckedInGuest for already checked-in:', checkedInGuest)
           setRecentlyCheckedInGuest(checkedInGuest)
-          
+
           // Ẩn thông tin sau 10 giây
           setTimeout(() => {
             setRecentlyCheckedInGuest(null)
@@ -324,16 +342,21 @@ export default function CheckinPage() {
 
   // scanner checkin
   const handleQRScan = async (qrData: string) => {
+    // Nếu đang hiển thị thông tin khách vừa check-in thì không xử lý quét mới
+    if (recentlyCheckedInGuest) {
+      return
+    }
+
     try {
       const token = qrData.trim()
-      
+
       // Hiển thị instant feedback ngay lập tức
       console.log('=== INSTANT CHECKIN FEEDBACK ===')
       const instantCheckinEvent = new CustomEvent('instant-checkin', {
         detail: { token, guestName: 'Đang xử lý...' }
       })
       window.dispatchEvent(instantCheckinEvent)
-      
+
       // BroadcastChannel để thông báo instant check-in
       console.log('=== SENDING INSTANT CHECKIN BROADCAST ===')
       const channel = new BroadcastChannel('checkin-channel')
@@ -346,7 +369,7 @@ export default function CheckinPage() {
       console.log('Sending instant message:', instantMessage)
       channel.postMessage(instantMessage)
       channel.close()
-      
+
       // Trigger localStorage event để đảm bảo trang thiệp mời nhận được
       console.log('=== TRIGGERING INSTANT STORAGE EVENT ===')
       localStorage.setItem('exp_instant_checkin', JSON.stringify({
@@ -354,7 +377,7 @@ export default function CheckinPage() {
         token: token,
         timestamp: Date.now()
       }))
-      
+
       // Trigger URL hash để đảm bảo trang thiệp mời nhận được
       console.log('=== TRIGGERING URL HASH EVENT ===')
       const hashValue = `instant-checkin-${Date.now()}`
@@ -362,7 +385,7 @@ export default function CheckinPage() {
       setTimeout(() => {
         window.location.hash = ''
       }, 100)
-      
+
       // Trigger document.title để đảm bảo trang thiệp mời nhận được
       console.log('=== TRIGGERING DOCUMENT TITLE EVENT ===')
       const originalTitle = document.title
@@ -370,7 +393,7 @@ export default function CheckinPage() {
       setTimeout(() => {
         document.title = originalTitle
       }, 100)
-      
+
       const response = await api.checkinGuest({ qr_code: token })
       const data = await response.json()
 
@@ -385,12 +408,12 @@ export default function CheckinPage() {
         console.log('=== CHECKIN SUCCESS DEBUG ===')
         console.log('API Response:', data)
         console.log('Guest data:', data.guest)
-        
+
         const time = new Date().toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
         addNotification(`Check-in thành công!\nChào mừng ${data.guest.name}\n${time}`, "success")
         setShowSuccessAnimation(true)
         setTimeout(() => setShowSuccessAnimation(false), 1500)
-        
+
         // Lưu thông tin khách hàng vừa check-in
         const checkedInGuest: CheckedInGuest = {
           id: data.guest.id,
@@ -405,7 +428,8 @@ export default function CheckinPage() {
           checkin_method: "qr",
           checkin_status: "checked_in",
           event_id: data.guest.event_id,
-          event_name: data.guest.event_name
+          event_name: data.guest.event_name,
+          table_number: data.guest.table_number
         }
         console.log('=== CREATING CHECKED IN GUEST OBJECT ===')
         console.log('data.guest.id:', data.guest.id)
@@ -421,7 +445,7 @@ export default function CheckinPage() {
         console.log('data.guest.event_name:', data.guest.event_name)
         console.log('Final checkedInGuest object:', checkedInGuest)
         setRecentlyCheckedInGuest(checkedInGuest)
-        
+
         // BroadcastChannel để thông báo check-in thành công với guestId thực
         console.log('=== SENDING SUCCESS CHECKIN BROADCAST ===')
         const successChannel = new BroadcastChannel('checkin-channel')
@@ -435,30 +459,27 @@ export default function CheckinPage() {
         console.log('Sending success message:', successMessage)
         successChannel.postMessage(successMessage)
         successChannel.close()
-        
-        // Ẩn thông tin sau 10 giây
-        setTimeout(() => {
-          setRecentlyCheckedInGuest(null)
-        }, 10000)
-        
+
+
+
         await loadGuests()
-        
+
         // Auto switch to checkedIn view after successful check-in
         setSelectedCard("checkedIn")
       } else if (response.status === 409) {
         console.log('=== GUEST ALREADY CHECKED IN ===')
         console.log('API Response:', data)
-        
-        const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", { 
+
+        const checkinTime = new Date(data.checked_in_at).toLocaleString("vi-VN", {
           timeZone: "Asia/Bangkok",
           year: "numeric",
-          month: "2-digit", 
+          month: "2-digit",
           day: "2-digit",
           hour: "2-digit",
           minute: "2-digit"
         })
         addNotification(`⚠️ ${data.guest?.name || "Khách"} đã check-in trước đó\nThời gian: ${checkinTime}`, "warning")
-        
+
         // Hiển thị thông tin khách đã check-in trước đó
         if (data.guest) {
           const checkedInGuest: CheckedInGuest = {
@@ -474,15 +495,13 @@ export default function CheckinPage() {
             checkin_method: "qr",
             checkin_status: "checked_in",
             event_id: data.guest.event_id,
-            event_name: data.guest.event_name
+            event_name: data.guest.event_name,
+            table_number: data.guest.table_number
           }
           console.log('Setting recentlyCheckedInGuest for already checked-in:', checkedInGuest)
           setRecentlyCheckedInGuest(checkedInGuest)
-          
-          // Ẩn thông tin sau 10 giây
-          setTimeout(() => {
-            setRecentlyCheckedInGuest(null)
-          }, 10000)
+
+
         }
       } else if (response.status === 410) {
         addNotification("Token đã hết hạn\nVui lòng tạo mã QR mới", "error")
@@ -502,18 +521,18 @@ export default function CheckinPage() {
   // edit/checkin status
   const openEditPopup = async (guest: CheckedInGuest) => {
     setEditCheckin({ isOpen: true, guest, loading: true })
-    
+
     try {
       // Fetch all guests to get detailed information
       const response = await api.getGuests()
       if (!response.ok) throw new Error("Failed to fetch guest details")
-      
+
       const payload = await response.json()
       const allGuests = Array.isArray(payload?.guests) ? payload.guests : []
-      
+
       // Find the specific guest with detailed information
       const detailedGuestData = allGuests.find((g: any) => g.id === guest.id)
-      
+
       if (detailedGuestData) {
         // Update the guest with detailed information from database
         const detailedGuest: CheckedInGuest = {
@@ -524,8 +543,9 @@ export default function CheckinPage() {
           email: detailedGuestData.email || guest.email,
           phone: detailedGuestData.phone || guest.phone,
           tag: detailedGuestData.tag || guest.tag,
+          table_number: detailedGuestData.table_number || guest.table_number,
         }
-        
+
         setEditCheckin({ isOpen: true, guest: detailedGuest, loading: false })
       } else {
         // If guest not found in detailed data, use existing data
@@ -537,7 +557,7 @@ export default function CheckinPage() {
       setEditCheckin({ isOpen: false, guest: null, loading: false })
     }
   }
-  
+
   const closeEditPopup = () => setEditCheckin({ isOpen: false, guest: null, loading: false })
 
   const handleUpdateGuest = async (guest: CheckedInGuest) => {
@@ -553,7 +573,7 @@ export default function CheckinPage() {
         checkin_status: "checked_in",
         checked_in_at: guest.checked_in_at
       })
-      
+
       if (!res.ok) throw new Error("Update failed")
 
       // Refresh data after update
@@ -580,7 +600,7 @@ export default function CheckinPage() {
         phone: guest.phone || "",
         checkin_status: "checked_out",
       })
-      
+
       if (!res.ok) throw new Error("Checkout failed")
 
       // Refresh data after checkout
@@ -637,6 +657,18 @@ export default function CheckinPage() {
     const checkedIn = guestsForEvent.filter((g: any) => g?.checkin_status === "checked_in").length
     const total = acceptedForEvent.length
     const notCheckedIn = acceptedForEvent.filter((g: any) => g?.checkin_status === "not_arrived").length
+    
+    console.log('=== STATS CALCULATION ===')
+    console.log('Total guests for event:', guestsForEvent.length)
+    console.log('Accepted guests:', acceptedForEvent.length)
+    console.log('Checked in:', checkedIn)
+    console.log('Not checked in (accepted + not_arrived):', notCheckedIn)
+    console.log('Sample guest statuses:', guestsForEvent.slice(0, 5).map(g => ({
+      name: g.name,
+      rsvp: g.rsvp_status,
+      checkin: g.checkin_status
+    })))
+    
     return { total, checkedIn, notCheckedIn }
   }, [allGuests, selectedEventId])
 
@@ -649,7 +681,7 @@ export default function CheckinPage() {
       const searchFields = [g.name, g.title, g.position, g.company, g.tag, g.email, g.phone]
         .filter(Boolean)
         .some((v: string) => v.toLowerCase().includes(q))
-      
+
       return searchFields
     })
   }, [currentDisplayList, searchTerm])
@@ -677,6 +709,7 @@ export default function CheckinPage() {
       checkin_status: g.checkin_status || "not_arrived", // Add checkin_status
       event_id: g.event_id,
       event_name: g.event_name,
+      table_number: g.table_number || "",
     }
   }
   function mapGuestWithoutCheckinTime(g: any): CheckedInGuest {
@@ -694,6 +727,7 @@ export default function CheckinPage() {
       checkin_status: g.checkin_status || "not_arrived", // Add checkin_status
       event_id: g.event_id,
       event_name: g.event_name,
+      table_number: g.table_number || "",
     }
   }
 
@@ -715,17 +749,15 @@ export default function CheckinPage() {
           {notifications.map(n => (
             <div
               key={n.id}
-              className={`px-3 sm:px-4 py-3 sm:py-4 rounded-xl sm:rounded-l-2xl shadow-2xl backdrop-blur-md border transition-all duration-500 transform ${
-                n.visible ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95"
-              } ${
-                n.type === "success"
+              className={`px-3 sm:px-4 py-3 sm:py-4 rounded-xl sm:rounded-l-2xl shadow-2xl backdrop-blur-md border transition-all duration-500 transform ${n.visible ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95"
+                } ${n.type === "success"
                   ? "border-emerald-400/30 bg-gradient-to-br from-emerald-600/40 via-emerald-500/30 to-emerald-400/20 text-white"
                   : n.type === "error"
-                  ? "border-rose-400/30 bg-gradient-to-br from-rose-600/40 via-rose-500/30 to-rose-400/20 text-white"
-                  : n.type === "warning"
-                  ? "border-amber-400/30 bg-gradient-to-br from-amber-600/40 via-amber-500/30 to-amber-400/20 text-white"
-                  : "border-cyan-400/30 bg-gradient-to-br from-cyan-600/40 via-cyan-500/30 to-cyan-400/20 text-white"
-              }`}
+                    ? "border-rose-400/30 bg-gradient-to-br from-rose-600/40 via-rose-500/30 to-rose-400/20 text-white"
+                    : n.type === "warning"
+                      ? "border-amber-400/30 bg-gradient-to-br from-amber-600/40 via-amber-500/30 to-amber-400/20 text-white"
+                      : "border-cyan-400/30 bg-gradient-to-br from-cyan-600/40 via-cyan-500/30 to-cyan-400/20 text-white"
+                }`}
             >
               <div className="flex items-start gap-2 sm:gap-3">
                 {n.type === "success" && (
@@ -800,7 +832,7 @@ export default function CheckinPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={loadGuests}
+            onClick={() => loadGuests(true)}
             className="refresh-btn px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors flex items-center gap-2 text-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -826,15 +858,14 @@ export default function CheckinPage() {
 
       {/* Cards - Desktop Grid Layout, Mobile Horizontal Scroll */}
       <div className="relative mb-8 mt-4">
-      {/* Desktop: Grid Layout */}
-      <div className="hidden md:grid md:grid-cols-3 gap-4 lg:gap-6 py-4">
+        {/* Desktop: Grid Layout */}
+        <div className="hidden md:grid md:grid-cols-3 gap-4 lg:gap-6 py-4">
           {/* Total */}
           <div
-            className={`checkin-card-total group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-              selectedCard === "total"
-                ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
-                : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
-            }`}
+            className={`checkin-card-total group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${selectedCard === "total"
+              ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+              : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
+              }`}
             onClick={() => setSelectedCard(selectedCard === "total" ? null : "total")}
           >
             <div className="relative flex items-center justify-between w-full">
@@ -855,11 +886,10 @@ export default function CheckinPage() {
 
           {/* Checked In */}
           <div
-            className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-              selectedCard === "checkedIn"
-                ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
-                : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
-            }`}
+            className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${selectedCard === "checkedIn"
+              ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
+              : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
+              }`}
             onClick={() => setSelectedCard(selectedCard === "checkedIn" ? null : "checkedIn")}
           >
             <div className="relative flex items-center justify-between w-full">
@@ -880,11 +910,10 @@ export default function CheckinPage() {
 
           {/* Not Checked In */}
           <div
-            className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${
-              selectedCard === "notCheckedIn"
-                ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
-                : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
-            }`}
+            className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 cursor-pointer overflow-hidden ${selectedCard === "notCheckedIn"
+              ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
+              : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+              }`}
             onClick={() => setSelectedCard(selectedCard === "notCheckedIn" ? null : "notCheckedIn")}
           >
             <div className="relative flex items-center justify-between w-full">
@@ -906,7 +935,7 @@ export default function CheckinPage() {
         </div>
 
         {/* Mobile: Horizontal Scrollable */}
-        <div 
+        <div
           className="md:hidden overflow-x-auto scrollbar-hide py-4"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -915,11 +944,10 @@ export default function CheckinPage() {
           <div className="flex gap-3 min-w-max px-2">
             {/* Total */}
             <div
-              className={`checkin-card-total group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
-                selectedCard === "total"
-                  ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
-                  : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
-              }`}
+              className={`checkin-card-total group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${selectedCard === "total"
+                ? "bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/60 shadow-lg shadow-blue-500/30"
+                : "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20"
+                }`}
               onClick={() => setSelectedCard(selectedCard === "total" ? null : "total")}
             >
               <div className="relative flex items-center justify-between w-full">
@@ -940,11 +968,10 @@ export default function CheckinPage() {
 
             {/* Checked In */}
             <div
-              className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
-                selectedCard === "checkedIn"
-                  ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
-                  : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
-              }`}
+              className={`checkin-card-checkedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${selectedCard === "checkedIn"
+                ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/60 shadow-lg shadow-green-500/30"
+                : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20"
+                }`}
               onClick={() => setSelectedCard(selectedCard === "checkedIn" ? null : "checkedIn")}
             >
               <div className="relative flex items-center justify-between w-full">
@@ -965,11 +992,10 @@ export default function CheckinPage() {
 
             {/* Not Checked In */}
             <div
-              className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${
-                selectedCard === "notCheckedIn"
-                  ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
-                  : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
-              }`}
+              className={`checkin-card-notCheckedIn group relative backdrop-blur-sm rounded-xl p-4 transition-all duration-300 cursor-pointer overflow-hidden flex-shrink-0 w-64 ${selectedCard === "notCheckedIn"
+                ? "bg-gradient-to-br from-orange-500/30 to-red-500/30 border border-orange-400/60 shadow-lg shadow-orange-500/30"
+                : "bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20"
+                }`}
               onClick={() => setSelectedCard(selectedCard === "notCheckedIn" ? null : "notCheckedIn")}
             >
               <div className="relative flex items-center justify-between w-full">
@@ -990,18 +1016,17 @@ export default function CheckinPage() {
 
           </div>
         </div>
-        
+
         {/* Navigation Indicators - Mobile Only */}
         <div className="md:hidden absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full flex justify-center gap-2 mt-6">
           {cardTypes.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentCardIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentCardIndex 
-                  ? 'bg-white w-6' 
-                  : 'bg-white/30 hover:bg-white/50'
-              }`}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentCardIndex
+                ? 'bg-white w-6'
+                : 'bg-white/30 hover:bg-white/50'
+                }`}
             />
           ))}
         </div>
@@ -1018,14 +1043,13 @@ export default function CheckinPage() {
             placeholder="Tìm khách..."
           />
         </div>
-        
+
         {/* Scanner Button - Mobile Only */}
         <button
-          className={`scanner-btn px-3 py-2 rounded-lg border transition-all duration-300 flex items-center gap-1 text-sm font-medium sm:hidden ${
-            isScannerActive 
-              ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
-              : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
-          }`}
+          className={`scanner-btn px-3 py-2 rounded-lg border transition-all duration-300 flex items-center gap-1 text-sm font-medium sm:hidden ${isScannerActive
+            ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30"
+            : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
+            }`}
           onClick={() => setIsScannerActive(v => !v)}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1041,9 +1065,9 @@ export default function CheckinPage() {
         {pageGuests.length === 0 ? (
           <div className="col-span-full text-center py-8">
             <div className="text-white/60 text-lg mb-2">
-              {selectedCard === "checkedIn" ? "Chưa có khách nào đã check-in" : 
-               selectedCard === "notCheckedIn" ? "Chưa có khách nào chưa check-in" :
-               selectedCard === "total" ? "Chưa có khách nào đã check-in" : "Chưa có dữ liệu"}
+              {selectedCard === "checkedIn" ? "Chưa có khách nào đã check-in" :
+                selectedCard === "notCheckedIn" ? "Chưa có khách nào chưa check-in" :
+                  selectedCard === "total" ? "Chưa có khách nào đã check-in" : "Chưa có dữ liệu"}
             </div>
             <div className="text-white/40 text-sm">
               {selectedEventId ? `Event ID: ${selectedEventId}` : "Vui lòng chọn sự kiện"}
@@ -1051,74 +1075,77 @@ export default function CheckinPage() {
           </div>
         ) : (
           pageGuests.map(guest => (
-          <div
-            key={guest.id}
-            className={`guest-card rounded-xl p-3 sm:p-4 border bg-white/5 border-white/10 text-white transition-all duration-300 ${
-              selectedGuests.has(guest.id) ? "ring-2 ring-cyan-400/60 bg-cyan-500/10" : ""
-            } ${isMultiSelectMode ? "cursor-pointer" : ""}`}
-            onClick={() => isMultiSelectMode && toggleGuestSelection(guest.id)}
-          >
-            <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-white text-sm sm:text-base truncate">{guest.name}</div>
-                  {guest.checked_in_at && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
-                      <span className="text-xs font-medium text-green-300">
-                        Đã check-in
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="text-xs sm:text-sm text-white/70 truncate">
-                  {guest.title && `${guest.title}. `}
-                  {guest.position && `${guest.position}`}
-                </div>
-                <div className="text-xs sm:text-sm text-white/60 truncate">
-                  {guest.company && `🏢 ${guest.company}`}
-                </div>
-                {guest.checked_in_at && (
-                  <div className="mt-1 text-xs text-white/60">{new Date(guest.checked_in_at).toLocaleString("vi-VN", {
-                    timeZone: "Asia/Bangkok",
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false
-                  })}</div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {isMultiSelectMode && (
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                    selectedGuests.has(guest.id) 
-                      ? "bg-cyan-500 border-cyan-500" 
-                      : "border-white/30"
-                  }`}>
-                    {selectedGuests.has(guest.id) && (
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+            <div
+              key={guest.id}
+              className={`guest-card rounded-xl p-3 sm:p-4 border bg-white/5 border-white/10 text-white transition-all duration-300 ${selectedGuests.has(guest.id) ? "ring-2 ring-cyan-400/60 bg-cyan-500/10" : ""
+                } ${isMultiSelectMode ? "cursor-pointer" : ""}`}
+              onClick={() => isMultiSelectMode && toggleGuestSelection(guest.id)}
+            >
+              <div className="flex items-start justify-between gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-white text-sm sm:text-base truncate">{guest.name}</div>
+                    {guest.checked_in_at && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                        <span className="text-xs font-medium text-green-300">
+                          Đã check-in
+                        </span>
+                      </div>
                     )}
                   </div>
-                )}
-                {!isMultiSelectMode && (
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      openEditPopup(guest)
-                    }}
-                    className="action-btn px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs sm:text-sm hover:bg-white/20 transition-colors"
-                  >
-                    Sửa
-                  </button>
-                )}
+                  <div className="text-xs sm:text-sm text-white/70 truncate">
+                    {guest.title && `${guest.title}. `}
+                    {guest.position && `${guest.position}`}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/60 truncate">
+                    {guest.company && `🏢 ${guest.company}`}
+                  </div>
+                  {guest.table_number && (
+                    <div className="text-xs sm:text-sm text-yellow-300 truncate font-semibold mt-1">
+                      Bàn số: {guest.table_number}
+                    </div>
+                  )}
+                  {guest.checked_in_at && (
+                    <div className="mt-1 text-xs text-white/60">{new Date(guest.checked_in_at).toLocaleString("vi-VN", {
+                      timeZone: "Asia/Bangkok",
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false
+                    })}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isMultiSelectMode && (
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedGuests.has(guest.id)
+                      ? "bg-cyan-500 border-cyan-500"
+                      : "border-white/30"
+                      }`}>
+                      {selectedGuests.has(guest.id) && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  )}
+                  {!isMultiSelectMode && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        openEditPopup(guest)
+                      }}
+                      className="action-btn px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs sm:text-sm hover:bg-white/20 transition-colors"
+                    >
+                      Sửa
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          ))
         )}
       </div>
 
@@ -1173,52 +1200,52 @@ export default function CheckinPage() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <ActionBtn 
-                  label="Chấp nhận" 
-                  color="green" 
-                  onClick={() => bulk("accept", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Chấp nhận"
+                  color="green"
+                  onClick={() => bulk("accept", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Từ chối" 
-                  color="red" 
-                  onClick={() => bulk("reject", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Từ chối"
+                  color="red"
+                  onClick={() => bulk("reject", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Chờ phản hồi" 
-                  color="yellow" 
-                  onClick={() => bulk("pending", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Chờ phản hồi"
+                  color="yellow"
+                  onClick={() => bulk("pending", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Check-in" 
-                  color="blue" 
-                  onClick={() => bulk("checkin", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Check-in"
+                  color="blue"
+                  onClick={() => bulk("checkin", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Check-out" 
-                  color="orange" 
-                  onClick={() => bulk("checkout", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Check-out"
+                  color="orange"
+                  onClick={() => bulk("checkout", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Xóa" 
-                  color="red" 
-                  onClick={() => bulk("delete", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Xóa"
+                  color="red"
+                  onClick={() => bulk("delete", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Export" 
-                  color="purple" 
-                  onClick={() => bulk("export", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)} 
+                <ActionBtn
+                  label="Export"
+                  color="purple"
+                  onClick={() => bulk("export", selectedGuests, setSelectedGuests, addNotification, loadGuests, setIsBulkProcessing, setSelectedCard, selectedEventId)}
                   disabled={isBulkProcessing}
                 />
-                <ActionBtn 
-                  label="Bỏ chọn" 
-                  color="gray" 
-                  onClick={() => setSelectedGuests(new Set())} 
+                <ActionBtn
+                  label="Bỏ chọn"
+                  color="gray"
+                  onClick={() => setSelectedGuests(new Set())}
                   disabled={isBulkProcessing}
                 />
               </div>
@@ -1233,11 +1260,10 @@ export default function CheckinPage() {
         <div className="hidden sm:block">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <button
-              className={`scanner-btn px-4 py-2.5 rounded-lg border transition-all duration-300 flex items-center gap-2 text-sm font-medium ${
-                isScannerActive 
-                  ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30" 
-                  : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
-              }`}
+              className={`scanner-btn px-4 py-2.5 rounded-lg border transition-all duration-300 flex items-center gap-2 text-sm font-medium ${isScannerActive
+                ? "bg-green-500/20 border-green-400/40 text-green-300 hover:bg-green-500/30"
+                : "bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
+                }`}
               onClick={() => setIsScannerActive(v => !v)}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1260,10 +1286,13 @@ export default function CheckinPage() {
             <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
               <WorkingQRScanner onScan={handleQRScan} onError={handleScannerError} isActive={isScannerActive} />
             </div>
-            
+
             {/* Recently Checked In Guest Card */}
             {recentlyCheckedInGuest ? (
-              <div className="recently-checked-in-card rounded-xl border border-green-400/40 bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-6 shadow-lg shadow-green-500/20">
+              <div
+                className="recently-checked-in-card rounded-xl border border-green-400/40 bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-6 shadow-lg shadow-green-500/20 cursor-pointer hover:bg-green-500/30 transition-colors"
+                onClick={() => setRecentlyCheckedInGuest(null)}
+              >
                 {(() => {
                   console.log('=== RENDERING GUEST INFO ===');
                   console.log('recentlyCheckedInGuest:', recentlyCheckedInGuest);
@@ -1289,85 +1318,112 @@ export default function CheckinPage() {
                     <Icons.x className="w-4 h-4" />
                   </button>
                 </div>
-                
-                <div className="space-y-3">
-                  {/* Name & Title */}
-                  <div className="text-white font-medium text-lg">
-                    {recentlyCheckedInGuest.title && `${recentlyCheckedInGuest.title} `}
-                    {recentlyCheckedInGuest.name}
-                  </div>
-                  
-                  {/* Position */}
-                  {recentlyCheckedInGuest.position && (
-                    <div className="text-green-100">
-                      {recentlyCheckedInGuest.position}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[300px]">
+                  {/* Left Column (2/3): Info */}
+                  <div className="lg:col-span-2 space-y-3">
+                    {/* Name & Title */}
+                    <div className="text-white font-medium text-lg">
+                      {recentlyCheckedInGuest.title && `${recentlyCheckedInGuest.title} `}
+                      {recentlyCheckedInGuest.name}
                     </div>
-                  )}
-                  
-                  {/* Company */}
-                  {recentlyCheckedInGuest.company && (
+
+                    {recentlyCheckedInGuest.position && (
+                      <div className="text-green-100">{recentlyCheckedInGuest.position}</div>
+                    )}
+
+                    {/* Company */}
+                    {recentlyCheckedInGuest.company && (
+                      <div className="text-green-100 text-sm">{recentlyCheckedInGuest.company}</div>
+                    )}
+
+                    {/* Tag */}
+                    {recentlyCheckedInGuest.tag && (
+                      <div className="px-2 py-1 bg-green-500/30 text-green-200 text-xs rounded-full inline-block">
+                        {recentlyCheckedInGuest.tag}
+                      </div>
+                    )}
+
+                    {/* Contact Info */}
+                    <div className="space-y-1 pt-2 border-t border-green-400/20">
+                      {recentlyCheckedInGuest.email && (
+                        <div className="text-green-100 text-sm">
+                          Email: {recentlyCheckedInGuest.email}
+                        </div>
+                      )}
+                      {recentlyCheckedInGuest.phone && (
+                        <div className="text-green-100 text-sm">
+                          Phone: {recentlyCheckedInGuest.phone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Event Info */}
+                    {recentlyCheckedInGuest.event_name && (
+                      <div className="text-green-100 text-sm pt-2 border-t border-green-400/20">
+                        Sự kiện: {recentlyCheckedInGuest.event_name}
+                      </div>
+                    )}
+
+                    {/* Check-in Method */}
                     <div className="text-green-100 text-sm">
-                      {recentlyCheckedInGuest.company}
+                      Phương thức: {recentlyCheckedInGuest.checkin_method === 'qr' ? 'Quét QR' : 'Thủ công'}
                     </div>
-                  )}
-                  
-                  {/* Tag */}
-                  {recentlyCheckedInGuest.tag && (
-                    <div className="px-2 py-1 bg-green-500/30 text-green-200 text-xs rounded-full inline-block">
-                      {recentlyCheckedInGuest.tag}
+
+                    {/* Check-in Time */}
+                    <div className="text-green-200 text-sm pt-2 border-t border-green-400/20">
+                      Check-in: {recentlyCheckedInGuest.checked_in_at ?
+                        new Date(recentlyCheckedInGuest.checked_in_at).toLocaleString("vi-VN", {
+                          timeZone: "Asia/Bangkok",
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit"
+                        }) :
+                        new Date().toLocaleString("vi-VN", {
+                          timeZone: "Asia/Bangkok",
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit"
+                        })
+                      }
                     </div>
-                  )}
-                  
-                  {/* Contact Info */}
-                  <div className="space-y-1 pt-2 border-t border-green-400/20">
-                    {recentlyCheckedInGuest.email && (
-                      <div className="text-green-100 text-sm">
-                        Email: {recentlyCheckedInGuest.email}
+                  </div>
+
+                  {/* Right Column (1/3): Table Number */}
+                  <div className="lg:col-span-1 flex flex-col justify-center items-center">
+                    {(() => {
+                      console.log('=== TABLE NUMBER RENDER CHECK ===')
+                      console.log('recentlyCheckedInGuest:', recentlyCheckedInGuest)
+                      console.log('table_number value:', recentlyCheckedInGuest.table_number)
+                      console.log('table_number type:', typeof recentlyCheckedInGuest.table_number)
+                      console.log('table_number truthy?:', !!recentlyCheckedInGuest.table_number)
+                      return null
+                    })()}
+                    {recentlyCheckedInGuest.table_number && recentlyCheckedInGuest.table_number !== '' ? (
+                      <div className="w-full h-full min-h-[200px] flex flex-col items-center justify-center p-6 border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-500/20 to-green-500/20 rounded-2xl text-center shadow-lg shadow-yellow-500/30">
+                        <div className="text-yellow-300 uppercase tracking-widest font-bold mb-3 text-base">BÀN TIỆC</div>
+                        <div className="text-7xl lg:text-8xl font-black text-yellow-300 drop-shadow-2xl leading-none" style={{ textShadow: '0 0 30px rgba(253, 224, 71, 0.8), 0 0 60px rgba(253, 224, 71, 0.4)' }}>
+                          {recentlyCheckedInGuest.table_number}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full min-h-[200px] flex flex-col items-center justify-center p-6 border border-white/10 bg-white/5 rounded-xl text-center">
+                        <div className="text-white/40 text-sm">Chưa có số bàn</div>
+                        <div className="text-white/20 text-xs mt-2">Debug: {JSON.stringify(recentlyCheckedInGuest.table_number)}</div>
                       </div>
                     )}
-                    
-                    {recentlyCheckedInGuest.phone && (
-                      <div className="text-green-100 text-sm">
-                        Phone: {recentlyCheckedInGuest.phone}
-                      </div>
-                    )}
                   </div>
-                  
-                  {/* Event Info */}
-                  {recentlyCheckedInGuest.event_name && (
-                    <div className="text-green-100 text-sm pt-2 border-t border-green-400/20">
-                      Sự kiện: {recentlyCheckedInGuest.event_name}
-                    </div>
-                  )}
-                  
-                  {/* Check-in Method */}
-                  <div className="text-green-100 text-sm">
-                    Phương thức: {recentlyCheckedInGuest.checkin_method === 'qr' ? 'Quét QR' : 'Thủ công'}
-                  </div>
-                  
-                  {/* Check-in Time */}
-                  <div className="text-green-200 text-sm pt-2 border-t border-green-400/20">
-                    Check-in: {recentlyCheckedInGuest.checked_in_at ? 
-                      new Date(recentlyCheckedInGuest.checked_in_at).toLocaleString("vi-VN", {
-                        timeZone: "Asia/Bangkok",
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                      }) : 
-                      new Date().toLocaleString("vi-VN", {
-                        timeZone: "Asia/Bangkok",
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                      })
-                    }
-                  </div>
+                </div>
+
+                {/* Click to continue hint */}
+                <div className="mt-4 pt-4 border-t border-white/10 text-center animate-bounce">
+                  <span className="text-cyan-300 text-sm font-medium">Click vào thẻ để tiếp tục quét</span>
                 </div>
               </div>
             ) : (
@@ -1391,8 +1447,8 @@ export default function CheckinPage() {
               value={qrCode}
               onChange={e => setQrCode(e.target.value)}
             />
-            <button 
-              onClick={handleCheckIn} 
+            <button
+              onClick={handleCheckIn}
               className="checkin-btn px-4 py-2.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/30 hover:border-cyan-400/60 transition-all duration-300 text-sm font-medium"
             >
               Check-in
@@ -1651,26 +1707,26 @@ export default function CheckinPage() {
                         <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.tag || 'Chưa có'}</div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-white/70 text-sm font-medium mb-2">Thời gian check-in</label>
                         <div className="p-3 bg-white/5 rounded-lg text-white">
-                          {editCheckin.guest.checked_in_at 
-                            ? new Date(editCheckin.guest.checked_in_at).toLocaleString("vi-VN", { 
-                                timeZone: "Asia/Bangkok",
-                                year: "numeric",
-                                month: "2-digit", 
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit"
-                              })
+                          {editCheckin.guest.checked_in_at
+                            ? new Date(editCheckin.guest.checked_in_at).toLocaleString("vi-VN", {
+                              timeZone: "Asia/Bangkok",
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit"
+                            })
                             : 'Chưa có thông tin'
                           }
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="block text-white/70 text-sm font-medium mb-2">Phương thức check-in</label>
                         <div className="p-3 bg-white/5 rounded-lg text-white">{editCheckin.guest.checkin_method}</div>
@@ -1706,12 +1762,12 @@ export default function CheckinPage() {
   )
 }
 
-function ActionBtn({ 
-  label, 
-  color, 
-  onClick, 
-  disabled = false 
-}: { 
+function ActionBtn({
+  label,
+  color,
+  onClick,
+  disabled = false
+}: {
   label: string
   color: "green" | "red" | "yellow" | "blue" | "orange" | "purple" | "gray"
   onClick: () => void
@@ -1726,11 +1782,11 @@ function ActionBtn({
     purple: "bg-purple-500/20 border-purple-500/30 text-purple-400 hover:bg-purple-500/30",
     gray: "bg-gray-500/20 border-gray-500/30 text-gray-300 hover:bg-gray-500/30",
   }
-  
-  const disabledClasses = disabled 
-    ? "opacity-50 cursor-not-allowed hover:scale-100" 
+
+  const disabledClasses = disabled
+    ? "opacity-50 cursor-not-allowed hover:scale-100"
     : "hover:scale-105 active:scale-95"
-  
+
   return (
     <button
       onClick={onClick}
@@ -1783,34 +1839,34 @@ async function bulk(
 
   const guestIds = Array.from(selectedGuests)
   setIsBulkProcessing(true)
-  
+
   try {
     let response: Response
     let message: string
 
     switch (kind) {
       case "checkin":
-        const checkinData = { 
+        const checkinData = {
           guest_ids: guestIds,
-          event_id: selectedEventId 
+          event_id: selectedEventId
         }
         console.log("Sending bulk checkin data:", checkinData)
         response = await api.bulkCheckinGuests(checkinData)
         const result = await response.json()
-        
+
         if (result.already_checked_in_count > 0) {
           const alreadyCheckedInDetails = result.already_checked_in.map((g: any) => {
             const checkinTime = new Date(g.checkin_time).toLocaleString("vi-VN", {
               timeZone: "Asia/Bangkok",
               year: "numeric",
-              month: "2-digit", 
+              month: "2-digit",
               day: "2-digit",
               hour: "2-digit",
               minute: "2-digit"
             })
             return `${g.name} (${checkinTime})`
           }).join("\n")
-          
+
           message = `✅ ${result.message}\n\n⚠️ Khách đã check-in trước đó:\n${alreadyCheckedInDetails}`
         } else {
           message = `✅ ${result.message}`
@@ -1838,12 +1894,12 @@ async function bulk(
       setSelectedGuests(new Set())
       // Force refresh data
       await loadGuests()
-      
+
       // Auto switch to checkedIn view after check-in
       if (kind === "checkin") {
         setSelectedCard("checkedIn")
       }
-      
+
       console.log(`Bulk ${kind} successful for guests:`, guestIds)
     } else {
       const errorData = await response.json()

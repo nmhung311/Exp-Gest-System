@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
-import BackgroundGlow from '../_components/BackgroundGlow'
+import BackgroundGlow from '@/components/layout/BackgroundGlow'
 
 interface SimpleInviteData {
   guest: {

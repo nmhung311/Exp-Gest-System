@@ -1,1 +1,1 @@
-export { default } from "../app/components/SectionHeader"
+export { default } from "@/components/shared/SectionHeader"

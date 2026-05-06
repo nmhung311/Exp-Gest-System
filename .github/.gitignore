@@ -9,10 +9,6 @@ instance/
 *.db
 *.sqlite*
 
-# Backup runtime (API ghi zip/json vào đây — không commit dữ liệu)
-backend/backups/**
-!backend/backups/.gitkeep
-
 # Frontend / Node
 **/node_modules/
 **/.next/

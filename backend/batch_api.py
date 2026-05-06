@@ -4,7 +4,8 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import joinedload
-from models import Guest, Event, Checkin, db
+from db import db
+from models import Guest, Event, Checkin
 from datetime import datetime, timedelta
 import json
 import time

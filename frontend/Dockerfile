@@ -12,7 +12,8 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --only=production && npm audit fix --force || true && npm cache clean --force
+# Cần devDependencies (typescript, tailwind, …) để chạy next build
+RUN npm ci && (npm audit fix --force || true) && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -54,9 +55,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Switch to non-root user
 USER nextjs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+# Health: GET /api/test (200 JSON) — tránh / vì có thể 307/marketing tùy image/cấu hình; luôn drain body.
+HEALTHCHECK --interval=30s --timeout=30s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:3000/api/test',(res)=>{res.resume();const c=res.statusCode;process.exit(c>=200&&c<400?0:1)}).on('error',()=>process.exit(1))"
 
 # Expose port
 EXPOSE 3000

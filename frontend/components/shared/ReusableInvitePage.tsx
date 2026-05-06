@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import BackgroundGlow from '../_components/BackgroundGlow'
+import BackgroundGlow from '@/components/layout/BackgroundGlow'
 
 interface EventData {
   id: number;

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import QRCode from 'qrcode'
-import BackgroundGlow from '../../_components/BackgroundGlow'
+import BackgroundGlow from '@/components/layout/BackgroundGlow'
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -195,18 +195,17 @@ const InvitePage: React.FC = () => {
     console.log('checkin_status:', inviteData?.guest.checkin_status)
     console.log('showCheckinSuccess:', showCheckinSuccess)
 
-    if (inviteData && inviteData.guest.rsvp_status === 'accepted' &&
-      (inviteData.guest.checkin_status as string) === 'checked_in') {
+    if (inviteData && (inviteData.guest.checkin_status as string) === 'checked_in') {
       console.log('Setting showCheckinSuccess to true...')
       // Hiển thị ngay lập tức - không delay
       setShowCheckinSuccess(true)
       console.log('showCheckinSuccess set to true')
 
-      // Delay 2 giây trước khi hiển thị số bàn
+      // Delay 1 giây trước khi hiển thị số bàn
       setTimeout(() => {
         setShowTableNumber(true)
-        console.log('showTableNumber set to true after 2s delay')
-      }, 2000)
+        console.log('showTableNumber set to true after 1s delay')
+      }, 1000)
     } else if (inviteData && inviteData.guest.checkin_status === 'not_arrived') {
       // Chỉ reset khi chưa checkin, không reset khi đã checkin
       console.log('Guest not checked in yet, keeping showCheckinSuccess as is')
@@ -3104,8 +3103,8 @@ const InvitePage: React.FC = () => {
                 <div className="company-name">Technology Company</div>
               </div>
             </div>
-            <div className="event-title-main-desktop">Lễ kỷ niệm 15 năm</div>
-            <div className="event-title-main-mobile">Lễ kỷ niệm 15 năm</div>
+            <div className="event-title-main-desktop">{inviteData.event.name}</div>
+            <div className="event-title-main-mobile">{inviteData.event.name}</div>
             <div className="slogan-1-desktop">Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm</div>
             <div className="slogan-1-mobile">Từ Thái Nguyên vươn xa – 15 năm học tập và trải nghiệm</div>
           </div>
@@ -3288,25 +3287,28 @@ const InvitePage: React.FC = () => {
             {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
             {((inviteData.guest.checkin_status as string) === 'checked_in' || showCheckinSuccess || instantCheckin) && (
               <div className="checkin-success">
-                <div className="checkin-success-icon">
-                  <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                  </svg>
-                </div>
-                <div className="checkin-success-text">
-                  {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
-                </div>
+                {!showTableNumber && (
+                  <>
+                    <div className="checkin-success-icon">
+                      <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                      </svg>
+                    </div>
+                    <div className="checkin-success-text">
+                      {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
+                    </div>
+                  </>
+                )}
                 {inviteData.guest.table_number && showTableNumber && (
                   <div className="table-number-display animate-fade-in" style={{
                     marginTop: '16px',
                     padding: '16px 24px',
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%)',
-                    border: '2px solid rgba(59, 130, 246, 0.4)',
-                    borderRadius: '12px',
+                    background: 'transparent',
+                    border: 'none',
                     textAlign: 'center' as const
                   }}>
                     <div style={{
-                      fontSize: '14px',
+                      fontSize: '18px',
                       color: 'rgba(255, 255, 255, 0.9)',
                       marginBottom: '8px',
                       fontWeight: 500
@@ -3314,10 +3316,11 @@ const InvitePage: React.FC = () => {
                       Kính mời quý khách về bàn tiệc số
                     </div>
                     <div style={{
-                      fontSize: '32px',
+                      fontSize: '56px',
                       fontWeight: 'bold',
                       color: '#fff',
-                      letterSpacing: '2px'
+                      letterSpacing: '2px',
+                      textShadow: '0 0 20px rgba(96, 165, 250, 0.8), 0 0 40px rgba(96, 165, 250, 0.6), 0 0 60px rgba(96, 165, 250, 0.4)'
                     }}>
                       {inviteData.guest.table_number}
                     </div>
@@ -3669,25 +3672,28 @@ const InvitePage: React.FC = () => {
               {/* 3. Trạng thái "đã check-in" - Hiển thị dấu tích xanh (ưu tiên cao nhất) */}
               {((inviteData.guest.checkin_status as string) === 'checked_in' || showCheckinSuccess || instantCheckin) && (
                 <div className="desktop-checkin-success">
-                  <div className="desktop-checkin-success-icon">
-                    <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                    </svg>
-                  </div>
-                  <div className="desktop-checkin-success-text">
-                    {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
-                  </div>
+                  {!showTableNumber && (
+                    <>
+                      <div className="desktop-checkin-success-icon">
+                        <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                        </svg>
+                      </div>
+                      <div className="desktop-checkin-success-text">
+                        {showCheckinSuccess ? 'Check-in thành công!' : 'Đã check-in'}
+                      </div>
+                    </>
+                  )}
                   {inviteData.guest.table_number && showTableNumber && (
                     <div className="table-number-display animate-fade-in" style={{
                       marginTop: '16px',
                       padding: '16px 24px',
-                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%)',
-                      border: '2px solid rgba(59, 130, 246, 0.4)',
-                      borderRadius: '12px',
+                      background: 'transparent',
+                      border: 'none',
                       textAlign: 'center' as const
                     }}>
                       <div style={{
-                        fontSize: '14px',
+                        fontSize: '24px',
                         color: 'rgba(255, 255, 255, 0.9)',
                         marginBottom: '8px',
                         fontWeight: 500
@@ -3695,10 +3701,19 @@ const InvitePage: React.FC = () => {
                         Kính mời quý khách về bàn tiệc số
                       </div>
                       <div style={{
-                        fontSize: '32px',
+                        fontSize: '72px',
                         fontWeight: 'bold',
                         color: '#fff',
-                        letterSpacing: '2px'
+                        letterSpacing: '2px',
+                        textShadow: `0.3px 0.3px 0 rgba(0, 0, 0, 0.3),
+                          -0.3px -0.3px 0 rgba(0, 0, 0, 0.3),
+                          0.3px -0.3px 0 rgba(0, 0, 0, 0.3),
+                          -0.3px 0.3px 0 rgba(0, 0, 0, 0.3),
+                          0 0 8px rgba(59, 130, 246, 0.8),
+                          0 0 16px rgba(59, 130, 246, 0.6),
+                          0 0 24px rgba(59, 130, 246, 0.4),
+                          0 0 32px rgba(59, 130, 246, 0.3),
+                          0 0 40px rgba(59, 130, 246, 0.2)`
                       }}>
                         {inviteData.guest.table_number}
                       </div>

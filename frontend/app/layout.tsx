@@ -1,5 +1,5 @@
 import './globals.css'
-import TokenInitializer from '../components/TokenInitializer'
+import TokenInitializer from '@/components/TokenInitializer'
 
 export const metadata = { 
   title: "EXP Technology Co., Ltd | AI • Blockchain • Digital Solutions",

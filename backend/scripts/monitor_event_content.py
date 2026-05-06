@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-Script để monitor và cảnh báo khi có vấn đề với event_content
+Script để monitor và cảnh báo khi có vấn đề với event_content.
+Chạy từ thư mục backend: python -m scripts.monitor_event_content
 """
 
 import sys
 import os
 import time
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
 from app import create_app
-from models import db, Guest
+from models import Guest
 
 def monitor_event_content():
     """Monitor event_content và cảnh báo khi có vấn đề"""
@@ -35,7 +39,6 @@ def monitor_event_content():
                     if guest.id in last_check and last_check[guest.id] and not has_content:
                         print(f"⚠️  CẢNH BÁO: Guest {guest.id} ({guest.name}) đã mất event_content!")
                         print(f"   Thời gian: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-                        print(f"   Nội dung cũ: '{guest.event_content}'")
                 
                 last_check = current_check
                 

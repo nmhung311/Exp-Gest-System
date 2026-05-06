@@ -1,15 +1,15 @@
 // Cấu hình API và URLs cho ứng dụng
-// Tự động chuyển đổi giữa development và production
+// Site marketing: expsolution.io — app sự kiện (subdomain): event.expsolution.io
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// API Base URLs - Always use Next.js API routes for frontend calls
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
+// Client gọi qua Next API routes (cùng origin); production mặc định là subdomain sự kiện
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||
   (isDevelopment ? 'http://localhost:3000' : 'https://event.expsolution.io')
 
-// Frontend Base URL  
+// URL gốc của chính app Next (không phải apex marketing)
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  (isDevelopment ? 'http://192.168.1.135:5008' : 'http://192.168.1.135:5008')
+  (isDevelopment ? 'http://localhost:3000' : 'https://event.expsolution.io')
 
 // API Endpoints - Tất cả sử dụng Next.js API routes
 export const API_ENDPOINTS = {
@@ -62,7 +62,7 @@ export const getFrontendUrl = (path: string) => {
 
 // Debug info (chỉ hiển thị trong development)
 if (isDevelopment) {
-  console.log('🔧 Development Mode - API Config:', {
+  console.log('Development Mode - API Config:', {
     API_BASE_URL,
     FRONTEND_URL,
     NODE_ENV: process.env.NODE_ENV

@@ -3,9 +3,9 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createPortal } from 'react-dom'
-import CustomDropdown from '../../../components/CustomDropdown'
-import CustomCheckbox from '../../../components/CustomCheckbox'
-import DateTimePicker from '../../../components/DateTimePicker'
+import CustomDropdown from '@/components/shared/CustomDropdown'
+import CustomCheckbox from '@/components/shared/CustomCheckbox'
+import DateTimePicker from '@/components/shared/DateTimePicker'
 
 import { api } from "@/lib/api"
 interface Event {

@@ -1,15 +1,24 @@
-# Backend
+# Backend (Flask)
 
-- API spec: see ../docs/v1.0/openapi.yaml
-- DB: MongoDB via MongoEngine (planned); temporary in-memory for first run.
-- QR/Token: see design.md section QR & Security.
+- API: `docs/v1.0/openapi.yaml`
+- DB: SQLite mặc định (`instance/exp_guest.db` trong Docker; local tương đương).
+- Cấu hình: sao chép `env.example` → `.env` tại thư mục này.
 
-## Run (dev)
-
-From project root:
+## Chạy dev (local)
 
 ```bash
-python -m backend.app
+cd backend
+pip install -r requirements.txt
+python app.py
 ```
 
-Health check: `http://localhost:9009/health`
+Health: `http://127.0.0.1:5008/health`
+
+## Script tiện ích
+
+```bash
+cd backend
+python -m scripts.monitor_event_content
+```
+
+`scripts/cloudflare_worker_stub.py` chỉ là mẫu edge (Pyodice), không dùng cho API chính.
